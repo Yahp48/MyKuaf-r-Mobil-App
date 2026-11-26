@@ -4,13 +4,12 @@ import { AntDesign as Icon } from '@expo/vector-icons';
 import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
 import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
+import { supportApi } from '../services/api';
 
 export default function FeedbackScreen({ navigation }) {
   const [selectedRating, setSelectedRating] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [feedback, setFeedback] = useState("");
-  const [email, setEmail] = useState("");
-  const [isAnonymous, setIsAnonymous] = useState(false);
   const { state } = useApp();
   const cartCount = state.cartItems.length;
 
@@ -61,7 +60,7 @@ export default function FeedbackScreen({ navigation }) {
     5: "Mükemmel"
   };
 
-  const submitFeedback = () => {
+  const submitFeedback = async () => {
     if (selectedRating === 0) {
       Alert.alert("Uyarı", "Lütfen bir puan verin.");
       return;
@@ -74,29 +73,32 @@ export default function FeedbackScreen({ navigation }) {
       Alert.alert("Uyarı", "Lütfen geri bildiriminizi yazın.");
       return;
     }
-    if (!isAnonymous && !email.trim()) {
-      Alert.alert("Uyarı", "Lütfen e-posta adresinizi girin veya anonim gönderimi seçin.");
+
+    try {
+      const subject = feedbackCategories.find((c) => c.id === selectedCategory)?.title ?? "Genel";
+      await supportApi.createTicket({
+        type: "FEEDBACK",
+        subject,
+        message: feedback.trim(),
+        rating: selectedRating,
+      });
+    } catch (e) {
+      Alert.alert("Gönderilemedi", e.message);
       return;
     }
-
-    Alert.alert(
-      "Geri Bildirim Gönderildi",
-      "Değerli geri bildiriminiz için teşekkürler! Görüşleriniz bizim için çok önemli.",
-      [
-        {
-          text: "Tamam",
-          onPress: () => {
-            setSelectedRating(0);
-            setSelectedCategory(null);
-            setFeedback("");
-            setEmail("");
-            setIsAnonymous(false);
-            navigation.goBack();
-          }
-        }
-      ]
-    );
+    Alert.alert("Geri Bildirim Gönderildi", "Değerli geri bildiriminiz için teşekkürler! Görüşleriniz bizim için çok önemli.", [
+      {
+        text: "Tamam",
+        onPress: () => {
+          setSelectedRating(0);
+          setSelectedCategory(null);
+          setFeedback("");
+          navigation.goBack();
+        },
+      },
+    ]);
   };
+
 
   const renderStars = () => {
     return (
@@ -147,7 +149,7 @@ export default function FeedbackScreen({ navigation }) {
       
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrowleft" size={30} color="#fff" />
+          <Icon name="arrow-left" size={30} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.logo}>GERİ BİLDİRİM</Text>
         <TouchableOpacity onPress={() => navigation.navigate("Notifications")}>
@@ -213,61 +215,10 @@ export default function FeedbackScreen({ navigation }) {
         </View>
 
         
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📧 İletişim Tercihi</Text>
-          
-          <View style={styles.contactOptions}>
-            <TouchableOpacity
-              style={[
-                styles.contactOption,
-                !isAnonymous && styles.selectedContactOption
-              ]}
-              onPress={() => setIsAnonymous(false)}
-            >
-              <FontAwesome6 
-                name={!isAnonymous ? "check-circle" : "circle"} 
-                size={20} 
-                color={!isAnonymous ? "#FF4896" : "#ccc"} 
-              />
-              <Text style={styles.contactOptionText}>
-                E-posta ile dönüş istiyorum
-              </Text>
-            </TouchableOpacity>
+        <Text style={styles.contactNote}>
+          Geri bildiriminiz hesabınızla birlikte iletilir; gerekirse size kayıtlı e-posta adresinizden dönüş yapılır.
+        </Text>
 
-            <TouchableOpacity
-              style={[
-                styles.contactOption,
-                isAnonymous && styles.selectedContactOption
-              ]}
-              onPress={() => setIsAnonymous(true)}
-            >
-              <FontAwesome6 
-                name={isAnonymous ? "check-circle" : "circle"} 
-                size={20} 
-                color={isAnonymous ? "#FF4896" : "#ccc"} 
-              />
-              <Text style={styles.contactOptionText}>
-                Anonim gönder
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {!isAnonymous && (
-            <View style={styles.emailContainer}>
-              <Text style={styles.emailLabel}>E-posta Adresiniz</Text>
-              <TextInput
-                style={styles.emailInput}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="e-posta@example.com"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-          )}
-        </View>
-
-       
         <View style={styles.submitContainer}>
           <TouchableOpacity style={styles.submitButton} onPress={submitFeedback}>
             <FontAwesome6 name="paper-plane" size={16} color="#fff" />
@@ -334,6 +285,7 @@ export default function FeedbackScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  contactNote: { fontSize: 13, color: "#777", marginHorizontal: 20, marginBottom: 12, lineHeight: 19 },
   container: { flex: 1, backgroundColor: "#f8f9fa" },
   header: {
     flexDirection: "row",

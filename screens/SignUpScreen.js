@@ -1,127 +1,146 @@
-import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from "react-native";
+import React, { useState } from "react";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { useApp } from "../context/AppContext";
+import { Button, Checkbox, Field } from "../components/ui";
+import { colors } from "../components/theme";
 
-const API_BASE_URL = "http://192.168.4.116:5000";
+const PASSWORD_RULE = /^(?=.*[A-Za-zÇĞİÖŞÜçğıöşü])(?=.*\d).{8,128}$/;
 
 export default function SignUpScreen({ navigation }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { actions } = useApp();
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
+
+  const validate = () => {
+    const e = {};
+    if (form.name.trim().length < 2) e.name = "Adınızı ve soyadınızı girin";
+    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) e.email = "Geçerli bir e-posta adresi girin";
+    if (form.phone && !/^(\+90|0)?5\d{9}$/.test(form.phone.replace(/[\s()-]/g, ""))) {
+      e.phone = "Geçerli bir cep telefonu girin (5XX XXX XX XX)";
+    }
+    if (!PASSWORD_RULE.test(form.password)) e.password = "En az 8 karakter, en az bir harf ve bir rakam";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   const handleSignUp = async () => {
-    setIsLoading(true);
+    if (!validate()) return;
+    if (!acceptTerms) {
+      Alert.alert("Onay gerekli", "Devam etmek için kullanım koşullarını ve KVKK aydınlatma metnini onaylayın.");
+      return;
+    }
+    setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+      await actions.signUp({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        ...(form.phone ? { phone: form.phone } : {}),
+        acceptTerms: true,
+        marketingOptIn,
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        Alert.alert("Başarılı", "Kayıt işlemi başarılı!", [
-          { text: "Tamam", onPress: () => navigation.navigate("SignIn") }
-        ]);
-      } else {
-        Alert.alert("Hata", data.message || "Kayıt başarısız!");
-      }
-    } catch (error) {
-      console.error("❌ Kayıt hatası:", error);
-      Alert.alert("Hata", "Sunucuya bağlanırken bir hata oluştu.");
-    } finally {
-      setIsLoading(false);
+    } catch (e) {
+      Alert.alert("Kayıt yapılamadı", e.message);
+      setLoading(false);
     }
   };
 
   return (
-    <LinearGradient colors={["#f8f4ff", "#e8dffb"]} style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardAvoidingView}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.logoContainer}>
-            <Ionicons name="cut-outline" size={80} color="#7b68ee" style={styles.logoIcon} />
-            <Text style={styles.appName}>Güzellik Salonu</Text>
-            <Text style={styles.welcomeText}>Yeni hesap oluşturun</Text>
+    <LinearGradient colors={["#fff0f6", "#f3e8ff"]} style={styles.container}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <View style={styles.logoBox}>
+            <Ionicons name="cut-outline" size={60} color={colors.primary} />
+            <Text style={styles.appName}>Yeni hesap oluşturun</Text>
           </View>
 
-          <View style={styles.formContainer}>
-            <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={20} color="#9e8efc" style={styles.inputIcon} />
-              <TextInput
-                placeholder="Ad Soyad"
-                placeholderTextColor="#aaa"
-                value={name}
-                onChangeText={setName}
-                style={styles.input}
-                autoCapitalize="words"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Ionicons name="mail-outline" size={20} color="#9e8efc" style={styles.inputIcon} />
-              <TextInput
-                placeholder="E-posta adresiniz"
-                placeholderTextColor="#aaa"
-                value={email}
-                onChangeText={setEmail}
-                style={styles.input}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#9e8efc" style={styles.inputIcon} />
-              <TextInput
-                placeholder="Şifreniz (min. 6 karakter)"
-                placeholderTextColor="#aaa"
-                value={password}
-                onChangeText={setPassword}
-                style={styles.input}
-                secureTextEntry={!showPassword}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+          <Field
+            icon="person-outline"
+            placeholder="Ad Soyad"
+            value={form.name}
+            onChangeText={set("name")}
+            autoCapitalize="words"
+            autoComplete="name"
+            textContentType="name"
+            error={errors.name}
+            accessibilityLabel="Ad soyad"
+          />
+          <Field
+            icon="mail-outline"
+            placeholder="E-posta adresiniz"
+            value={form.email}
+            onChangeText={set("email")}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            textContentType="emailAddress"
+            error={errors.email}
+            accessibilityLabel="E-posta"
+          />
+          <Field
+            icon="phone"
+            placeholder="Cep telefonu (isteğe bağlı)"
+            value={form.phone}
+            onChangeText={set("phone")}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+            error={errors.phone}
+            accessibilityLabel="Cep telefonu"
+          />
+          <Field
+            icon="lock-outline"
+            placeholder="Şifre (en az 8 karakter, harf ve rakam)"
+            value={form.password}
+            onChangeText={set("password")}
+            secureTextEntry={!showPassword}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            error={errors.password}
+            accessibilityLabel="Şifre"
+            right={
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} hitSlop={10}>
                 <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#9e8efc" />
               </TouchableOpacity>
-            </View>
+            }
+          />
 
-            <TouchableOpacity 
-              onPress={handleSignUp} 
-              style={styles.signUpButton}
-              disabled={isLoading}
-            >
-              <LinearGradient 
-                colors={["#9e8efc", "#7b68ee"]} 
-                style={styles.gradientButton}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Text style={styles.signUpButtonText}>
-                  {isLoading ? "Kayıt Olunuyor..." : "Kayıt Ol"}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
+          <Checkbox checked={acceptTerms} onChange={setAcceptTerms}>
+            <Text style={styles.consent}>
+              <Text style={styles.link} onPress={() => navigation.navigate("Privacy")}>
+                Kullanım koşullarını ve KVKK aydınlatma metnini
+              </Text>{" "}
+              okudum, kabul ediyorum.
+            </Text>
+          </Checkbox>
+          <Checkbox checked={marketingOptIn} onChange={setMarketingOptIn}>
+            <Text style={styles.consent}>
+              Kampanya ve fırsatlardan e-posta/SMS ile haberdar olmak istiyorum (isteğe bağlı).
+            </Text>
+          </Checkbox>
 
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>veya</Text>
-              <View style={styles.dividerLine} />
-            </View>
+          <Button title="Kayıt Ol" onPress={handleSignUp} loading={loading} style={{ marginTop: 16 }} />
 
-            <TouchableOpacity 
-              style={styles.loginButton}
-              onPress={() => navigation.navigate("SignIn")}
-            >
-              <Text style={styles.loginButtonText}>Zaten hesabınız var mı? Giriş Yap</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.bottomLink} onPress={() => navigation.goBack()}>
+            <Text style={styles.link}>Zaten hesabınız var mı? Giriş yapın</Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -129,98 +148,11 @@ export default function SignUpScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: "center",
-    padding: 30,
-  },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  logoIcon: {
-    marginBottom: 15,
-  },
-  appName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#5a4fcf",
-    marginBottom: 5,
-  },
-  welcomeText: {
-    fontSize: 16,
-    color: "#777",
-  },
-  formContainer: {
-    width: "100%",
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "white",
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    marginBottom: 15,
-    shadowColor: "#9e8efc",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    height: 50,
-    color: "#333",
-    fontSize: 16,
-  },
-  eyeIcon: {
-    padding: 10,
-  },
-  signUpButton: {
-    borderRadius: 10,
-    overflow: "hidden",
-    marginBottom: 20,
-  },
-  gradientButton: {
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  signUpButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#ddd",
-  },
-  dividerText: {
-    marginHorizontal: 10,
-    color: "#999",
-    fontSize: 14,
-  },
-  loginButton: {
-    paddingVertical: 15,
-    alignItems: "center",
-  },
-  loginButtonText: {
-    color: "#9e8efc",
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  container: { flex: 1 },
+  scroll: { flexGrow: 1, justifyContent: "center", padding: 28 },
+  logoBox: { alignItems: "center", marginBottom: 24 },
+  appName: { fontSize: 22, fontWeight: "bold", color: colors.primary, marginTop: 8 },
+  consent: { fontSize: 13, color: colors.text, lineHeight: 19 },
+  link: { color: colors.primary, fontWeight: "600" },
+  bottomLink: { alignItems: "center", paddingVertical: 18 },
 });

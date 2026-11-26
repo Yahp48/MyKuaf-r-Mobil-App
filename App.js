@@ -1,83 +1,110 @@
 import React from "react";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import { AppProvider } from "./context/AppContext";
+import * as Linking from "expo-linking";
+import { AppProvider, useApp } from "./context/AppContext";
+import { EmptyState, Loading } from "./components/ui";
 
-// Ekranlar
 import SignInScreen from "./screens/SignInScreen";
 import SignUpScreen from "./screens/SignUpScreen";
+import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
 import HomeScreen from "./screens/HomeScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import AccountSettingsScreen from "./screens/AccountSettingsScreen";
 import WalletScreen from "./screens/WalletScreen";
+import LoadMoneyScreen from "./screens/LoadMoneyScreen";
 import NotificationScreen from "./screens/NotificationScreen";
 import AppointmentsScreen from "./screens/AppointmentsScreen";
-import LoadMoneyScreen from "./screens/LoadMoneyScreen";
 import CalendarScreen from "./screens/CalendarScreen";
-import PaymentScreen from "./screens/PaymentScreen";
-import PaymentVerificationScreen from "./screens/PaymentVerificationScreen";
-import BankTransferScreen from "./screens/BankTransferScreen";
-import CreditCardTopupScreen from "./screens/CreditCardTopupScreen";
-import AddNewCardScreen from "./screens/AddNewCardScreen";
 import ShopScreen from "./screens/ShopScreen";
 import ProductDetailScreen from "./screens/ProductDetailScreen";
 import ShoppingCartScreen from "./screens/ShoppingCartScreen";
-
-// Yeni eklenenler
-import AboutScreen from "./screens/AboutScreen";
-import FavoritesScreen from "./screens/FavoritesScreen";
-import FeedbackScreen from "./screens/FeedbackScreen";
-import LanguageScreen from "./screens/LanguageScreen";
-import OrderDetailScreen from "./screens/OrderDetailScreen";
+import CheckoutScreen from "./screens/CheckoutScreen";
+import AddressFormScreen from "./screens/AddressFormScreen";
 import OrderScreen from "./screens/OrderScreen";
-import PrivacyScreen from "./screens/PrivacyScreen";
-import ReviewsScreen from "./screens/ReviewvsScreen"
+import OrderDetailScreen from "./screens/OrderDetailScreen";
+import FavoritesScreen from "./screens/FavoritesScreen";
+import ReviewsScreen from "./screens/ReviewsScreen";
+import FeedbackScreen from "./screens/FeedbackScreen";
 import SupportScreen from "./screens/SupportScreen";
+import PrivacyScreen from "./screens/PrivacyScreen";
+import AboutScreen from "./screens/AboutScreen";
 
 const Stack = createStackNavigator();
 
-function AppNavigator() {
+// Ödeme sayfası "mykuafor://payment-result" ile uygulamaya döner (bkz. services/checkout.js).
+const linking = {
+  prefixes: [Linking.createURL("/"), "mykuafor://"],
+  config: { screens: {} },
+};
+
+function AuthStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="SignIn" component={SignInScreen} />
+      <Stack.Screen name="SignUp" component={SignUpScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="Privacy" component={PrivacyScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function MainStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Home">
-     {/* <Stack.Screen name="SignIn" component={SignInScreen} />
-      <Stack.Screen name="SignUp" component={SignUpScreen} />  */}
       <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
-      <Stack.Screen name="WalletScreen" component={WalletScreen} />
-      <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="Appointments" component={AppointmentsScreen} />
-      <Stack.Screen name="LoadMoney" component={LoadMoneyScreen} />
       <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
-      <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
-      <Stack.Screen name="PaymentVerificationScreen" component={PaymentVerificationScreen} />
-      <Stack.Screen name="BankTransferScreen" component={BankTransferScreen} />
-      <Stack.Screen name="CreditCardTopupScreen" component={CreditCardTopupScreen} />
-      <Stack.Screen name="AddNewCardScreen" component={AddNewCardScreen} />
       <Stack.Screen name="Shop" component={ShopScreen} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <Stack.Screen name="ShoppingCart" component={ShoppingCartScreen} />
-
-      {/* Eklenen sayfalar */}
-      <Stack.Screen name="About" component={AboutScreen} />
-      <Stack.Screen name="Favorites" component={FavoritesScreen} />
-      <Stack.Screen name="Feedback" component={FeedbackScreen} />
-      <Stack.Screen name="Language" component={LanguageScreen} />
-      <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} />
+      <Stack.Screen name="AddressForm" component={AddressFormScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
       <Stack.Screen name="Order" component={OrderScreen} />
-      <Stack.Screen name="Privacy" component={PrivacyScreen} />
+      <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+      <Stack.Screen name="Favorites" component={FavoritesScreen} />
+      <Stack.Screen name="WalletScreen" component={WalletScreen} />
+      <Stack.Screen name="LoadMoney" component={LoadMoneyScreen} />
+      <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="Reviews" component={ReviewsScreen} />
+      <Stack.Screen name="Feedback" component={FeedbackScreen} />
       <Stack.Screen name="Support" component={SupportScreen} />
+      <Stack.Screen name="Privacy" component={PrivacyScreen} />
+      <Stack.Screen name="About" component={AboutScreen} />
     </Stack.Navigator>
+  );
+}
+
+function Root() {
+  const { status, actions } = useApp();
+  if (status === "loading") return <Loading />;
+  if (status === "offline") {
+    return (
+      <EmptyState
+        icon="cloud-off"
+        title="Sunucuya bağlanılamadı"
+        message="İnternet bağlantınızı kontrol edip tekrar deneyin."
+        actionTitle="Tekrar dene"
+        onAction={actions.bootstrap}
+      />
+    );
+  }
+  return (
+    <NavigationContainer linking={linking}>{status === "signedIn" ? <MainStack /> : <AuthStack />}</NavigationContainer>
   );
 }
 
 export default function App() {
   return (
-    <AppProvider>
-      <NavigationContainer>
-        <AppNavigator />
-      </NavigationContainer>
-    </AppProvider>
+    <SafeAreaProvider>
+      <AppProvider>
+        <StatusBar style="light" />
+        <Root />
+      </AppProvider>
+    </SafeAreaProvider>
   );
 }

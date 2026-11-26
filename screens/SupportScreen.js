@@ -4,11 +4,11 @@ import { AntDesign as Icon } from '@expo/vector-icons';
 import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
 import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
+import { supportApi } from '../services/api';
 
 export default function SupportScreen({ navigation }) {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [message, setMessage] = useState("");
-  const [email, setEmail] = useState("");
   const { state } = useApp();
     const cartCount = state.cartItems.length;
 
@@ -107,7 +107,7 @@ export default function SupportScreen({ navigation }) {
     }
   ];
 
-  const sendSupportMessage = () => {
+  const sendSupportMessage = async () => {
     if (!selectedCategory) {
       Alert.alert("Uyarı", "Lütfen bir kategori seçin.");
       return;
@@ -116,27 +116,30 @@ export default function SupportScreen({ navigation }) {
       Alert.alert("Uyarı", "Lütfen mesajınızı yazın.");
       return;
     }
-    if (!email.trim()) {
-      Alert.alert("Uyarı", "Lütfen e-posta adresinizi girin.");
+
+    try {
+      const subject = supportCategories.find((c) => c.id === selectedCategory)?.title ?? "Genel";
+      await supportApi.createTicket({
+        type: selectedCategory === "technical" ? "BUG" : "SUPPORT",
+        subject,
+        message: message.trim(),
+      });
+    } catch (e) {
+      Alert.alert("Gönderilemedi", e.message);
       return;
     }
-
-    Alert.alert(
-      "Mesaj Gönderildi",
-      "Destek talebiniz alındı. En kısa sürede size dönüş yapacağız.",
-      [
-        {
-          text: "Tamam",
-          onPress: () => {
-            setMessage("");
-            setEmail("");
-            setSelectedCategory(null);
-            navigation.goBack();
-          }
-        }
-      ]
-    );
+    Alert.alert("Mesaj Gönderildi", "Destek talebiniz alındı. Size hesabınızdaki e-posta adresinden dönüş yapacağız.", [
+      {
+        text: "Tamam",
+        onPress: () => {
+          setMessage("");
+          setSelectedCategory(null);
+          navigation.goBack();
+        },
+      },
+    ]);
   };
+
 
   const CategoryCard = ({ category }) => (
     <TouchableOpacity
@@ -202,7 +205,7 @@ export default function SupportScreen({ navigation }) {
       
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrowleft" size={30} color="#fff" />
+          <Icon name="arrow-left" size={30} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.logo}>MÜŞTERİ HİZMETLERİ</Text>
         <TouchableOpacity onPress={() => navigation.navigate("Notifications")}>
@@ -231,16 +234,6 @@ export default function SupportScreen({ navigation }) {
               <CategoryCard key={category.id} category={category} />
             ))}
           </View>
-
-          <Text style={styles.formLabel}>E-posta Adresiniz</Text>
-          <TextInput
-            style={styles.textInput}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="E-posta adresinizi girin"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
 
           <Text style={styles.formLabel}>Mesajınız</Text>
           <TextInput

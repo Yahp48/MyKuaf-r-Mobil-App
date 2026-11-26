@@ -1,205 +1,158 @@
-import React, { useEffect, useState } from "react";
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Platform, StatusBar } from "react-native";
-import { MaterialIcons as MaterialIcon } from '@expo/vector-icons';
-import { AntDesign as Icon } from '@expo/vector-icons';
-import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
-import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
-import { useApp } from '../context/AppContext';
+import React, { useCallback, useState } from "react";
+import { Alert, FlatList, Linking, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
+import { appointmentApi } from "../services/api";
+import AppHeader from "../components/AppHeader";
+import BottomNav from "../components/BottomNav";
+import { Button, EmptyState, ErrorState, Loading, StatusPill } from "../components/ui";
+import { useRemote } from "../components/useRemote";
+import { APPOINTMENT_STATUS, colors, formatDate, formatTL } from "../components/theme";
 
 export default function AppointmentsScreen({ navigation }) {
-  const [appointments, setAppointments] = useState([]);
-  const { state } = useApp();
-const cartCount = state.cartItems.length;
+  const [scope, setScope] = useState("upcoming");
+  const loader = useCallback(() => appointmentApi.list(scope), [scope]);
+  const { data, setData, error, loading, refreshing, reload, refresh } = useRemote(loader);
+  const [cancellingId, setCancellingId] = useState(null);
 
-  useEffect(() => {
-    fetch("http://192.168.187.117:5000/api/appointments")
-      .then((res) => res.json())
-      .then((data) => setAppointments(data))
-      .catch((err) => console.error("Randevu verisi alınamadı:", err));
-  }, []);
+  const cancel = (a) =>
+    Alert.alert("Randevuyu iptal et", `${a.salon.name} · ${a.date} ${a.time} randevunuz iptal edilsin mi?`, [
+      { text: "Vazgeç", style: "cancel" },
+      {
+        text: "İptal et",
+        style: "destructive",
+        onPress: async () => {
+          setCancellingId(a.id);
+          try {
+            const { appointment } = await appointmentApi.cancel(a.id);
+            setData((d) => ({
+              ...d,
+              items:
+                scope === "upcoming"
+                  ? d.items.filter((x) => x.id !== a.id)
+                  : d.items.map((x) => (x.id === a.id ? appointment : x)),
+            }));
+          } catch (e) {
+            Alert.alert("İptal edilemedi", e.message);
+          } finally {
+            setCancellingId(null);
+          }
+        },
+      },
+    ]);
+
+  const renderItem = ({ item: a }) => {
+    const status = APPOINTMENT_STATUS[a.status] ?? { label: a.status, color: colors.muted };
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardTop}>
+          <Text style={styles.salon}>{a.salon.name}</Text>
+          <StatusPill label={status.label} color={status.color} />
+        </View>
+        <Text style={styles.when}>
+          {formatDate(`${a.date}T12:00:00`)} · {a.time}
+        </Text>
+        <Text style={styles.meta}>Personel: {a.staff.name}</Text>
+        <Text style={styles.meta}>{a.services.map((s) => s.name).join(", ")}</Text>
+        <Text style={styles.meta}>
+          Tutar: <Text style={styles.bold}>{formatTL(a.total)}</Text> (salonda ödenir) · Kod: {a.code}
+        </Text>
+        <View style={styles.actions}>
+          {a.salon.phone ? (
+            <TouchableOpacity style={styles.link} onPress={() => Linking.openURL(`tel:${a.salon.phone}`)}>
+              <MaterialIcons name="call" size={18} color={colors.primary} />
+              <Text style={styles.linkText}>Salonu ara</Text>
+            </TouchableOpacity>
+          ) : null}
+          {a.canCancel ? (
+            <Button
+              title="İptal et"
+              variant="outline"
+              onPress={() => cancel(a)}
+              loading={cancellingId === a.id}
+              style={styles.cancelBtn}
+            />
+          ) : null}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate("Home")}> 
-          <Icon name="home" size={30} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.logo}>WOMAN HAIR DESIGN</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Notifications")}> 
-          <FontAwesome6 name="bell" size={30} color="#fff" />
-        </TouchableOpacity>
+      <AppHeader />
+      <View style={styles.tabs}>
+        {[
+          ["upcoming", "Yaklaşan"],
+          ["past", "Geçmiş"],
+        ].map(([key, label]) => (
+          <TouchableOpacity
+            key={key}
+            style={[styles.tab, scope === key && styles.tabOn]}
+            onPress={() => setScope(key)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: scope === key }}
+          >
+            <Text style={[styles.tabText, scope === key && styles.tabTextOn]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      <Text style={styles.title}>Randevularım</Text>
-      <ScrollView style={styles.scrollArea}>
-        {appointments.length === 0 ? (
-          <Text style={styles.message}>Henüz randevunuz yok</Text>
-        ) : (
-          appointments.map((appointment) => (
-            <View key={appointment._id} style={styles.card}>
-              <Text style={styles.cardText}>Ad: {appointment.ad}</Text>
-              <Text style={styles.cardText}>Telefon: {appointment.telefon}</Text>
-              <Text style={styles.cardText}>Tarih: {appointment.tarih}</Text>
-              <Text style={styles.cardText}>Saat: {appointment.saat}</Text>
-              <Text style={styles.cardText}>Personel: {appointment.personel}</Text>
-              <Text style={styles.cardText}>Kuaför: {appointment.kuafor}</Text>
-              <Text style={styles.cardText}>Şehir: {appointment.sehir}</Text>
-              <Text style={styles.cardText}>Durum: {appointment.status}</Text>
-            </View>
-          ))
-        )}
-      </ScrollView>
-
-      <View style={styles.bottomNav}>
-        <TouchableOpacity onPress={() => navigation.navigate("Appointments")} style={styles.navButton}>
-          <View style={styles.activeNavItem}>
-            <FontAwesome5 name="calendar-alt" size={24} color="#e00061" />
-            <Text style={[styles.navText, styles.activeNavText]}>Randevular</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
-          <FontAwesome5 name="map-marked-alt" size={24} color="#fff" />
-          <Text style={styles.navText}>Harita</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate("Shop")} style={styles.navButton}>
-          <FontAwesome5 name="shopping-bag" size={28} color="#fff" />
-          {cartCount > 0 && (
-            <View style={styles.navCartBadge}>
-              <Text style={styles.navCartBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text>
-            </View>
-          )}
-          <Text style={styles.navText}>Mağaza</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate("Profile")} style={styles.navButton}>
-          <FontAwesome6 name="user" size={24} color="#fff" />
-          <Text style={styles.navText}>Profil</Text>
-        </TouchableOpacity>
-      </View>
+      {loading && !data ? (
+        <Loading />
+      ) : error && !data ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : (
+        <FlatList
+          data={data?.items ?? []}
+          keyExtractor={(a) => a.id}
+          renderItem={renderItem}
+          contentContainerStyle={{ padding: 16, flexGrow: 1 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
+          ListEmptyComponent={
+            <EmptyState
+              icon="event-available"
+              title={scope === "upcoming" ? "Yaklaşan randevunuz yok" : "Geçmiş randevunuz yok"}
+              message="Haritadan bir salon seçip hemen randevu alabilirsiniz."
+              actionTitle="Salon bul"
+              onAction={() => navigation.navigate("Home")}
+            />
+          }
+        />
+      )}
+      <BottomNav active="Appointments" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
+  container: { flex: 1, backgroundColor: colors.background },
+  tabs: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#FF4896",
-    paddingTop: Platform.OS === "ios" ? 20 : StatusBar.currentHeight - 35,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    position: "absolute",
-    width: "100%",
-    top: 0,
-    zIndex: 2,
+    margin: 16,
+    marginBottom: 0,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 4,
   },
-  logo: {
-    color: "white",
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FF4896",
-    marginTop: 90,
-    marginLeft: 30,
-  },
-  scrollArea: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-  },
-  message: {
-    fontSize: 16,
-    color: "#888",
-    marginTop: 100,
-    textAlign: "center",
-  },
+  tab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 10 },
+  tabOn: { backgroundColor: "#fff", elevation: 2, shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 4 },
+  tabText: { color: colors.muted, fontWeight: "600" },
+  tabTextOn: { color: colors.primary },
   card: {
-    backgroundColor: "#f9f9f9",
-    padding: 15,
-    marginVertical: 10,
-    borderRadius: 10,
-    elevation: 2,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  cardText: {
-    fontSize: 14,
-    color: "#333",
-    marginBottom: 5,
-  },
-  bottomNav: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    backgroundColor: "#FF4896",
-    height: 65,
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#FF4896',
-    height: 70,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    paddingHorizontal: 10,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  navButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingVertical: 8,
-  },
-  navText: {
-    color: '#fff',
-    fontSize: 11,
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  activeNavItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  activeNavText: {
-    color: '#e00061',
-    fontWeight: 'bold',
-  },
-  navCartBadge: {
-    position: 'absolute',
-    top: -4,
-    right: 8,
-    backgroundColor: '#e00061',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FF4896',
-  },
-  navCartBadgeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
+  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
+  salon: { fontSize: 16, fontWeight: "bold", color: colors.text, flex: 1, marginRight: 8 },
+  when: { fontSize: 15, color: colors.primary, fontWeight: "600", marginBottom: 6 },
+  meta: { fontSize: 13, color: colors.muted, marginBottom: 3 },
+  bold: { fontWeight: "bold", color: colors.text },
+  actions: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10 },
+  link: { flexDirection: "row", alignItems: "center" },
+  linkText: { color: colors.primary, marginLeft: 4, fontWeight: "600" },
+  cancelBtn: { paddingVertical: 8, minHeight: 38, paddingHorizontal: 18 },
 });

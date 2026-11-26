@@ -1,142 +1,114 @@
-import React from "react";
-import { View, StyleSheet, Text, TextInput, TouchableOpacity, Platform, StatusBar, ScrollView } from "react-native";
-import { MaterialIcons as MaterialIcon } from '@expo/vector-icons';
-import { AntDesign as Icon } from '@expo/vector-icons';
-import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
-import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
-import { useApp } from '../context/AppContext';
+import React, { useCallback } from "react";
+import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
+import { notificationApi } from "../services/api";
+import { useApp } from "../context/AppContext";
+import AppHeader from "../components/AppHeader";
+import BottomNav from "../components/BottomNav";
+import { EmptyState, ErrorState, Loading } from "../components/ui";
+import { useRemote } from "../components/useRemote";
+import { colors, formatDate } from "../components/theme";
+
+const ICONS = {
+  appointment_confirmed: "event-available",
+  appointment_cancelled: "event-busy",
+  order_paid: "shopping-bag",
+  order_status: "local-shipping",
+  wallet_topup: "account-balance-wallet",
+};
 
 export default function NotificationScreen({ navigation }) {
-  const { state } = useApp();
-    const cartCount = state.cartItems.length;
+  const { actions } = useApp();
+  // setUnreadNotifications bir useState ayarlayıcısı: kimliği sabit, döngüye girmez.
+  const setUnread = actions.setUnreadNotifications;
+  const loader = useCallback(async () => {
+    const res = await notificationApi.list();
+    setUnread(res.unreadCount);
+    return res;
+  }, [setUnread]);
+  const { data, setData, error, loading, refreshing, reload, refresh } = useRemote(loader);
+
+  const markRead = (n) => {
+    if (n.read) return;
+    setData((d) => ({
+      ...d,
+      items: d.items.map((x) => (x.id === n.id ? { ...x, read: true } : x)),
+      unreadCount: d.unreadCount - 1,
+    }));
+    actions.setUnreadNotifications((c) => Math.max(0, c - 1));
+    notificationApi.markRead(n.id).catch(() => {});
+  };
+
+  const open = (n) => {
+    markRead(n);
+    if (n.data?.appointmentId) navigation.navigate("Appointments");
+    else if (n.data?.orderId) navigation.navigate("OrderDetail", { orderId: n.data.orderId });
+    else if (n.type === "wallet_topup") navigation.navigate("WalletScreen");
+  };
+
+  const markAll = async () => {
+    try {
+      await notificationApi.markAllRead();
+      setData((d) => ({ ...d, items: d.items.map((x) => ({ ...x, read: true })), unreadCount: 0 }));
+      actions.setUnreadNotifications(0);
+    } catch (e) {
+      Alert.alert("Hata", e.message);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-            <Icon name="home" size={30} color="#fff" />
-        </TouchableOpacity>
-            <Text style={styles.logo}>WOMAN HAIR DESIGN</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Notifications")}>
-            <FontAwesome6 name="bell" size={30} color="#e00061" />
-        </TouchableOpacity>
-      </View>
-      <Text style={styles.title}>Bildirimlerim</Text>
-      <Text style={styles.message}>Henüz bildiriminiz yok</Text>
-
-
-
-      <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Appointments")}
-          style={styles.navButton}
-        >
-          <FontAwesome5 name="calendar-alt" size={24} color="#fff" />
-          <Text style={styles.navText}>Randevular</Text>
-        </TouchableOpacity>
-      
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Home")}
-          style={styles.navButton}
-        >
-          <FontAwesome5 name="map-marked-alt" size={24} color="#fff" />
-          <Text style={styles.navText}>Harita</Text>
-        </TouchableOpacity>
-      
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Shop")}
-          style={styles.navButton}
-        >
-          <FontAwesome5 name="shopping-bag" size={28} color="#fff" />
-          {cartCount > 0 && (
-            <View style={styles.navCartBadge}>
-              <Text style={styles.navCartBadgeText}>
-                {cartCount > 99 ? '99+' : cartCount}
-              </Text>
-            </View>
+      <AppHeader title="Bildirimler" back />
+      {loading && !data ? (
+        <Loading />
+      ) : error && !data ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : (
+        <FlatList
+          data={data.items}
+          keyExtractor={(n) => n.id}
+          contentContainerStyle={{ flexGrow: 1 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
+          ListHeaderComponent={
+            data.unreadCount > 0 ? (
+              <TouchableOpacity style={styles.markAll} onPress={markAll}>
+                <Text style={styles.markAllText}>Tümünü okundu işaretle</Text>
+              </TouchableOpacity>
+            ) : null
+          }
+          renderItem={({ item: n }) => (
+            <TouchableOpacity style={[styles.item, !n.read && styles.unread]} onPress={() => open(n)}>
+              <MaterialIcons name={ICONS[n.type] ?? "notifications"} size={26} color={colors.primary} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={[styles.title, !n.read && { fontWeight: "bold" }]}>{n.title}</Text>
+                <Text style={styles.body}>{n.body}</Text>
+                <Text style={styles.date}>{formatDate(n.createdAt, true)}</Text>
+              </View>
+              {!n.read && <View style={styles.dot} />}
+            </TouchableOpacity>
           )}
-          <Text style={styles.navText}>Mağaza</Text>
-        </TouchableOpacity>
-      
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Profile")}
-          style={styles.navButton}
-        >
-          <FontAwesome6 name="user" size={24} color="#fff" />
-          <Text style={styles.navText}>Profil</Text>
-        </TouchableOpacity>
-      </View>
+          ListEmptyComponent={<EmptyState icon="notifications-none" title="Henüz bildiriminiz yok" />}
+        />
+      )}
+      <BottomNav />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-      flex: 1,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      backgroundColor: "#FF4896",
-      paddingTop: Platform.OS === "ios" ? 20 : StatusBar.currentHeight - 35,
-      paddingHorizontal: 20,
-      paddingBottom: 10,
-      position: "absolute",
-      width: "100%",
-      top: 0,
-      zIndex: 2,
-    },
-    logo: {
-      color: "white",
-      fontSize: 20,
-      fontWeight: "bold",
-    },
-    title: { fontSize: 24, fontWeight: "bold", color: "#FF4896", marginTop:90, marginLeft:30},
-    message: { fontSize: 16, color: "#888", marginTop: 100, marginLeft:110 },
-    bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#FF4896',
-    height: 70,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    paddingHorizontal: 10,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+  container: { flex: 1, backgroundColor: colors.background },
+  markAll: { alignSelf: "flex-end", padding: 14 },
+  markAllText: { color: colors.primary, fontWeight: "600" },
+  item: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  navButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingVertical: 8,
-  },
-  navText: {
-    color: '#fff',
-    fontSize: 11,
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  navCartBadge: {
-    position: 'absolute',
-    top: -4,
-    right: 8,
-    backgroundColor: '#e00061',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FF4896',
-  },
-  navCartBadgeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
+  unread: { backgroundColor: "#fff5fa" },
+  title: { fontSize: 15, color: colors.text },
+  body: { fontSize: 14, color: colors.muted, marginTop: 2, lineHeight: 19 },
+  date: { fontSize: 12, color: "#aaa", marginTop: 4 },
+  dot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.primary, marginTop: 6 },
 });

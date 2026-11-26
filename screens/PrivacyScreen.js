@@ -78,7 +78,7 @@ export default function PrivacyScreen({ navigation }) {
      
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrowleft" size={30} color="#fff" />
+          <Icon name="arrow-left" size={30} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.logo}>GİZLİLİK</Text>
         <TouchableOpacity onPress={() => navigation.navigate("Notifications")}>

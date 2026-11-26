@@ -1,173 +1,160 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { CommonActions } from "@react-navigation/native"; 
-import { AntDesign as Icon } from '@expo/vector-icons';
-import { MaterialIcons as MaterialIcon } from '@expo/vector-icons';
-import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
-import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
+import React, { useState } from "react";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useApp } from "../context/AppContext";
+import { userApi } from "../services/api";
+import AppHeader from "../components/AppHeader";
+import { Button, Field } from "../components/ui";
+import { colors } from "../components/theme";
 
-export default function AccountSettings({ navigation }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+export default function AccountSettingsScreen({ navigation }) {
+  const { user, actions } = useApp();
+  const [name, setName] = useState(user?.name ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
+  const [savingProfile, setSavingProfile] = useState(false);
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
 
-  
-  useEffect(() => {
-    const getUserInfo = async () => {
-      try {
-        const userData = await AsyncStorage.getItem("user");
-        if (userData) {
-          const user = JSON.parse(userData);
-          setName(user.name);
-          setEmail(user.email);
-        }
-      } catch (error) {
-        console.error("Kullanıcı bilgileri alınamadı:", error);
-      }
-    };
-    getUserInfo();
-  }, []);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
- 
-  const handleChangePassword = async () => {
-    if (!currentPassword || !newPassword) {
-      Alert.alert("Hata", "Lütfen mevcut ve yeni şifrenizi girin!");
-      return;
-    }
-
+  const saveProfile = async () => {
+    setSavingProfile(true);
     try {
-      const token = await AsyncStorage.getItem("token");
-      const response = await fetch("http://192.168.73.116:5000/api/users/change-password", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          email,
-          currentPassword,
-          newPassword,
-        }),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        Alert.alert("Başarılı", "Şifreniz başarıyla güncellendi.");
-        setCurrentPassword("");
-        setNewPassword("");
-      } else {
-        Alert.alert("Hata", data.message || "Şifre değiştirilemedi!");
-      }
-    } catch (error) {
-      console.error("Şifre değiştirme hatası:", error);
-      Alert.alert("Hata", "Sunucuya bağlanırken bir hata oluştu.");
+      const { user: updated } = await userApi.update({ name: name.trim(), phone: phone.trim() ? phone : null });
+      actions.setUser(updated);
+      Alert.alert("Kaydedildi", "Profil bilgileriniz güncellendi.");
+    } catch (e) {
+      Alert.alert("Hata", e.message);
+    } finally {
+      setSavingProfile(false);
     }
   };
 
-  
-  const handleLogout = async () => {
-    await AsyncStorage.removeItem("token"); 
-    await AsyncStorage.removeItem("user");  
+  const changePassword = async () => {
+    if (!currentPassword || !newPassword) {
+      Alert.alert("Eksik bilgi", "Mevcut ve yeni şifrenizi girin.");
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      const res = await userApi.changePassword(currentPassword, newPassword);
+      setCurrentPassword("");
+      setNewPassword("");
+      Alert.alert("Şifre güncellendi", res.message);
+    } catch (e) {
+      Alert.alert("Hata", e.message);
+    } finally {
+      setSavingPassword(false);
+    }
+  };
 
-    
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: "SignIn" }],
-      })
+  const confirmLogout = () =>
+    Alert.alert("Çıkış yap", "Hesabınızdan çıkış yapmak istiyor musunuz?", [
+      { text: "Vazgeç", style: "cancel" },
+      { text: "Çıkış yap", style: "destructive", onPress: () => actions.signOut() },
+    ]);
+
+  // Hesap silme: App Store ve Google Play şartı. Geri alınamaz, iki kez onay alınır.
+  const confirmDelete = () => {
+    if (!deletePassword) {
+      Alert.alert("Şifre gerekli", "Hesabınızı silmek için şifrenizi girin.");
+      return;
+    }
+    Alert.alert(
+      "Hesabınız kalıcı olarak silinecek",
+      "Profiliniz, adresleriniz, favorileriniz, sepetiniz ve bildirimleriniz silinir; gelecekteki randevularınız iptal edilir. " +
+        "Yasal olarak saklanması gereken fatura/sipariş kayıtları kimliğinizden ayrılarak tutulur. Bu işlem geri alınamaz.",
+      [
+        { text: "Vazgeç", style: "cancel" },
+        {
+          text: "Hesabımı sil",
+          style: "destructive",
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await actions.deleteAccount(deletePassword);
+              Alert.alert("Hesabınız silindi", "MyKuaför'ü kullandığınız için teşekkür ederiz.");
+            } catch (e) {
+              setDeleting(false);
+              Alert.alert("Hesap silinemedi", e.message);
+            }
+          },
+        },
+      ],
     );
   };
 
   return (
-    <View style={styles.container}>
-      
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-          <Icon name="home" size={35} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.logo}>WOMAN HAIR DESIGN</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Notifications")}>
-          <MaterialIcon name="notifications-none" size={35} color="#fff" />
-        </TouchableOpacity>
-      </View>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.container}>
+      <AppHeader title="Hesap Ayarları" back />
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <Text style={styles.section}>Profil</Text>
+        <Field label="E-posta" value={user?.email ?? ""} editable={false} />
+        <Field label="Ad Soyad" value={name} onChangeText={setName} autoComplete="name" />
+        <Field label="Cep telefonu" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" />
+        <Button title="Bilgileri Kaydet" onPress={saveProfile} loading={savingProfile} />
 
-      
-      <View style={styles.form}>
-        <Text style={styles.label}>Ad Soyad</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} editable={false} />
-
-        <Text style={styles.label}>E-Posta</Text>
-        <TextInput style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" editable={false} />
-
-       
-        <Text style={styles.label}>Mevcut Şifre</Text>
-        <TextInput
-          style={styles.input}
+        <Text style={styles.section}>Şifre değiştir</Text>
+        <Field
+          label="Mevcut şifre"
           value={currentPassword}
           onChangeText={setCurrentPassword}
           secureTextEntry
-          placeholder="Mevcut şifrenizi girin"
+          autoComplete="current-password"
         />
-
-        <Text style={styles.label}>Yeni Şifre</Text>
-        <TextInput
-          style={styles.input}
+        <Field
+          label="Yeni şifre"
           value={newPassword}
           onChangeText={setNewPassword}
           secureTextEntry
-          placeholder="Yeni şifrenizi girin"
+          autoComplete="new-password"
+          placeholder="En az 8 karakter, harf ve rakam"
         />
+        <Button title="Şifreyi Güncelle" onPress={changePassword} loading={savingPassword} />
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleChangePassword}>
-          <Text style={styles.saveButtonText}>Şifreyi Güncelle</Text>
-        </TouchableOpacity>
+        <Button title="Çıkış Yap" variant="outline" onPress={confirmLogout} style={{ marginTop: 28 }} />
 
-        
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Çıkış Yap</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        <View style={styles.dangerZone}>
+          <Text style={styles.dangerTitle}>Hesabı sil</Text>
+          <Text style={styles.dangerText}>
+            Hesabınızı ve kişisel verilerinizi kalıcı olarak silebilirsiniz. Cüzdanınızda bakiye varsa önce iade için
+            Destek'e yazın.
+          </Text>
+          <Field
+            placeholder="Onay için şifreniz"
+            value={deletePassword}
+            onChangeText={setDeletePassword}
+            secureTextEntry
+            autoComplete="current-password"
+            accessibilityLabel="Hesap silme onayı için şifre"
+          />
+          <Button title="Hesabımı Kalıcı Olarak Sil" variant="danger" onPress={confirmDelete} loading={deleting} />
+          <Button
+            title="Destek'e yaz"
+            variant="outline"
+            onPress={() => navigation.navigate("Support")}
+            style={{ marginTop: 10 }}
+          />
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#FF4896",
-    paddingTop: 15,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-  },
-  logo: { color: "white", fontSize: 20, fontWeight: "bold" },
-  form: { padding: 20 },
-  label: { fontSize: 16, color: "#FF4896", fontWeight: "bold", marginBottom: 5 },
-  input: {
+  container: { flex: 1, backgroundColor: colors.background },
+  scroll: { padding: 20, paddingBottom: 48 },
+  section: { fontSize: 17, fontWeight: "bold", color: colors.primary, marginTop: 20, marginBottom: 12 },
+  dangerZone: {
+    marginTop: 36,
+    padding: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#FF4896",
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 15,
+    borderColor: "#f5c2c7",
+    backgroundColor: "#fff5f5",
   },
-  saveButton: {
-    backgroundColor: "#FF4896",
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-  logoutButton: {
-    backgroundColor: "#d9534f",
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  logoutButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  dangerTitle: { fontSize: 16, fontWeight: "bold", color: colors.danger, marginBottom: 6 },
+  dangerText: { fontSize: 13, color: colors.text, marginBottom: 12, lineHeight: 19 },
 });
-

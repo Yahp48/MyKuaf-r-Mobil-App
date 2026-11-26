@@ -1,602 +1,372 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  Modal,
+  Platform,
+  ScrollView,
+  Share,
+  StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
-  StatusBar,
-  ScrollView,
-  Platform,
-  Alert,
-  Modal,
-  Image,
-  Dimensions,
+  View,
 } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
-import { AntDesign as Icon } from '@expo/vector-icons';
-import { MaterialIcons as MaterialIcon } from '@expo/vector-icons';
-import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
-import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
 import * as Location from "expo-location";
-const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 import polyline from "@mapbox/polyline";
-import { useApp } from '../context/AppContext';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AntDesign, FontAwesome, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
+import AppHeader from "../components/AppHeader";
+import BottomNav from "../components/BottomNav";
+import { colors } from "../components/theme";
+import { favoriteApi, mapsApi, salonApi } from "../services/api";
 
-const { width, height } = Dimensions.get('window');
+// Konum izni verilmezse Kırşehir merkezi gösterilir.
+const DEFAULT_REGION = { latitude: 39.1451, longitude: 34.1605, latitudeDelta: 0.05, longitudeDelta: 0.05 };
+const PROMO_SEEN_KEY = "mykuafor.promoSeen.v1";
 
-
-function HomeScreen({ navigation }) {
-  const [searchText, setSearchText] = useState("");
-  const [filteredSalons, setFilteredSalons] = useState([]);
-  const [selectedSalon, setSelectedSalon] = useState(null);
+export default function HomeScreen({ navigation }) {
+  const mapRef = useRef(null);
+  const [salons, setSalons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
-  const [routeCoords, setRouteCoords] = useState([]);
-  const [showAdModal, setShowAdModal] = useState(false);
-  const { state } = useApp();
-  const cartCount = state.cartItems.length;
-  
+  const [route, setRoute] = useState(null);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [showPromo, setShowPromo] = useState(false);
+
+  const loadSalons = useCallback(async (coords) => {
+    try {
+      const data = await salonApi.list({ lat: coords?.latitude, lng: coords?.longitude, pageSize: 50 });
+      setSalons(data.items);
+    } catch (e) {
+      Alert.alert("Salonlar yüklenemedi", e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Konum İzni Gerekli", "Bu özelliği kullanmak için konum izni vermeniz gerekiyor.");
+        loadSalons(null);
         return;
       }
-
-      let location = await Location.getCurrentPositionAsync({});
-      setUserLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
+      try {
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        setUserLocation(coords);
+        loadSalons(coords);
+      } catch {
+        loadSalons(null);
+      }
     })();
 
-    
-    const timer = setTimeout(() => {
-      setShowAdModal(true);
-    }, 2000);
+    // Mağaza tanıtımı yalnızca bir kez gösterilir.
+    AsyncStorage.getItem(PROMO_SEEN_KEY)
+      .then((seen) => !seen && setTimeout(() => setShowPromo(true), 1500))
+      .catch(() => {});
+  }, [loadSalons]);
 
-    return () => clearTimeout(timer);
-  }, []);
-
-  const salons = [
-    { id: 1, kuafor: "Zeynep Bayan Kuaför", rating: 4.0, openTime: "Açık", closeTime: "20:00", latitude: 39.150, longitude: 34.160, clock: 'Açık', sehir: 'Ahievran, Aşk Paşa Blv. No:29, 40100 Kırşehir Merkez/Kırşehir', website: 'zeynep.kuafor.com.tr' },
-    { id: 2, kuafor: "Kentpark Kuaför", rating: 4.5, openTime: "Açık", closeTime: "19:00", latitude: 39.148, longitude: 34.165, clock: 'Açık', sehir: 'Kentpark, Kırşehir Merkez/Kırşehir', website: 'kentpark.kuafor.com.tr' },
-    { id: 3, kuafor: "Atatürk Bulvarı Kuaför", rating: 4.2, openTime: "Açık", closeTime: "18:00", latitude: 39.142, longitude: 34.158, clock: 'Kapalı', sehir: 'Atatürk Bulvarı, Kırşehir Merkez/Kırşehir', website: 'atatürk.kuafor.com.tr' },
-    { id: 4, kuafor: "Masal Parkı Kuaför", rating: 3.9, openTime: "Kapalı", closeTime: "17:00", latitude: 39.145, longitude: 34.168, clock: 'Kapalı', sehir: 'Masal Parkı, Kırşehir Merkez/Kırşehir', website: 'masalpark.kuafor.com.tr' },
-    { id: 5, kuafor: "Hamidiye Kuaför", rating: 4.3, openTime: "Açık", closeTime: "20:00", latitude: 39.140, longitude: 34.155, clock: 'Açık', sehir: 'Hamidiye Cami, Kırşehir Merkez/Kırşehir', website: 'hamidiye.kuafor.com.tr' },
-  ];
-
-  const handleSearch = (text) => {
-    setSearchText(text);
-    if (text === "") {
-      setFilteredSalons([]);
-    } else {
-      const results = salons.filter((salon) => salon.kuafor.toLowerCase().includes(text.toLowerCase()));
-      setFilteredSalons(results);
-    }
+  const closePromo = (goShop) => {
+    setShowPromo(false);
+    AsyncStorage.setItem(PROMO_SEEN_KEY, "1").catch(() => {});
+    if (goShop) navigation.navigate("Shop");
   };
 
-  const closeDetails = () => {
-    setSelectedSalon(null);
-    setRouteCoords([]);
+  const visibleSalons = search.trim()
+    ? salons.filter((s) => s.name.toLocaleLowerCase("tr-TR").includes(search.trim().toLocaleLowerCase("tr-TR")))
+    : salons;
+
+  const selectSalon = (salon) => {
+    setSelected(salon);
+    setRoute(null);
+    mapRef.current?.animateToRegion({ ...DEFAULT_REGION, latitude: salon.latitude, longitude: salon.longitude }, 400);
   };
 
-  const handleMarkerPress = (salon) => {
-    setSelectedSalon(salon);
-    setRouteCoords([]);
-  };
-
-  const handleRandevuAl = () => {
-    if (selectedSalon) {
-      navigation.navigate("CalendarScreen", {
-        salonName: selectedSalon.kuafor,
-        sehir: selectedSalon.sehir,
-      });
-    }
-  };
-
-  const openDirections = async () => {
-    if (!userLocation || !selectedSalon) {
-      Alert.alert("Hata", "Konum veya hedef bulunamadı.");
+  const getDirections = async () => {
+    if (!userLocation) {
+      Alert.alert("Konum gerekli", "Yol tarifi için konum izni verin.", [
+        { text: "Vazgeç", style: "cancel" },
+        { text: "Ayarları aç", onPress: () => Linking.openSettings() },
+      ]);
       return;
     }
-
-    const origin = `${userLocation.latitude},${userLocation.longitude}`;
-    const destination = `${selectedSalon.latitude},${selectedSalon.longitude}`;
-    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&key=${GOOGLE_MAPS_API_KEY}`;
-
-        try {
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.routes.length) {
-        const points = polyline.decode(data.routes[0].overview_polyline.points);
-        const coords = points.map(([lat, lng]) => ({
-          latitude: lat,
-          longitude: lng,
-        }));
-        setRouteCoords(coords);
-      } else {
-        Alert.alert("Rota bulunamadı", "Google API'den sonuç alınamadı.");
-      }
-    } catch (error) {
-      console.error("Rota alma hatası:", error); // ✅ artık error tanımlı
-      Alert.alert("Hata", "Rota alınırken bir sorun oluştu.");
+    setRouteLoading(true);
+    try {
+      const data = await mapsApi.directions(selected.id, userLocation.latitude, userLocation.longitude);
+      const coords = polyline.decode(data.polyline).map(([latitude, longitude]) => ({ latitude, longitude }));
+      setRoute({ coords, distance: data.distance.text, duration: data.duration.text });
+      mapRef.current?.fitToCoordinates(coords, {
+        edgePadding: { top: 60, right: 40, bottom: 320, left: 40 },
+        animated: true,
+      });
+    } catch (e) {
+      // Sunucuda yol tarifi kapalıysa cihazın harita uygulamasına yönlendir.
+      const q = `${selected.latitude},${selected.longitude}`;
+      const url = Platform.OS === "ios" ? `maps://?daddr=${q}` : `google.navigation:q=${q}`;
+      Alert.alert("Uygulama içi rota alınamadı", e.message, [
+        { text: "Kapat", style: "cancel" },
+        { text: "Haritalar'da aç", onPress: () => Linking.openURL(url).catch(() => {}) },
+      ]);
+    } finally {
+      setRouteLoading(false);
     }
-
   };
 
-  const handleAdClick = () => {
-    setShowAdModal(false);
-    navigation.navigate('Shop');
+  const callSalon = () => {
+    if (!selected?.phone) return Alert.alert("Telefon yok", "Bu salonun telefon numarası kayıtlı değil.");
+    Linking.openURL(`tel:${selected.phone}`).catch(() => {});
   };
 
-  const closeAdModal = () => {
-    setShowAdModal(false);
+  const toggleFavorite = async () => {
+    const next = !selected.isFavorite;
+    const apply = (value) => {
+      setSelected((s) => (s ? { ...s, isFavorite: value } : s));
+      setSalons((list) => list.map((s) => (s.id === selected.id ? { ...s, isFavorite: value } : s)));
+    };
+    apply(next);
+    try {
+      await (next ? favoriteApi.addSalon(selected.id) : favoriteApi.removeSalon(selected.id));
+    } catch (e) {
+      apply(!next);
+      Alert.alert("Hata", e.message);
+    }
   };
+
+  const shareSalon = () =>
+    Share.share({ message: `${selected.name}\n${selected.address}${selected.website ? `\n${selected.website}` : ""}` });
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <StatusBar backgroundColor="#FF4896" barStyle="light-content" />
-        <Icon name="home" size={35} color="#fff" style={styles.icon} />
-        <Text style={styles.logo}>WOMAN HAIR DESIGN</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Notifications")}>
-          <MaterialIcon name="notifications-none" size={35} color="#fff" />
-        </TouchableOpacity>
+      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+      <AppHeader />
+
+      <View style={styles.mapWrap}>
+        <View style={styles.searchBox}>
+          <MaterialIcons name="search" size={22} color="#999" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Kuaför ara"
+            placeholderTextColor="#999"
+            value={search}
+            onChangeText={setSearch}
+            accessibilityLabel="Kuaför ara"
+          />
+          {search ? (
+            <TouchableOpacity onPress={() => setSearch("")} accessibilityLabel="Aramayı temizle">
+              <AntDesign name="close" size={18} color="#999" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          initialRegion={userLocation ? { ...DEFAULT_REGION, ...userLocation } : DEFAULT_REGION}
+          showsUserLocation={!!userLocation}
+        >
+          {visibleSalons.map((salon) => (
+            <Marker
+              key={salon.id}
+              coordinate={{ latitude: salon.latitude, longitude: salon.longitude }}
+              title={salon.name}
+              pinColor={salon.isOpenNow ? colors.primary : "gray"}
+              onPress={() => selectSalon(salon)}
+            />
+          ))}
+          {route && <Polyline coordinates={route.coords} strokeColor={colors.primary} strokeWidth={4} />}
+        </MapView>
+        {loading && (
+          <View style={styles.mapLoading}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        )}
+
+        {selected && (
+          <View style={styles.sheet}>
+            <TouchableOpacity style={styles.sheetClose} onPress={() => setSelected(null)} accessibilityLabel="Kapat">
+              <AntDesign name="close" size={20} color="#333" />
+            </TouchableOpacity>
+            <ScrollView>
+              <Text style={styles.salonName}>{selected.name}</Text>
+              <View style={styles.row}>
+                <FontAwesome name="star" size={15} color="#f5a623" />
+                <Text style={styles.rating}>
+                  {selected.ratingCount
+                    ? `${selected.rating} (${selected.ratingCount} değerlendirme)`
+                    : "Henüz değerlendirme yok"}
+                </Text>
+              </View>
+              <Text style={[styles.hours, { color: selected.isOpenNow ? colors.success : colors.danger }]}>
+                {selected.isOpenNow ? "Şu an açık" : "Şu an kapalı"}
+                {selected.todayHours
+                  ? ` · Bugün ${selected.todayHours.opens} - ${selected.todayHours.closes}`
+                  : " · Bugün kapalı"}
+                {selected.distanceKm !== undefined ? ` · ${selected.distanceKm} km` : ""}
+              </Text>
+              <Text style={styles.address}>{selected.address}</Text>
+              {route && (
+                <Text style={styles.routeInfo}>
+                  Rota: {route.distance} · yaklaşık {route.duration}
+                </Text>
+              )}
+
+              <View style={styles.actions}>
+                <Action icon="directions" label="Yol Tarifi" onPress={getDirections} loading={routeLoading} />
+                <Action icon="call" label="Ara" onPress={callSalon} />
+                <Action
+                  icon={selected.isFavorite ? "favorite" : "favorite-border"}
+                  label="Kaydet"
+                  onPress={toggleFavorite}
+                />
+                <Action icon="share" label="Paylaş" onPress={shareSalon} />
+              </View>
+
+              <TouchableOpacity
+                style={styles.bookButton}
+                onPress={() =>
+                  navigation.navigate("CalendarScreen", { salonId: selected.id, salonName: selected.name })
+                }
+              >
+                <FontAwesome5 name="calendar-alt" size={20} color="#fff" />
+                <Text style={styles.bookText}>Randevu Al</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        )}
       </View>
 
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: 39.1451,
-          longitude: 34.1605,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
-      >
-        {userLocation && (
-          <Marker coordinate={userLocation} title="Benim Konumum" pinColor="blue" />
-        )}
-        {(filteredSalons.length > 0 ? filteredSalons : salons).map((salon) => (
-          <Marker
-            key={salon.id}
-            coordinate={{ latitude: salon.latitude, longitude: salon.longitude }}
-            title={salon.kuafor}
-            onPress={() => handleMarkerPress(salon)}
-          />
-        ))}
-        {routeCoords.length > 0 && (
-          <Polyline coordinates={routeCoords} strokeColor="#FF4896" strokeWidth={4} />
-        )}
-      </MapView>
-
-      <Modal
-        visible={showAdModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={closeAdModal}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.adContainer}>
-            <TouchableOpacity style={styles.closeButton} onPress={closeAdModal}>
-              <Icon name="close" size={24} color="#333" />
+      <Modal visible={showPromo} transparent animationType="fade" onRequestClose={() => closePromo(false)}>
+        <View style={styles.overlay}>
+          <View style={styles.promo}>
+            <TouchableOpacity style={styles.promoClose} onPress={() => closePromo(false)} accessibilityLabel="Kapat">
+              <AntDesign name="close" size={22} color="#333" />
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.adContent} onPress={handleAdClick}>
-              <View style={styles.adImageContainer}>
-                <Image 
-                  source={{ uri: 'https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=300&h=200&fit=crop&overlay=FF4896&blend=multiply&txt=YEN%C4%B0%20MA%C4%9EAZA&txt-size=30&txt-color=white&txt-align=center,middle' }}
-                  style={styles.adImage}
-                />
-                <View style={styles.adBadge}>
-                  <Text style={styles.adBadgeText}>YENİ!</Text>
-                </View>
-              </View>
-              
-              <View style={styles.adTextContainer}>
-                <Text style={styles.adTitle}>🛍️ Mağazamız Açıldı!</Text>
-                <Text style={styles.adDescription}>
-                  Profesyonel saç bakım ürünleri ve araçları artık sizlerle! 
-                  İlk alışverişinizde %20 indirim fırsatını kaçırmayın.
-                </Text>
-                <View style={styles.adButtonContainer}>
-                  <Text style={styles.adButton}>🛒 Mağazayı Keşfet</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+            <Image
+              source={{ uri: "https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=600&h=360&fit=crop" }}
+              style={styles.promoImage}
+              accessibilityIgnoresInvertColors
+            />
+            <View style={{ padding: 20 }}>
+              <Text style={styles.promoTitle}>Mağazamız açıldı!</Text>
+              <Text style={styles.promoText}>
+                Salonlarımızda kullandığımız profesyonel saç bakım ürünleri artık uygulamada.
+              </Text>
+              <TouchableOpacity style={styles.promoButton} onPress={() => closePromo(true)}>
+                <Text style={styles.promoButtonText}>Mağazayı keşfet</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
 
-      {selectedSalon && (
-        <ScrollView style={styles.detailsContainer}>
-          <TouchableOpacity style={styles.closeButton} onPress={closeDetails}>
-            <Text style={styles.closeButtonText}>×</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.dragButton}>
-            <Text style={styles.dragButtonText}></Text>
-          </TouchableOpacity>
-
-          <Text style={styles.salonName}>{selectedSalon.kuafor}</Text>
-          <View style={styles.ratingContainerR}>
-            <View style={styles.ratingContainer}>
-              <Text style={styles.rating}>{selectedSalon.rating} ⭐⭐⭐⭐</Text>
-              <Text style={styles.hours}>{selectedSalon.openTime} - Kapanış: {selectedSalon.closeTime}</Text>
-            </View>
-
-            <TouchableOpacity style={styles.buttonR} onPress={handleRandevuAl}>
-              <FontAwesome5 name="calendar-alt" size={35} color="#FF4896" />
-              <Text style={styles.buttonTextR}>Randevu Al</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.buttonsContainer}>
-            <TouchableOpacity style={styles.button} onPress={openDirections}>
-              <MaterialIcon name="directions" size={20} color="#fff" />
-              <Text style={styles.buttonText}>Yol Tarifi</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button}>
-              <MaterialIcon name="call" size={20} color="#fff" />
-              <Text style={styles.buttonText}>Ara</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button}>
-              <MaterialIcon name="call" size={20} color="#fff" />
-              <Text style={styles.buttonText}>Kaydet</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button}>
-              <MaterialIcon name="call" size={20} color="#fff" />
-              <Text style={styles.buttonText}>Paylaş</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.imagePlaceholder}></View>
-          <View style={styles.additionalInfo}>
-            <Text style={styles.address}>{selectedSalon.sehir}</Text>
-            <Text style={styles.clock}>Saat: {selectedSalon.clock} - Kapanış: {selectedSalon.closeTime}</Text>
-            <Text style={styles.website}>{selectedSalon.website}</Text>
-          </View>
-        </ScrollView>
-      )}
-
-      
-      <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Appointments")}
-          style={styles.navButton}
-        >
-          <FontAwesome5 name="calendar-alt" size={24} color="#fff" />
-          <Text style={styles.navText}>Randevular</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Home")}
-          style={styles.navButton}
-        >
-          <View style={styles.activeNavItem}>
-            <FontAwesome5 name="map-marked-alt" size={24} color="#e00061" />
-            <Text style={[styles.navText, styles.activeNavText]}>Harita</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Shop")}
-          style={styles.navButton}
-        >
-          <FontAwesome5 name="shopping-bag" size={28} color="#fff" />
-          {cartCount > 0 && (
-            <View style={styles.navCartBadge}>
-              <Text style={styles.navCartBadgeText}>
-                {cartCount > 99 ? '99+' : cartCount}
-              </Text>
-            </View>
-          )}
-          <Text style={styles.navText}>Mağaza</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Profile")}
-          style={styles.navButton}
-        >
-          <FontAwesome6 name="user" size={24} color="#fff" />
-          <Text style={styles.navText}>Profil</Text>
-        </TouchableOpacity>
-      </View>
+      <BottomNav active="Home" />
     </View>
   );
 }
 
+function Action({ icon, label, onPress, loading }) {
+  return (
+    <TouchableOpacity style={styles.action} onPress={onPress} disabled={loading} accessibilityLabel={label}>
+      {loading ? <ActivityIndicator color="#fff" size="small" /> : <MaterialIcons name={icon} size={20} color="#fff" />}
+      <Text style={styles.actionText}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FF4896',
-    paddingTop: Platform.OS === 'ios' ? 50 : StatusBar.currentHeight + 10,
-    paddingHorizontal: 20,
-    paddingBottom: 15,
+  container: { flex: 1, backgroundColor: colors.background },
+  searchBox: {
+    position: "absolute",
+    top: 12,
+    left: 16,
+    right: 16,
+    zIndex: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    paddingHorizontal: 14,
+    height: 46,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
+  },
+  searchInput: { flex: 1, marginLeft: 8, fontSize: 15, color: colors.text },
+  mapWrap: { flex: 1 },
+  map: { flex: 1 },
+  mapLoading: { position: "absolute", top: "45%", alignSelf: "center" },
+  sheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    maxHeight: "60%",
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    elevation: 12,
+    shadowColor: "#000",
     shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  logo: {
-    color: "white",
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  map: {
-    flex: 1,
-  },
-  
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  adContainer: {
-    backgroundColor: 'white',
-    width: width * 0.85,
-    borderRadius: 20,
-    overflow: 'hidden',
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
     shadowRadius: 10,
   },
-  closeButton: {
-    position: 'absolute',
-    top: 15,
-    right: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  sheetClose: { position: "absolute", right: 14, top: 14, zIndex: 2, padding: 6 },
+  salonName: { fontSize: 20, fontWeight: "bold", color: colors.text, marginRight: 30 },
+  row: { flexDirection: "row", alignItems: "center", marginTop: 6 },
+  rating: { marginLeft: 6, color: colors.text, fontSize: 14 },
+  hours: { marginTop: 6, fontSize: 14, fontWeight: "600" },
+  address: { marginTop: 6, fontSize: 14, color: colors.muted },
+  routeInfo: { marginTop: 6, fontSize: 14, color: colors.accent, fontWeight: "600" },
+  actions: { flexDirection: "row", justifyContent: "space-between", marginTop: 16 },
+  action: {
+    backgroundColor: colors.primary,
     borderRadius: 20,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-    elevation: 5,
-  },
-  adContent: {
-    width: '100%',
-  },
-  adImageContainer: {
-    position: 'relative',
-    height: 180,
-  },
-  adImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  adBadge: {
-    position: 'absolute',
-    top: 15,
-    left: 15,
-    backgroundColor: '#e00061',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-  },
-  adBadgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  adTextContainer: {
-    padding: 20,
-  },
-  adTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  adDescription: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  adButtonContainer: {
-    backgroundColor: '#FF4896',
-    borderRadius: 25,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  adButton: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  // Existing styles
-  detailsContainer: {
-    position: "absolute",
-    bottom: 0,
-    backgroundColor: "#fff",
-    width: "100%",
-    padding: 10,
-    paddingLeft: 25,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    elevation: 10,
-    flexGrow: 1,
-  },
-  salonName: {
-    top: 30,
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  ratingContainer: {
-    flexDirection: "column",
-    alignItems: "flex-start",
-    marginTop: 1,
-  },
-  ratingContainerR: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 10,
-    top: 25,
-  },
-  rating: {
-    fontSize: 16,
-    color: "#FF4896",
-    marginRight: 5,
-  },
-  hours: {
-    fontSize: 14,
-    color: "#666",
-  },
-  imagePlaceholder: {
-    width: "100%",
-    height: 150,
-    backgroundColor: "#ccc",
-    borderRadius: 10,
-    marginTop: 10,
-    top: 30,
-  },
-  buttonsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-    top: 30,
-  },
-  button: {
-    backgroundColor: "#FF4896",
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  buttonR: {
-    backgroundColor: "#fff",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    flexDirection: "column",
-    alignItems: "center",
-    marginLeft: 70,
-  },
-  buttonText: {
-    color: "#fff",
-    marginLeft: 5,
-    fontWeight: "bold",
-  },
-  buttonTextR: {
-    color: "#FF4896",
-    marginLeft: 5,
-    fontWeight: "bold",
-  },
-  additionalInfo: {
-    marginTop: 20,
-    top: 25,
-  },
-  address: {
-    fontSize: 14,
-    color: "#333",
-  },
-  clock: {
-    fontSize: 14,
-    color: "#333",
-    top: 10,
-  },
-  website: {
-    fontSize: 14,
-    color: "#FF4896",
-    top: 20,
-  },
-  closeButtonText: {
-    color: "#333", 
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  dragButton: {
-    position: "absolute",
-    top: 1,
-    left: "50%",
-    transform: [{ translateX: -15 }],
-    backgroundColor: "#ebebeb", 
-    borderRadius: 10,
-    paddingRight: 25,
-    paddingLeft: 25,
-    zIndex: 3,
-  },
-  dragButtonText: {
-    fontSize: 5,
-    color: "#333",
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#FF4896',
-    height: 70,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
     paddingHorizontal: 10,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    flexDirection: "row",
+    alignItems: "center",
   },
-  navButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingVertical: 8,
+  actionText: { color: "#fff", marginLeft: 4, fontSize: 12, fontWeight: "600" },
+  bookButton: {
+    marginTop: 16,
+    backgroundColor: colors.accent,
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  navText: {
-    color: '#fff',
-    fontSize: 11,
-    marginTop: 4,
-    fontWeight: '500',
+  bookText: { color: "#fff", fontSize: 16, fontWeight: "bold", marginLeft: 10 },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 },
+  promo: { backgroundColor: "#fff", borderRadius: 20, overflow: "hidden", width: "100%" },
+  promoClose: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 2,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderRadius: 18,
+    padding: 6,
   },
-  activeNavItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  promoImage: { width: "100%", height: 180 },
+  promoTitle: { fontSize: 20, fontWeight: "bold", textAlign: "center", color: colors.text },
+  promoText: { fontSize: 14, color: colors.muted, textAlign: "center", marginTop: 8, lineHeight: 20 },
+  promoButton: {
+    marginTop: 18,
+    backgroundColor: colors.primary,
+    borderRadius: 24,
+    paddingVertical: 12,
+    alignItems: "center",
   },
-  activeNavText: {
-    color: '#e00061',
-    fontWeight: 'bold',
-  },
-  navCartBadge: {
-    position: 'absolute',
-    top: -4,
-    right: 8,
-    backgroundColor: '#e00061',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FF4896',
-  },
-  navCartBadgeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
+  promoButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
-
-export default HomeScreen;

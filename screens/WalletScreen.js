@@ -1,192 +1,104 @@
-import React from "react";
-import { View, StyleSheet, Text, TextInput, TouchableOpacity, Platform, StatusBar, ScrollView } from "react-native";
+import React, { useCallback } from "react";
+import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { AntDesign as Icon } from '@expo/vector-icons';
-import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
-import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
-import { AntDesign as AntDesign } from '@expo/vector-icons';
-import { MaterialIcons as MaterialIcon } from '@expo/vector-icons';
-import { useApp } from '../context/AppContext';
+import { FontAwesome6 } from "@expo/vector-icons";
+import { walletApi } from "../services/api";
+import AppHeader from "../components/AppHeader";
+import BottomNav from "../components/BottomNav";
+import { EmptyState, ErrorState, Loading } from "../components/ui";
+import { useRemote } from "../components/useRemote";
+import { colors, formatDate, formatTL } from "../components/theme";
+
+const TYPE_LABEL = { TOPUP: "Bakiye yükleme", PAYMENT: "Ödeme", REFUND: "İade" };
 
 export default function WalletScreen({ navigation }) {
-  const { state } = useApp();
-    const cartCount = state.cartItems.length;
+  const loader = useCallback(() => walletApi.get(), []);
+  const { data, error, loading, refreshing, reload, refresh } = useRemote(loader);
+
+  if (loading && !data) {
+    return (
+      <View style={styles.container}>
+        <AppHeader title="Cüzdanım" back />
+        <Loading />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-  
-      <View style={styles.header}>
-              <TouchableOpacity onPress={() => navigation.navigate("")}>
-                <Icon name="home" size={30} color="#fff" />
-              </TouchableOpacity>
-              <Text style={styles.logo}>WOMAN HAIR DESIGN</Text>
-              <TouchableOpacity onPress={() => navigation.navigate("Notifications")}>
-                <FontAwesome6 name="bell" size={30} color="#fff" />
-              </TouchableOpacity>
-      </View>
-
-    
-      <LinearGradient colors={["#FF4896", "#5A189A"]} style={styles.walletContainer}>
-        <View style={styles.walletContent}>
-          <View style={styles.walletInfo}>
-            <Text style={styles.title}>Cüzdanım</Text>
-            <Text style={styles.balanceLabel}>Bakiyem</Text>
-            <Text style={styles.balance}>0 TL</Text>
-          </View>
-          <View style={styles.walletActions}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('LoadMoney')}>
-  <FontAwesome6 name="wallet" size={35} color="#fff" />
-  <Text style={styles.actionText}>Yükle</Text>
-</TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton}>
-              <FontAwesome6 name="arrow-right-arrow-left" size={35} color="#fff" />
-              <Text style={styles.actionText}>Gönder</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </LinearGradient>
-
-      
-      <View style={styles.transactionContainer}>
-        <Text style={styles.transactionTitle}>Son Hareketler</Text>
-        <Text style={styles.noTransaction}>Henüz işlem yapmadınız</Text>
-      </View>
-
-      
-      <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Appointments")}
-          style={styles.navButton}
-        >
-          <FontAwesome5 name="calendar-alt" size={24} color="#fff" />
-          <Text style={styles.navText}>Randevular</Text>
-        </TouchableOpacity>
-      
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Home")}
-          style={styles.navButton}
-        >
-          <FontAwesome5 name="map-marked-alt" size={24} color="#fff" />
-          <Text style={styles.navText}>Harita</Text>
-        </TouchableOpacity>
-      
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Shop")}
-          style={styles.navButton}
-        >
-          <FontAwesome5 name="shopping-bag" size={28} color="#fff" />
-          {cartCount > 0 && (
-            <View style={styles.navCartBadge}>
-              <Text style={styles.navCartBadgeText}>
-                {cartCount > 99 ? '99+' : cartCount}
+      <AppHeader title="Cüzdanım" back />
+      {error && !data ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : (
+        <FlatList
+          data={data.transactions.items}
+          keyExtractor={(t) => t.id}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
+          contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
+          ListHeaderComponent={
+            <>
+              <LinearGradient colors={[colors.primary, colors.accent]} style={styles.card}>
+                <View>
+                  <Text style={styles.cardLabel}>Bakiyem</Text>
+                  <Text style={styles.balance}>{formatTL(data.balance)}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.topup}
+                  onPress={() => navigation.navigate("LoadMoney", { limits: data.limits })}
+                  accessibilityLabel="Bakiye yükle"
+                >
+                  <FontAwesome6 name="wallet" size={28} color="#fff" />
+                  <Text style={styles.topupText}>Yükle</Text>
+                </TouchableOpacity>
+              </LinearGradient>
+              <Text style={styles.section}>Son hareketler</Text>
+            </>
+          }
+          renderItem={({ item: t }) => (
+            <View style={styles.tx}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.txTitle}>{TYPE_LABEL[t.type] ?? t.type}</Text>
+                <Text style={styles.txMeta}>{t.description}</Text>
+                <Text style={styles.txMeta}>{formatDate(t.createdAt, true)}</Text>
+              </View>
+              <Text style={[styles.amount, { color: t.amount >= 0 ? colors.success : colors.danger }]}>
+                {t.amount >= 0 ? "+" : ""}
+                {formatTL(t.amount)}
               </Text>
             </View>
           )}
-          <Text style={styles.navText}>Mağaza</Text>
-        </TouchableOpacity>
-      
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Profile")}
-          style={styles.navButton}
-        >
-          <FontAwesome6 name="user" size={24} color="#fff" />
-          <Text style={styles.navText}>Profil</Text>
-        </TouchableOpacity>
-      </View>
+          ListEmptyComponent={<EmptyState icon="account-balance-wallet" title="Henüz işlem yapmadınız" />}
+        />
+      )}
+      <BottomNav active="Profile" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  header: {
+  container: { flex: 1, backgroundColor: colors.background },
+  card: {
+    margin: 16,
+    borderRadius: 18,
+    padding: 22,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#FF4896",
-    paddingTop: 15,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
   },
-  logo: { color: "white", fontSize: 20, fontWeight: "bold" },
-  walletContainer: {
-    paddingVertical: 20,
-    paddingHorizontal: 25,
-    borderBottomLeftRadius: 80,
-    borderBottomRightRadius: 0,
-    paddingLeft: 30,
-    paddingBottom: 40,
-  },
-  walletContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-  },
-  walletInfo: {
-    alignItems: "flex-start",
-  },
-  title: { fontSize: 40, color: "#fff", fontWeight: "bold", marginTop: -30, marginLeft: 13 },
-  balanceLabel: { fontSize: 16, color: "#fff", marginTop: 20, marginLeft: 15 },
-  balance: { fontSize: 40, color: "#fff", fontWeight: "bold", marginTop: 2, marginLeft: 15 },
-  walletActions: {
+  cardLabel: { color: "#ffe3ef", fontSize: 14 },
+  balance: { color: "#fff", fontSize: 30, fontWeight: "bold", marginTop: 4 },
+  topup: { alignItems: "center", padding: 8 },
+  topupText: { color: "#fff", marginTop: 6, fontWeight: "600" },
+  section: { fontSize: 16, fontWeight: "bold", color: colors.text, marginHorizontal: 16, marginBottom: 6 },
+  tx: {
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  actionButton: {
-    flexDirection: "column",
-    alignItems: "center",
-    marginLeft: 25,
-  },
-  actionText: { color: "#fff", marginTop: 5, fontWeight: "bold", fontSize: 14 },
-  transactionContainer: {
-    padding: 20,
-  },
-  transactionTitle: { fontSize: 18, fontWeight: "bold", color: "#333" },
-  noTransaction: { color: "#FF4896", marginTop: 40, textAlign: "center" },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#FF4896',
-    height: 70,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    paddingHorizontal: 10,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  navButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingVertical: 8,
-  },
-  navText: {
-    color: '#fff',
-    fontSize: 11,
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  navCartBadge: {
-    position: 'absolute',
-    top: -4,
-    right: 8,
-    backgroundColor: '#e00061',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FF4896',
-  },
-  navCartBadgeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
+  txTitle: { fontSize: 15, fontWeight: "600", color: colors.text },
+  txMeta: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  amount: { fontSize: 15, fontWeight: "bold" },
 });

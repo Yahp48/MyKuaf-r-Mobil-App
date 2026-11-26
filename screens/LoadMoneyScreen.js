@@ -1,110 +1,117 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialCommunityIcons as MaterialCommunityIcons } from '@expo/vector-icons';
-import { FontAwesome as FontAwesome } from '@expo/vector-icons';
-import { MaterialIcons as MaterialIcons } from '@expo/vector-icons';
+import React, { useState } from "react";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
+import { walletApi } from "../services/api";
+import { openCheckout } from "../services/checkout";
+import { useApp } from "../context/AppContext";
+import AppHeader from "../components/AppHeader";
+import { Button, Field } from "../components/ui";
+import { colors, formatTL } from "../components/theme";
 
-export default function LoadMoneyScreen({ navigation }) {
+const QUICK = [100, 250, 500, 1000];
+
+export default function LoadMoneyScreen({ navigation, route }) {
+  const limits = route.params?.limits ?? { minTopup: 50, maxTopup: 5000 };
+  const { actions } = useApp();
+  const [amount, setAmount] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const value = Number(amount.replace(",", "."));
+  const valid = Number.isFinite(value) && value >= limits.minTopup && value <= limits.maxTopup;
+
+  const submit = async () => {
+    setLoading(true);
+    try {
+      const { payment, checkoutUrl } = await walletApi.topup(Math.round(value * 100) / 100);
+      const status = await openCheckout(checkoutUrl, payment.id);
+      if (status === "SUCCEEDED") {
+        actions.refreshUnread().catch(() => {});
+        actions.refreshUser().catch(() => {});
+        Alert.alert("Bakiye yüklendi", `Cüzdanınıza ${formatTL(value)} yüklendi.`, [
+          { text: "Tamam", onPress: () => navigation.goBack() },
+        ]);
+      } else if (status === "FAILED") {
+        Alert.alert("Ödeme başarısız", "Kartınızdan çekim yapılmadı. Lütfen tekrar deneyin.");
+      } else {
+        Alert.alert("Ödeme tamamlanmadı", "Ödeme sayfasını kapattınız. Çekim yapılmadı.");
+      }
+    } catch (e) {
+      Alert.alert("Hata", e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      
-      <LinearGradient colors={['#FF4896', '#5A189A']} style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Para yükle</Text>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <MaterialIcons name="close" size={30} color="#fff" />
-          </TouchableOpacity>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.container}>
+      <AppHeader title="Bakiye Yükle" back />
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <View style={styles.quick}>
+          {QUICK.filter((q) => q >= limits.minTopup && q <= limits.maxTopup).map((q) => (
+            <TouchableOpacity
+              key={q}
+              style={[styles.chip, value === q && styles.chipOn]}
+              onPress={() => setAmount(String(q))}
+              accessibilityState={{ selected: value === q }}
+            >
+              <Text style={[styles.chipText, value === q && { color: "#fff" }]}>{formatTL(q)}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      </LinearGradient>
-
-      
-      <View style={styles.body}>
-        <Text style={styles.question}>Nasıl Para Yüklemek İstersin?</Text>
-
-        <View style={styles.optionsContainer}>
-          
-          <TouchableOpacity style={styles.optionButton} onPress={() => navigation.navigate('BankTransferScreen')}>
-            <View style={styles.optionLeft}>
-              <MaterialCommunityIcons name="bank" size={30} color="#800080" />
-              <Text style={styles.optionText}>Banka hesabından</Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={28} color="#000" />
-          </TouchableOpacity>
-          
-
-          
-          <TouchableOpacity style={styles.optionButton} onPress={() => navigation.navigate('CreditCardTopupScreen')}>
-            <View style={styles.optionLeft}>
-              <FontAwesome name="credit-card" size={30} color="#800080" />
-              <Text style={styles.optionText}>Banka / kredi kartıyla</Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={28} color="#000" />
-          </TouchableOpacity>
+        <Field
+          label="Tutar (TL)"
+          value={amount}
+          onChangeText={(v) => setAmount(v.replace(/[^\d.,]/g, ""))}
+          keyboardType="decimal-pad"
+          placeholder={`${limits.minTopup} - ${limits.maxTopup}`}
+          error={
+            amount && !valid
+              ? `Tutar ${formatTL(limits.minTopup)} ile ${formatTL(limits.maxTopup)} arasında olmalı`
+              : null
+          }
+        />
+        <View style={styles.secure}>
+          <MaterialIcons name="lock" size={18} color={colors.success} />
+          <Text style={styles.secureText}>
+            Ödeme, lisanslı ödeme kuruluşunun 3D Secure korumalı sayfasında yapılır. Kart bilgileriniz MyKuaför'e
+            iletilmez ve saklanmaz.
+          </Text>
         </View>
-      </View>
-    </View>
+        <Button
+          title={valid ? `${formatTL(value)} Yükle` : "Yükle"}
+          onPress={submit}
+          loading={loading}
+          disabled={!valid}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: {
-    height: 100,
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+  container: { flex: 1, backgroundColor: colors.background },
+  scroll: { padding: 20 },
+  quick: { flexDirection: "row", flexWrap: "wrap", marginBottom: 16 },
+  chip: {
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    marginRight: 8,
+    marginBottom: 8,
   },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 25,
-    fontWeight: 'bold',
-  },
-  body: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 40,
-  },
-  question: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: '#000',
-    textAlign: 'center',
-    marginBottom: 60,
-  },
-  optionsContainer: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 10,
-    paddingVertical: 20,
-    paddingHorizontal: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-    paddingTop: 13,
-    paddingBottom: 13,
-  },
-  optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 25,
-  },
-  optionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  optionText: {
-    fontSize: 18,
-    marginLeft: 15,
-    color: '#000',
-  },
+  chipOn: { backgroundColor: colors.primary },
+  chipText: { color: colors.primary, fontWeight: "600" },
+  secure: { flexDirection: "row", backgroundColor: "#eef7ee", borderRadius: 10, padding: 12, marginBottom: 20 },
+  secureText: { flex: 1, marginLeft: 8, fontSize: 13, color: colors.text, lineHeight: 18 },
 });

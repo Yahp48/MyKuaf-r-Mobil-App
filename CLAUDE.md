@@ -1,61 +1,58 @@
-# MyKuaför Mobil Uygulaması
+# MyKuaför
 
-Kuaför/güzellik salonu müşterileri için mobil uygulama: randevu alma, salon ürünleri mağazası,
-sepet ve ödeme, cüzdan/bakiye yükleme, bildirimler, harita üzerinden salona yol tarifi.
-Arayüz dili Türkçe. Uygulama içi marka adı şu an "womanhair" (AboutScreen).
+Kuaför/güzellik salonu müşterileri için mobil uygulama + backend: harita üzerinden salon bulma ve
+yol tarifi, randevu alma, salon ürünleri mağazası, sepet ve ödeme, cüzdan, bildirimler.
+Arayüz dili Türkçe. Uygulama adı "MyKuaför", ekranlardaki salon markası "WOMAN HAIR DESIGN".
+Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kurallarına uygun olmalı.
 
-## Teknoloji
-- Expo SDK 54, React Native 0.81.4, React 19.1, New Architecture açık (`app.json` → `newArchEnabled`)
-- Saf JavaScript (TypeScript yok), Android klasörü prebuild edilmiş (`android/`, paket `com.yaho.kuafor_mobil`)
-- Navigasyon: `@react-navigation/stack` (tek stack, `App.js`)
-- Global durum: `context/AppContext.js` (useReducer + Context)
-- Harita: `react-native-maps` + `expo-location` + `@mapbox/polyline` (HomeScreen, Google Directions API)
-- Gerçek zamanlı: `socket.io-client` (`services/socketService.js`)
-- Bildirim: `expo-notifications` (`services/notificationService.js`)
-- Ortam değişkenleri: `react-native-dotenv`, `import { X } from "@env"` — değerler `.env` dosyasında (`.env.example`'a bak)
+## Yapı
+- Kök dizin: Expo mobil uygulaması (saf JavaScript)
+- `backend/`: Node.js + TypeScript API (ayrıntılar `backend/README.md`)
+
+## Mobil teknoloji
+- Expo SDK 54, React Native 0.81, React 19.1, New Architecture açık
+- Expo CNG: `android/` ve `ios/` git'te YOK; native ayarlar `app.config.js`'te (EAS Build / `npx expo prebuild`)
+- Navigasyon: `@react-navigation/stack`. `App.js` oturuma göre `AuthStack` (giriş/kayıt) veya `MainStack` gösterir
+- Global durum: `context/AppContext.js` → oturum, sunucudaki sepet, okunmamış bildirim sayısı
+- API: `services/api.js` tek istemci. Yenileme token'ı `expo-secure-store`'da, erişim token'ı bellekte; 401'de otomatik yenileme
+- API adresi: `config.js` → `.env`'deki `EXPO_PUBLIC_API_URL`; geliştirmede boşsa Expo host IP'si:5000
+- Ödeme: `services/checkout.js` sağlayıcının güvenli sayfasını `expo-web-browser` ile açar, sonucu sunucudan sorgular.
+  Uygulama kart bilgisi ASLA toplamaz (PCI-DSS)
+- Ortak bileşenler: `components/` (AppHeader, BottomNav, ProductCard, ui.js, theme.js, useRemote.js)
+
+## Backend teknoloji
+- Express 5, PostgreSQL 17 + Prisma ORM 7 (driver adapter `@prisma/adapter-pg`), Zod 4, JWT + Argon2id
+- Para kuruş cinsinden Int; API'de TL ondalık. Fiyatlar her zaman sunucuda hesaplanır
+- Çift rezervasyon PostgreSQL exclusion constraint ile engellenir (migration'da elle eklenmiş SQL)
+- Ödeme sağlayıcısı soyut: `PAYMENT_PROVIDER=mock` (geliştirme) | `iyzico` (henüz yazılmadı). Production'da mock yasak
 
 ## Komutlar
-- `npm install` — bağımlılıklar
-- `npx expo start` — geliştirme sunucusu (Expo Go veya dev build)
-- `npm run android` — `expo run:android` ile native build (Android Studio/SDK gerekir)
-- `npx expo export --platform android` — derleme kontrolü (hızlı "bundle oluşuyor mu" testi)
-- Test ve lint kurulu değil.
-
-## Klasör yapısı
-- `App.js` — tüm ekranların kaydı, başlangıç ekranı `Home`
-- `screens/` — 30 ekran (randevu, mağaza, sepet, ödeme, cüzdan, profil, destek...)
-- `services/apiService.js` — merkezi API istemcisi (token, kuyruk, timeout, mock veriler içerir)
-- `services/paymentService.js`, `socketService.js`, `notificationService.js`
-- `context/AppContext.js` — kullanıcı, sepet, favoriler vb. global durum
-- `fix-catch-blocks.js` — tek seferlik yardımcı betik (`catch {` → `catch (e) {`), uygulamanın parçası değil
-
-## Backend
-Backend bu repoda YOK. Uygulama `:5000` portunda çalışan bir Node/Express API bekliyor
-(`/api/appointments`, `/api/orders`, `/api/users/...`). Android emülatörde `10.0.2.2:5000`,
-iOS/web'de `localhost:5000`. Production adresi henüz yer tutucu (`your-production-api.com`).
-
-## Bilinen sorunlar (öncelik sırasıyla)
-1. **Dağınık API adresleri:** Bazı ekranlar `apiService` yerine doğrudan `fetch` ile farklı sabit LAN IP'lerine gidiyor:
-   `SignInScreen` / `OrderScreen` (192.168.244.116), `SignUpScreen` (192.168.4.116),
-   `AccountSettingsScreen` (192.168.73.116), `RandevuForm` (192.168.187.117),
-   `PaymentVerificationScreen` (10.0.2.2). Hepsi `services/apiService.js` üzerinden, tek bir
-   yapılandırılabilir adresle (`.env` → `API_URL`) çalışmalı.
-2. **Giriş kapalı:** `App.js` içinde SignIn/SignUp ekranları yorum satırında; uygulama doğrudan Home ile açılıyor,
-   `apiService.getUserId()` misafir ID üretiyor.
-3. **Yer tutucular:** Stripe anahtarı (`pk_test_your_stripe_key_here`) ve backend URL'leri sahte;
-   Stripe paketi kurulu ama hiçbir yerde import edilmiyor.
-4. **Kullanılmayan bağımlılıklar:** `react-native-push-notification`, `react-native-datepicker` (terk edilmiş),
-   `@react-native-community/checkbox`, `polyline`, `react-native-toast-message`, `@stripe/stripe-react-native`,
-   `metro-react-native-babel-preset` (eski). Kaldırmadan önce tekrar grep ile kontrol et.
-5. `babel.config.js` `react-native-worklets/plugin` kullanıyor ama paket `package.json`'da doğrudan yok
-   (reanimated üzerinden geliyor) — `npx expo install react-native-worklets` ile açıkça eklenmeli.
-6. Mock veriler `apiService.js`, `ShopScreen`, `FavoritesScreen`, `ShoppingCartScreen` içine gömülü.
-7. Büyük dosyalar: `ShoppingCartScreen` (~1400 satır), `ShopScreen`, `ProductDetailScreen`, `apiService` —
-   değişiklik yaparken bileşenlere bölmeyi düşün ama istenmeden toplu refactor yapma.
-8. `package.json` adı hâlâ `newproje`.
+Mobil (kök dizin):
+- `npm install`, `npx expo start`
+- `npx expo export --platform android --output-dir dist` — derleme kontrolü (her değişiklikten sonra)
+- `npx expo-doctor` — bağımlılık/yapılandırma kontrolü
+Backend (`backend/`):
+- `docker compose up -d` (PostgreSQL), `npm run db:deploy`, `npm run db:seed`, `npm run dev`
+- `npm test` (33 entegrasyon testi, `mykuafor_test` veritabanı), `npm run typecheck`
+- Şema değişikliği: `prisma/schema.prisma` düzenle → `npm run db:migrate -- --name <ad>`
+- Demo hesabı (yalnızca yerel seed): `demo@mykuafor.test` / `Demo12345`
 
 ## Kurallar
-- `.env` asla commit edilmez (daha önce geçmişten temizlendi). Yeni anahtar → `.env.example`'a boş olarak ekle.
-- Yeni paket eklerken `npx expo install <paket>` kullan (SDK 54 ile uyumlu sürümü seçer).
-- Ekran metinleri Türkçe; kod içi isimler İngilizce (mevcut düzen böyle).
-- Değişiklikten sonra en az `npx expo export --platform android` ile derlemenin bozulmadığını doğrula.
+- `.env` asla commit edilmez. Yeni anahtar → ilgili `.env.example`'a boş olarak ekle
+- `EXPO_PUBLIC_*` değerleri uygulama paketine gömülür: gizli anahtar koyma (gizli anahtarlar backend'de)
+- Yeni mobil paket: `npx expo install <paket>` (SDK 54 uyumlu sürüm)
+- Ekran metinleri Türkçe; kod içi isimler İngilizce
+- Mağaza kuralları: hesap silme uygulama içinde kalmalı (AccountSettings), sahte veri/yorum/indirim gösterilmez,
+  çalışmayan özellik menüde yer almaz, izin metinleri Türkçe ve gerekçeli
+- Her adım ayrı commit; doğrulama: mobil bundle + `backend` testleri
+
+## Bilinen eksikler / sıradaki işler
+1. iyzico ödeme entegrasyonu (üye işyeri hesabı ve API anahtarı gerekli) — `backend/src/modules/payments/providers.ts`
+2. Yönetim paneli yok: salon, personel, hizmet, ürün ve sipariş durumu şu an seed/veritabanından yönetiliyor
+3. Production altyapısı: barındırma, alan adı + HTTPS, SMTP, EAS projectId (push bildirimleri için)
+4. Gerçek içerik: KVKK aydınlatma metni, mesafeli satış sözleşmesi, ön bilgilendirme formu (PrivacyScreen),
+   Hakkında/Destek ekranlarındaki telefon, WhatsApp ve sosyal medya adresleri yer tutucu
+5. Expo SDK 54 → güncel SDK (58) yükseltmesi ayrı bir adım olarak yapılmalı (cihazda test gerekir)
+6. Gerçek zamanlı güncellemeler backend'de hazır (Socket.IO) ama mobil henüz bağlanmıyor; ekranlar odakta yenileniyor
+7. Eski ekranlar (About, Privacy, Support, Feedback) hâlâ kendi başlık/alt menü kopyalarını kullanıyor;
+   `components/AppHeader` ve `BottomNav`'a taşınabilir
