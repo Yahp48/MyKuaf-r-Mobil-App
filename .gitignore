@@ -35,3 +35,14 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# gizli anahtarlar
+.env
+
+# Expo CNG: native klasörler `npx expo prebuild` / EAS Build ile üretilir
+/android
+/ios
+
+# tüm yerel ortam dosyaları (.env.example hariç)
+.env.*
+!.env.example

@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView, TextInput, Alert } from "react-native";
-import Icon from "react-native-vector-icons/AntDesign";
-import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
-import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
+import { AntDesign as Icon } from '@expo/vector-icons';
+import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
+import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 
 export default function FeedbackScreen({ navigation }) {

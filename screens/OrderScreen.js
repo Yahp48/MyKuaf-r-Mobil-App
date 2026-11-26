@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView, RefreshControl, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Icon from "react-native-vector-icons/AntDesign";
-import MaterialIcon from "react-native-vector-icons/MaterialIcons";
-import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
-import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
+import { AntDesign as Icon } from '@expo/vector-icons';
+import { MaterialIcons as MaterialIcon } from '@expo/vector-icons';
+import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
+import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 
 export default function OrdersScreen({ navigation }) {

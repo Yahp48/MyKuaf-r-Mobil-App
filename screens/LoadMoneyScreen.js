@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { MaterialCommunityIcons as MaterialCommunityIcons } from '@expo/vector-icons';
+import { FontAwesome as FontAwesome } from '@expo/vector-icons';
+import { MaterialIcons as MaterialIcons } from '@expo/vector-icons';
 
 export default function LoadMoneyScreen({ navigation }) {
   return (

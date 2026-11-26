@@ -8,8 +8,8 @@ import {
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { FontAwesome as FontAwesome } from '@expo/vector-icons';
+import { MaterialIcons as MaterialIcons } from '@expo/vector-icons';
 
 export default function CreditCardTopupScreen({ navigation }) {
   const route = useRoute();

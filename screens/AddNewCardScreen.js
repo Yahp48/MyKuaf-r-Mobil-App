@@ -8,8 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { CheckBox } from 'react-native-elements';
+import { MaterialIcons as MaterialIcons } from '@expo/vector-icons';
 
 export default function AddNewCardScreen({ navigation }) {
   const [cardNumber, setCardNumber] = useState('');
@@ -89,13 +88,14 @@ export default function AddNewCardScreen({ navigation }) {
         </View>
 
         <View style={styles.checkboxContainer}>
-          <CheckBox
-  title="Kartım kaydedilsin"
-  checked={agreed}
-  onPress={() => setAgreed(!agreed)}
-  containerStyle={{ backgroundColor: 'transparent', borderWidth: 0 }}
-  textStyle={{ color: '#000', fontSize: 14 }}
-/>
+          <TouchableOpacity
+            onPress={() => setAgreed(!agreed)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: agreed }}
+            style={{ padding: 8 }}
+          >
+            <MaterialIcons name={agreed ? 'check-box' : 'check-box-outline-blank'} size={24} color="#FF4896" />
+          </TouchableOpacity>
           <Text style={styles.checkboxText}>
             Kartım alışverişlerim için Mykuafor ve Cüzdanım'da aydınlatma metni
             kapsamında kaydedilsin.

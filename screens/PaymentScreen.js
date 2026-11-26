@@ -11,9 +11,9 @@ import {
   Image
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
-import FontAwesome from "react-native-vector-icons/FontAwesome";
+import { MaterialIcons as MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
+import { FontAwesome as FontAwesome } from '@expo/vector-icons';
 
 export default function PaymentScreen({ navigation, route }) {
   const orderType = route.params?.orderType;

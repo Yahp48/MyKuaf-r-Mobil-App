@@ -12,7 +12,6 @@ import AccountSettingsScreen from "./screens/AccountSettingsScreen";
 import WalletScreen from "./screens/WalletScreen";
 import NotificationScreen from "./screens/NotificationScreen";
 import AppointmentsScreen from "./screens/AppointmentsScreen";
-import RandevuForm from "./screens/RandevuForm";
 import LoadMoneyScreen from "./screens/LoadMoneyScreen";
 import CalendarScreen from "./screens/CalendarScreen";
 import PaymentScreen from "./screens/PaymentScreen";
@@ -48,7 +47,6 @@ function AppNavigator() {
       <Stack.Screen name="WalletScreen" component={WalletScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="Appointments" component={AppointmentsScreen} />
-      <Stack.Screen name="RandevuForm" component={RandevuForm} />
       <Stack.Screen name="LoadMoney" component={LoadMoneyScreen} />
       <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
       <Stack.Screen name="PaymentScreen" component={PaymentScreen} />

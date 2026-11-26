@@ -10,7 +10,7 @@ import {
   Platform
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as MaterialIcons } from '@expo/vector-icons';
 
 export default function PaymentVerificationScreen({ navigation, route }) {
   const [verificationCode, setVerificationCode] = useState("");

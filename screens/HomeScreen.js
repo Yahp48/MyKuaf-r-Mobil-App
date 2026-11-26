@@ -13,12 +13,12 @@ import {
   Dimensions,
 } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
-import Icon from "react-native-vector-icons/AntDesign";
-import MaterialIcon from "react-native-vector-icons/MaterialIcons";
-import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
-import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
+import { AntDesign as Icon } from '@expo/vector-icons';
+import { MaterialIcons as MaterialIcon } from '@expo/vector-icons';
+import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
+import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
 import * as Location from "expo-location";
-import { GOOGLE_MAPS_API_KEY } from "@env";
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 import polyline from "@mapbox/polyline";
 import { useApp } from '../context/AppContext';
 

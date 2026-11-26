@@ -1,9 +1,9 @@
 import React from "react";
 import { View, StyleSheet, Text, TextInput, TouchableOpacity, Platform, StatusBar, ScrollView } from "react-native";
-import MaterialIcon from "react-native-vector-icons/MaterialIcons";
-import Icon from "react-native-vector-icons/AntDesign";
-import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
-import FontAwesome6 from "react-native-vector-icons/FontAwesome6";
+import { MaterialIcons as MaterialIcon } from '@expo/vector-icons';
+import { AntDesign as Icon } from '@expo/vector-icons';
+import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
+import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 
 export default function NotificationScreen({ navigation }) {

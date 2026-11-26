@@ -13,10 +13,10 @@ import {
   FlatList,
   ActivityIndicator,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/AntDesign';
-import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
-import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
-import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
+import { AntDesign as Icon } from '@expo/vector-icons';
+import { MaterialIcons as MaterialIcon } from '@expo/vector-icons';
+import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
+import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
 // import { LinearGradient } from 'expo-linear-gradient'; // Temporarily disabled due to version conflict
 import apiService from '../services/apiService';
 import { useApp } from '../context/AppContext';
