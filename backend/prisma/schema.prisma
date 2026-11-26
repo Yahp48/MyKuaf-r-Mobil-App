@@ -1,0 +1,544 @@
+// MyKuaför veritabanı şeması (PostgreSQL, Prisma ORM 7)
+// Para tutarları kuruş cinsinden tam sayı (Int) olarak saklanır: 149,90 TL = 14990.
+// Tüm zaman damgaları UTC (timestamptz). Salon saatleri salonun saat diliminde yorumlanır.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Kullanıcı & oturum ─────────────────────────────
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+model User {
+  id                 String    @id @default(uuid(7)) @db.Uuid
+  email              String    @unique
+  passwordHash       String?
+  name               String
+  phone              String?
+  role               Role      @default(CUSTOMER)
+  walletBalanceCents Int       @default(0)
+  marketingOptIn     Boolean   @default(false)
+  deletedAt          DateTime? @db.Timestamptz(3)
+  createdAt          DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @db.Timestamptz(3)
+
+  refreshTokens       RefreshToken[]
+  passwordResets      PasswordReset[]
+  appointments        Appointment[]
+  salonReviews        SalonReview[]
+  productReviews      ProductReview[]
+  cartItems           CartItem[]
+  favoriteProducts    FavoriteProduct[]
+  favoriteSalons      FavoriteSalon[]
+  addresses           Address[]
+  orders              Order[]
+  walletTransactions  WalletTransaction[]
+  payments            Payment[]
+  notifications       Notification[]
+  pushTokens          PushToken[]
+  supportTickets      SupportTicket[]
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  userId     String    @db.Uuid
+  // Aynı girişten türeyen token zinciri; yeniden kullanım tespit edilirse tüm aile iptal edilir.
+  familyId   String    @db.Uuid
+  tokenHash  String    @unique
+  expiresAt  DateTime  @db.Timestamptz(3)
+  revokedAt  DateTime? @db.Timestamptz(3)
+  replacedBy String?   @db.Uuid
+  userAgent  String?
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+model PasswordReset {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @db.Uuid
+  codeHash  String
+  attempts  Int       @default(0)
+  expiresAt DateTime  @db.Timestamptz(3)
+  usedAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ───────────────────────────── Salon & randevu ─────────────────────────────
+
+model Salon {
+  id                      String   @id @default(uuid(7)) @db.Uuid
+  slug                    String   @unique
+  name                    String
+  description             String?
+  address                 String
+  city                    String
+  district                String?
+  phone                   String?
+  website                 String?
+  latitude                Float
+  longitude               Float
+  timezone                String   @default("Europe/Istanbul")
+  coverImageUrl           String?
+  slotIntervalMinutes     Int      @default(30)
+  // Randevu başlangıcına en az bu kadar dakika kala alınabilir.
+  bookingLeadMinutes      Int      @default(60)
+  // En fazla kaç gün ilerisi için randevu alınabilir.
+  bookingHorizonDays      Int      @default(60)
+  // Randevuya bu kadar saatten az kaldıysa müşteri iptal edemez.
+  cancellationWindowHours Int      @default(2)
+  autoConfirm             Boolean  @default(true)
+  ratingAvg               Float    @default(0)
+  ratingCount             Int      @default(0)
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @db.Timestamptz(3)
+
+  workingHours WorkingHours[]
+  staff        Staff[]
+  services     Service[]
+  appointments Appointment[]
+  reviews      SalonReview[]
+  favoritedBy  FavoriteSalon[]
+
+  @@index([city])
+}
+
+model WorkingHours {
+  id          String  @id @default(uuid(7)) @db.Uuid
+  salonId     String  @db.Uuid
+  // ISO hafta günü: 1 = Pazartesi ... 7 = Pazar
+  weekday     Int
+  // Gece yarısından itibaren dakika (09:00 = 540)
+  openMinute  Int
+  closeMinute Int
+  isClosed    Boolean @default(false)
+
+  salon Salon @relation(fields: [salonId], references: [id], onDelete: Cascade)
+
+  @@unique([salonId, weekday])
+}
+
+model Staff {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  salonId   String   @db.Uuid
+  name      String
+  title     String?
+  avatarUrl String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  salon        Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  timeOff      StaffTimeOff[]
+  appointments Appointment[]
+
+  @@index([salonId])
+}
+
+model StaffTimeOff {
+  id       String   @id @default(uuid(7)) @db.Uuid
+  staffId  String   @db.Uuid
+  startsAt DateTime @db.Timestamptz(3)
+  endsAt   DateTime @db.Timestamptz(3)
+  reason   String?
+
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId, startsAt])
+}
+
+model Service {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  salonId         String   @db.Uuid
+  name            String
+  description     String?
+  durationMinutes Int
+  priceCents      Int
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+
+  salon               Salon                @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  appointmentServices AppointmentService[]
+
+  @@index([salonId])
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Appointment {
+  id            String            @id @default(uuid(7)) @db.Uuid
+  code          String            @unique
+  userId        String?           @db.Uuid
+  salonId       String            @db.Uuid
+  staffId       String            @db.Uuid
+  startsAt      DateTime          @db.Timestamptz(3)
+  endsAt        DateTime          @db.Timestamptz(3)
+  status        AppointmentStatus @default(PENDING)
+  totalCents    Int
+  customerName  String
+  customerPhone String?
+  customerNote  String?
+  cancelledAt   DateTime?         @db.Timestamptz(3)
+  cancelReason  String?
+  createdAt     DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime          @updatedAt @db.Timestamptz(3)
+
+  // Hesap silinse de randevu kaydı (anonimleştirilmiş) korunur.
+  user     User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  salon    Salon                @relation(fields: [salonId], references: [id], onDelete: Restrict)
+  staff    Staff                @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  services AppointmentService[]
+  review   SalonReview?
+
+  @@index([userId, startsAt])
+  @@index([staffId, startsAt])
+  @@index([salonId, startsAt])
+}
+
+model AppointmentService {
+  id              String @id @default(uuid(7)) @db.Uuid
+  appointmentId   String @db.Uuid
+  serviceId       String @db.Uuid
+  // Fiyat/isim değişse bile randevudaki değer sabit kalır.
+  nameSnapshot    String
+  priceCents      Int
+  durationMinutes Int
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  service     Service     @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@index([appointmentId])
+}
+
+model SalonReview {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  salonId       String   @db.Uuid
+  userId        String?  @db.Uuid
+  // Yalnızca tamamlanmış randevu yorumlanabilir; her randevuya bir yorum.
+  appointmentId String   @unique @db.Uuid
+  rating        Int
+  comment       String?
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+
+  salon       Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([salonId, createdAt])
+}
+
+// ───────────────────────────── Mağaza ─────────────────────────────
+
+model Category {
+  id        String  @id @default(uuid(7)) @db.Uuid
+  slug      String  @unique
+  name      String
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  products Product[]
+}
+
+model Product {
+  id                  String   @id @default(uuid(7)) @db.Uuid
+  slug                String   @unique
+  name                String
+  description         String?
+  brand               String?
+  categoryId          String   @db.Uuid
+  priceCents          Int
+  // İndirim öncesi fiyat (üstü çizili gösterilir)
+  compareAtPriceCents Int?
+  stock               Int      @default(0)
+  images              String[]
+  features            String[]
+  isActive            Boolean  @default(true)
+  isFeatured          Boolean  @default(false)
+  ratingAvg           Float    @default(0)
+  ratingCount         Int      @default(0)
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @db.Timestamptz(3)
+
+  category    Category          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  reviews     ProductReview[]
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+  favoritedBy FavoriteProduct[]
+
+  @@index([categoryId])
+  @@index([isActive, isFeatured])
+}
+
+model ProductReview {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  productId String   @db.Uuid
+  userId    String?  @db.Uuid
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([productId, userId])
+  @@index([productId, createdAt])
+}
+
+model CartItem {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @db.Uuid
+  productId String   @db.Uuid
+  quantity  Int
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model FavoriteProduct {
+  userId    String   @db.Uuid
+  productId String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([userId, productId])
+}
+
+model FavoriteSalon {
+  userId    String   @db.Uuid
+  salonId   String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  salon Salon @relation(fields: [salonId], references: [id], onDelete: Cascade)
+
+  @@id([userId, salonId])
+}
+
+model Address {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  userId     String   @db.Uuid
+  title      String
+  fullName   String
+  phone      String
+  city       String
+  district   String
+  line       String
+  postalCode String?
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PREPARING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  WALLET
+}
+
+model Order {
+  id              String        @id @default(uuid(7)) @db.Uuid
+  orderNumber     String        @unique
+  userId          String?       @db.Uuid
+  status          OrderStatus   @default(PENDING_PAYMENT)
+  paymentMethod   PaymentMethod
+  subtotalCents   Int
+  shippingCents   Int
+  totalCents      Int
+  // Sipariş anındaki teslimat adresi (adres sonradan değişse/silinse de korunur)
+  shippingAddress Json
+  customerEmail   String
+  trackingNumber  String?
+  paidAt          DateTime?     @db.Timestamptz(3)
+  cancelledAt     DateTime?     @db.Timestamptz(3)
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
+
+  // Yasal saklama yükümlülüğü: hesap silinse de sipariş kaydı korunur.
+  user     User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items    OrderItem[]
+  payments Payment[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model OrderItem {
+  id             String @id @default(uuid(7)) @db.Uuid
+  orderId        String @db.Uuid
+  productId      String @db.Uuid
+  nameSnapshot   String
+  imageSnapshot  String?
+  unitPriceCents Int
+  quantity       Int
+  lineTotalCents Int
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+}
+
+// ───────────────────────────── Cüzdan & ödeme ─────────────────────────────
+
+enum WalletTransactionType {
+  TOPUP
+  PAYMENT
+  REFUND
+}
+
+model WalletTransaction {
+  id                String                @id @default(uuid(7)) @db.Uuid
+  userId            String                @db.Uuid
+  type              WalletTransactionType
+  // Bakiyeye etkisi: yükleme/iade pozitif, harcama negatif
+  amountCents       Int
+  balanceAfterCents Int
+  description       String
+  orderId           String?               @db.Uuid
+  paymentId         String?               @db.Uuid
+  createdAt         DateTime              @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+enum PaymentPurpose {
+  ORDER
+  WALLET_TOPUP
+}
+
+enum PaymentProvider {
+  MOCK
+  IYZICO
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id            String          @id @default(uuid(7)) @db.Uuid
+  userId        String?         @db.Uuid
+  purpose       PaymentPurpose
+  orderId       String?         @db.Uuid
+  amountCents   Int
+  currency      String          @default("TRY")
+  provider      PaymentProvider
+  // Sağlayıcının oturum/işlem kimliği (iyzico checkout token vb.)
+  providerRef   String?         @unique
+  status        PaymentStatus   @default(PENDING)
+  failureReason String?
+  completedAt   DateTime?       @db.Timestamptz(3)
+  createdAt     DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime        @updatedAt @db.Timestamptz(3)
+
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+}
+
+// ───────────────────────────── Bildirim & destek ─────────────────────────────
+
+model Notification {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @db.Uuid
+  type      String
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model PushToken {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  userId     String   @db.Uuid
+  token      String   @unique
+  platform   String
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  lastSeenAt DateTime @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum TicketType {
+  SUPPORT
+  FEEDBACK
+  BUG
+}
+
+enum TicketStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+model SupportTicket {
+  id        String       @id @default(uuid(7)) @db.Uuid
+  userId    String?      @db.Uuid
+  type      TicketType
+  subject   String
+  message   String
+  rating    Int?
+  status    TicketStatus @default(OPEN)
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime     @updatedAt @db.Timestamptz(3)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+}

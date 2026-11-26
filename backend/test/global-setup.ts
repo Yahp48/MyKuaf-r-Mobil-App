@@ -1,0 +1,8 @@
+import { execSync } from "node:child_process";
+import { testEnv } from "./test-env.ts";
+
+export default function setup() {
+  const env = { ...process.env, ...testEnv() };
+  if (!env.DATABASE_URL.includes("test")) throw new Error("Testler yalnızca adında 'test' geçen veritabanında çalışır");
+  execSync("npx prisma migrate deploy", { env, stdio: "pipe" });
+}
