@@ -21,6 +21,10 @@ import { paymentsRouter } from "./modules/payments/routes.ts";
 import { notificationsRouter } from "./modules/notifications/routes.ts";
 import { supportRouter } from "./modules/support/routes.ts";
 import { mapsRouter } from "./modules/maps/routes.ts";
+import { businessAuthRouter } from "./modules/business/auth.ts";
+import { salonPanelRouter } from "./modules/business/salon.ts";
+import { sellerPanelRouter } from "./modules/business/seller.ts";
+import { businessCommonRouter, UPLOAD_DIR } from "./modules/business/common.ts";
 
 export const corsOrigins = env.CORS_ORIGINS.split(",")
   .map((s) => s.trim())
@@ -75,8 +79,22 @@ export function createApp() {
   api.use("/notifications", notificationsRouter);
   api.use("/support", supportRouter);
   api.use("/maps", mapsRouter);
+  api.use("/business/auth", businessAuthRouter);
+  api.use("/business/salon", salonPanelRouter);
+  api.use("/business/seller", sellerPanelRouter);
+  api.use("/business", businessCommonRouter);
 
   app.use("/api", api);
+  // Yüklenen işletme görselleri (mobil uygulama ve panel farklı kökenden gösterir)
+  app.use(
+    "/uploads",
+    express.static(UPLOAD_DIR, {
+      maxAge: "30d",
+      immutable: true,
+      index: false,
+      setHeaders: (res) => res.setHeader("Cross-Origin-Resource-Policy", "cross-origin"),
+    }),
+  );
   app.use(notFoundHandler);
   app.use(errorHandler);
   return app;

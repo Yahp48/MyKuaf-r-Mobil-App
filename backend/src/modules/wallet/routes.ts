@@ -7,7 +7,7 @@ import { formatTL, fromTL, toTL } from "../../lib/money.ts";
 import { env } from "../../config/env.ts";
 import { requireAuth, userId } from "../../middleware/auth.ts";
 import { paymentProvider } from "../payments/providers.ts";
-import { serializePayment, startCheckout } from "../payments/service.ts";
+import { serializePayment, startCheckout, zReturnUrl } from "../payments/service.ts";
 
 export const walletRouter = Router();
 walletRouter.use(requireAuth);
@@ -47,10 +47,11 @@ walletRouter.get("/", async (req, res) => {
 const topupSchema = z.object({
   // TL cinsinden, en fazla 2 ondalık
   amount: z.number().positive("Tutar sıfırdan büyük olmalı").multipleOf(0.01, "En fazla 2 ondalık basamak"),
+  returnUrl: zReturnUrl.optional(),
 });
 
 walletRouter.post("/topups", async (req, res) => {
-  const { amount } = parse(topupSchema, req.body);
+  const { amount, returnUrl } = parse(topupSchema, req.body);
   const cents = fromTL(amount);
   if (cents < env.WALLET_MIN_TOPUP_CENTS || cents > env.WALLET_MAX_TOPUP_CENTS) {
     throw new AppError(
@@ -60,7 +61,13 @@ walletRouter.post("/topups", async (req, res) => {
     );
   }
   const payment = await prisma.payment.create({
-    data: { userId: userId(req), purpose: "WALLET_TOPUP", amountCents: cents, provider: paymentProvider().name },
+    data: {
+      userId: userId(req),
+      purpose: "WALLET_TOPUP",
+      amountCents: cents,
+      provider: paymentProvider().name,
+      returnUrl,
+    },
   });
   const checkout = await startCheckout(payment.id);
   const fresh = await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } });

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { visibleSalonWhere } from "../../lib/visibility.ts";
 import { z } from "zod";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { prisma } from "../../lib/prisma.ts";
@@ -34,7 +35,7 @@ mapsRouter.get("/directions", requireAuth, directionsLimiter, async (req, res) =
   if (!env.GOOGLE_MAPS_SERVER_API_KEY) {
     throw new AppError(503, "DIRECTIONS_UNAVAILABLE", "Yol tarifi hizmeti şu anda kullanılamıyor");
   }
-  const salon = await prisma.salon.findFirst({ where: { id: q.salonId, isActive: true } });
+  const salon = await prisma.salon.findFirst({ where: { id: q.salonId, ...visibleSalonWhere } });
   if (!salon) throw notFound("Salon bulunamadı");
 
   const url = new URL("https://maps.googleapis.com/maps/api/directions/json");

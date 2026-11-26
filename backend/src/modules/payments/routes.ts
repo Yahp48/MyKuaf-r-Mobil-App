@@ -20,8 +20,11 @@ paymentsRouter.get("/:id", requireAuth, async (req, res) => {
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
-const appReturnUrl = (paymentId: string) =>
-  `${env.APP_DEEP_LINK_SCHEME}://payment-result?paymentId=${encodeURIComponent(paymentId)}`;
+// returnUrl kayıt sırasında zReturnUrl ile doğrulanmıştır (yalnızca uygulama şeması / geliştirmede exp://).
+const appReturnUrl = (paymentId: string, returnUrl?: string | null) => {
+  const base = returnUrl ?? `${env.APP_DEEP_LINK_SCHEME}://payment-result`;
+  return `${base}${base.includes("?") ? "&" : "?"}paymentId=${encodeURIComponent(paymentId)}`;
+};
 
 // ───────────── Sahte sağlayıcı (yalnızca PAYMENT_PROVIDER=mock; production'da env doğrulaması engeller) ─────────────
 
@@ -47,7 +50,7 @@ ${
 <input type="hidden" name="ref" value="${escapeHtml(ref)}">
 <button class="ok" name="result" value="success">Ödemeyi onayla</button>
 <button class="fail" name="result" value="fail">Ödemeyi reddet</button></form>`
-    : `<p>Bu ödeme zaten sonuçlandı: ${escapeHtml(payment.status)}</p><a href="${escapeHtml(appReturnUrl(payment.id))}">Uygulamaya dön</a>`
+    : `<p>Bu ödeme zaten sonuçlandı: ${escapeHtml(payment.status)}</p><a href="${escapeHtml(appReturnUrl(payment.id, payment.returnUrl))}">Uygulamaya dön</a>`
 }
 </body></html>`);
   });
@@ -61,6 +64,6 @@ ${
       body.ref,
       body.result === "success" ? { ok: true } : { ok: false, reason: "Ödeme reddedildi" },
     );
-    res.redirect(303, appReturnUrl(payment.id));
+    res.redirect(303, appReturnUrl(payment.id, payment.returnUrl));
   });
 }

@@ -3,9 +3,23 @@ import { AppError, notFound } from "../../lib/errors.ts";
 import { formatTL, toTL } from "../../lib/money.ts";
 import { logger } from "../../lib/logger.ts";
 import { notify } from "../notifications/notify.ts";
-import { emitToUser } from "../../realtime/socket.ts";
+import { z } from "zod";
+import { emitToBusiness, emitToUser } from "../../realtime/socket.ts";
+import { env, isProd } from "../../config/env.ts";
 import { paymentProvider } from "./providers.ts";
 import type { Payment } from "../../generated/prisma/client.ts";
+
+/**
+ * Ödeme bitince yönlendirilecek uygulama adresi. Açık yönlendirme (open redirect) olmaması için
+ * yalnızca uygulamanın kendi şeması; geliştirmede Expo Go adresleri (exp://) kabul edilir.
+ */
+export const zReturnUrl = z
+  .string()
+  .max(300)
+  .refine(
+    (u) => u.startsWith(`${env.APP_DEEP_LINK_SCHEME}://`) || (!isProd && /^exps?:\/\//.test(u)),
+    "Geçersiz dönüş adresi",
+  );
 
 // Ödeme sayfasında bu süreden uzun bekleyen işlemler iptal edilir, ayrılan stok serbest bırakılır.
 export const PAYMENT_TIMEOUT_MS = 30 * 60_000;
@@ -16,7 +30,7 @@ export function serializePayment(p: Payment) {
     purpose: p.purpose,
     status: p.status,
     amount: toTL(p.amountCents),
-    orderId: p.orderId,
+    refunded: toTL(p.refundedCents),
     failureReason: p.failureReason,
     completedAt: p.completedAt?.toISOString() ?? null,
     createdAt: p.createdAt.toISOString(),
@@ -65,26 +79,31 @@ export async function finalizePayment(paymentId: string, outcome: Outcome) {
         : { status: "FAILED", completedAt: new Date(), failureReason: outcome.reason },
     });
     const payment = await tx.payment.findUniqueOrThrow({ where: { id: paymentId } });
-    if (claimed.count === 0) return { payment, changed: false as const };
+    if (claimed.count === 0) return { payment, changed: false as const, orderIds: [] as string[] };
 
-    if (payment.purpose === "ORDER" && payment.orderId) {
+    let orderIds: string[] = [];
+    if (payment.purpose === "ORDER") {
+      const orders = await tx.order.findMany({
+        where: { paymentId: payment.id, status: "PENDING_PAYMENT" },
+        include: { items: true },
+      });
+      orderIds = orders.map((o) => o.id);
       if (outcome.ok) {
-        const order = await tx.order.update({
-          where: { id: payment.orderId },
-          data: { status: "PAID", paidAt: new Date() },
-          include: { items: true },
-        });
-        if (order.userId) {
+        await tx.order.updateMany({ where: { id: { in: orderIds } }, data: { status: "PAID", paidAt: new Date() } });
+        if (payment.userId) {
           await tx.cartItem.deleteMany({
-            where: { userId: order.userId, productId: { in: order.items.map((i) => i.productId) } },
+            where: {
+              userId: payment.userId,
+              productId: { in: orders.flatMap((o) => o.items.map((i) => i.productId)) },
+            },
           });
         }
       } else {
-        const cancelled = await tx.order.updateMany({
-          where: { id: payment.orderId, status: "PENDING_PAYMENT" },
-          data: { status: "CANCELLED", cancelledAt: new Date() },
+        await tx.order.updateMany({
+          where: { id: { in: orderIds } },
+          data: { status: "CANCELLED", cancelledAt: new Date(), cancelReason: outcome.reason },
         });
-        if (cancelled.count) await restoreStock(tx, payment.orderId);
+        for (const id of orderIds) await restoreStock(tx, id);
       }
     }
 
@@ -104,10 +123,19 @@ export async function finalizePayment(paymentId: string, outcome: Outcome) {
         },
       });
     }
-    return { payment, changed: true as const };
+    return { payment, changed: true as const, orderIds };
   });
 
   const { payment } = result;
+  if (result.changed && result.orderIds.length) {
+    // Sipariş paneline anında düşer (ödenen) veya listeden çıkar (iptal).
+    const { orderInclude, serializeOrder, publishOrder } = await import("../orders/service.ts");
+    const orders = await prisma.order.findMany({ where: { id: { in: result.orderIds } }, include: orderInclude });
+    for (const o of orders) {
+      if (outcome.ok) emitToBusiness(o.sellerId, "order:new", serializeOrder(o));
+      publishOrder(o);
+    }
+  }
   if (result.changed && payment.userId) {
     emitToUser(payment.userId, "payment:updated", serializePayment(payment));
     if (outcome.ok) {
@@ -118,7 +146,7 @@ export async function finalizePayment(paymentId: string, outcome: Outcome) {
           payment.purpose === "ORDER"
             ? `${formatTL(payment.amountCents)} tutarındaki ödemeniz başarıyla alındı.`
             : `Cüzdanınıza ${formatTL(payment.amountCents)} yüklendi.`,
-        data: payment.orderId ? { orderId: payment.orderId } : { paymentId: payment.id },
+        data: result.orderIds[0] ? { orderId: result.orderIds[0] } : { paymentId: payment.id },
       });
     }
   }

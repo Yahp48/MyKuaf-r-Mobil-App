@@ -4,61 +4,28 @@ import { prisma } from "../../lib/prisma.ts";
 import { pageResult, paginate, parse, zId, zPagination } from "../../lib/validate.ts";
 import { AppError, conflict, notFound, unauthorized } from "../../lib/errors.ts";
 import { humanCode } from "../../lib/codes.ts";
-import { formatTL, toTL } from "../../lib/money.ts";
+import { formatTL } from "../../lib/money.ts";
 import { requireAuth, userId } from "../../middleware/auth.ts";
 import { loadCart, summarizeCart } from "../cart/service.ts";
 import { paymentProvider } from "../payments/providers.ts";
-import { restoreStock, serializePayment, startCheckout } from "../payments/service.ts";
+import { serializePayment, startCheckout, zReturnUrl } from "../payments/service.ts";
 import { notify } from "../notifications/notify.ts";
+import { emitToBusiness } from "../../realtime/socket.ts";
+import { CUSTOMER_CANCELLABLE, cancelOrder, orderInclude, serializeOrder } from "./service.ts";
 import type { Prisma } from "../../generated/prisma/client.ts";
 
 export const ordersRouter = Router();
 ordersRouter.use(requireAuth);
 
-const include = {
-  items: true,
-  payments: { orderBy: { createdAt: "desc" }, take: 1 },
-} satisfies Prisma.OrderInclude;
-type OrderRow = Prisma.OrderGetPayload<{ include: typeof include }>;
-
-// Müşteri, sipariş hazırlanmaya başlamadan iptal edebilir.
-const CANCELLABLE = ["PENDING_PAYMENT", "PAID"] as const;
-
-function serialize(o: OrderRow) {
-  return {
-    id: o.id,
-    orderNumber: o.orderNumber,
-    status: o.status,
-    paymentMethod: o.paymentMethod,
-    subtotal: toTL(o.subtotalCents),
-    shipping: toTL(o.shippingCents),
-    total: toTL(o.totalCents),
-    shippingAddress: o.shippingAddress,
-    trackingNumber: o.trackingNumber,
-    items: o.items.map((i) => ({
-      productId: i.productId,
-      name: i.nameSnapshot,
-      image: i.imageSnapshot,
-      unitPrice: toTL(i.unitPriceCents),
-      quantity: i.quantity,
-      lineTotal: toTL(i.lineTotalCents),
-    })),
-    itemCount: o.items.reduce((n, i) => n + i.quantity, 0),
-    canCancel: (CANCELLABLE as readonly string[]).includes(o.status),
-    payment: o.payments[0] ? serializePayment(o.payments[0]) : null,
-    paidAt: o.paidAt?.toISOString() ?? null,
-    cancelledAt: o.cancelledAt?.toISOString() ?? null,
-    createdAt: o.createdAt.toISOString(),
-  };
-}
-
 const createSchema = z.object({
   addressId: zId,
   paymentMethod: z.enum(["CARD", "WALLET"]),
+  returnUrl: zReturnUrl.optional(),
 });
 
 /**
  * Sepetten sipariş oluşturur. Fiyatlar ve kargo SUNUCUDA hesaplanır; istemciden gelen tutara güvenilmez.
+ * Çok satıcılı sepet satıcı başına ayrı siparişe bölünür, tek ödemeyle alınır.
  * Stok sipariş anında ayrılır; ödeme başarısız olursa veya zaman aşımına uğrarsa geri bırakılır.
  */
 ordersRouter.post("/", async (req, res) => {
@@ -92,37 +59,57 @@ ordersRouter.post("/", async (req, res) => {
       if (updated.count === 0) throw conflict("INSUFFICIENT_STOCK", `${row.product.name} için yeterli stok kalmadı`);
     }
 
-    const { subtotalCents, shippingCents, totalCents } = cart.totals;
-    const order = await tx.order.create({
-      data: {
-        orderNumber: humanCode("MK", 10),
-        userId: uid,
-        paymentMethod: body.paymentMethod,
-        subtotalCents,
-        shippingCents,
-        totalCents,
-        customerEmail: user.email,
-        shippingAddress: {
-          title: address.title,
-          fullName: address.fullName,
-          phone: address.phone,
-          city: address.city,
-          district: address.district,
-          line: address.line,
-          postalCode: address.postalCode,
+    const { totalCents } = cart.totals;
+    const payment =
+      body.paymentMethod === "CARD"
+        ? await tx.payment.create({
+            data: {
+              userId: uid,
+              purpose: "ORDER",
+              amountCents: totalCents,
+              provider: paymentProvider().name,
+              returnUrl: body.returnUrl,
+            },
+          })
+        : null;
+
+    const shippingAddress = {
+      title: address.title,
+      fullName: address.fullName,
+      phone: address.phone,
+      city: address.city,
+      district: address.district,
+      line: address.line,
+      postalCode: address.postalCode,
+    };
+    const orderIds: string[] = [];
+    for (const g of cart.groups) {
+      const order = await tx.order.create({
+        data: {
+          orderNumber: humanCode("MK", 10),
+          userId: uid,
+          sellerId: g.seller.id,
+          paymentId: payment?.id,
+          paymentMethod: body.paymentMethod,
+          subtotalCents: g.subtotalCents,
+          shippingCents: g.shippingCents,
+          totalCents: g.subtotalCents + g.shippingCents,
+          customerEmail: user.email,
+          shippingAddress,
+          items: {
+            create: g.rows.map((r) => ({
+              productId: r.productId,
+              nameSnapshot: r.product.name,
+              imageSnapshot: r.product.images[0] ?? null,
+              unitPriceCents: r.product.priceCents,
+              quantity: r.quantity,
+              lineTotalCents: r.product.priceCents * r.quantity,
+            })),
+          },
         },
-        items: {
-          create: rows.map((r) => ({
-            productId: r.productId,
-            nameSnapshot: r.product.name,
-            imageSnapshot: r.product.images[0] ?? null,
-            unitPriceCents: r.product.priceCents,
-            quantity: r.quantity,
-            lineTotalCents: r.product.priceCents * r.quantity,
-          })),
-        },
-      },
-    });
+      });
+      orderIds.push(order.id);
+    }
 
     if (body.paymentMethod === "WALLET") {
       const debited = await tx.user.updateMany({
@@ -137,44 +124,47 @@ ordersRouter.post("/", async (req, res) => {
         );
       }
       const after = await tx.user.findUniqueOrThrow({ where: { id: uid }, select: { walletBalanceCents: true } });
-      await tx.walletTransaction.create({
-        data: {
-          userId: uid,
-          type: "PAYMENT",
-          amountCents: -totalCents,
-          balanceAfterCents: after.walletBalanceCents,
-          description: `Sipariş ödemesi (${order.orderNumber})`,
-          orderId: order.id,
-        },
-      });
-      await tx.order.update({ where: { id: order.id }, data: { status: "PAID", paidAt: new Date() } });
+      const orders = await tx.order.findMany({ where: { id: { in: orderIds } } });
+      let balance = after.walletBalanceCents + totalCents;
+      for (const o of orders) {
+        balance -= o.totalCents;
+        await tx.walletTransaction.create({
+          data: {
+            userId: uid,
+            type: "PAYMENT",
+            amountCents: -o.totalCents,
+            balanceAfterCents: balance,
+            description: `Sipariş ödemesi (${o.orderNumber})`,
+            orderId: o.id,
+          },
+        });
+      }
+      await tx.order.updateMany({ where: { id: { in: orderIds } }, data: { status: "PAID", paidAt: new Date() } });
       await tx.cartItem.deleteMany({ where: { userId: uid } });
-      return { orderId: order.id, paymentId: undefined };
     }
-
-    const payment = await tx.payment.create({
-      data: {
-        userId: uid,
-        purpose: "ORDER",
-        orderId: order.id,
-        amountCents: totalCents,
-        provider: paymentProvider().name,
-      },
-    });
-    return { orderId: order.id, paymentId: payment.id };
+    return { orderIds, paymentId: payment?.id };
   });
 
   const checkout = result.paymentId ? await startCheckout(result.paymentId) : undefined;
-  const order = await prisma.order.findUniqueOrThrow({ where: { id: result.orderId }, include });
-  if (order.status === "PAID") {
+  const orders = await prisma.order.findMany({ where: { id: { in: result.orderIds } }, include: orderInclude });
+  if (body.paymentMethod === "WALLET") {
+    for (const o of orders) emitToBusiness(o.sellerId, "order:new", serializeOrder(o));
     await notify(uid, {
       type: "order_paid",
       title: "Siparişiniz alındı",
-      body: `${order.orderNumber} numaralı siparişiniz hazırlanmak üzere sıraya alındı.`,
-      data: { orderId: order.id },
+      body:
+        orders.length > 1
+          ? `${orders.length} ayrı satıcıdan siparişleriniz hazırlanmak üzere sıraya alındı.`
+          : `${orders[0]!.orderNumber} numaralı siparişiniz hazırlanmak üzere sıraya alındı.`,
+      data: { orderId: orders[0]!.id },
     });
   }
-  res.status(201).json({ order: serialize(order), checkoutUrl: checkout?.checkoutUrl ?? null });
+  const payment = result.paymentId ? await prisma.payment.findUnique({ where: { id: result.paymentId } }) : null;
+  res.status(201).json({
+    orders: orders.map(serializeOrder),
+    payment: payment ? serializePayment(payment) : null,
+    checkoutUrl: checkout?.checkoutUrl ?? null,
+  });
 });
 
 const listSchema = zPagination.extend({
@@ -185,82 +175,30 @@ ordersRouter.get("/", async (req, res) => {
   const q = parse(listSchema, req.query);
   const where: Prisma.OrderWhereInput = { userId: userId(req), ...(q.status ? { status: q.status } : {}) };
   const [rows, total] = await Promise.all([
-    prisma.order.findMany({ where, include, orderBy: { createdAt: "desc" }, ...paginate(q.page, q.pageSize) }),
+    prisma.order.findMany({
+      where,
+      include: orderInclude,
+      orderBy: { createdAt: "desc" },
+      ...paginate(q.page, q.pageSize),
+    }),
     prisma.order.count({ where }),
   ]);
-  res.json(pageResult(rows.map(serialize), total, q.page, q.pageSize));
+  res.json(pageResult(rows.map(serializeOrder), total, q.page, q.pageSize));
 });
 
 ordersRouter.get("/:id", async (req, res) => {
   const order = await prisma.order.findFirst({
     where: { id: parse(zId, req.params.id), userId: userId(req) },
-    include,
+    include: orderInclude,
   });
   if (!order) throw notFound("Sipariş bulunamadı");
-  res.json({ order: serialize(order) });
+  res.json({ order: serializeOrder(order) });
 });
 
 ordersRouter.post("/:id/cancel", async (req, res) => {
   const id = parse(zId, req.params.id);
-  const uid = userId(req);
-  const order = await prisma.order.findFirst({ where: { id, userId: uid }, include });
-  if (!order) throw notFound("Sipariş bulunamadı");
-  if (!(CANCELLABLE as readonly string[]).includes(order.status)) {
-    throw new AppError(
-      400,
-      "CANNOT_CANCEL",
-      "Hazırlanmaya başlanan siparişler iptal edilemez, iade için destekle iletişime geçin",
-    );
-  }
-
-  // Kartla ödenmiş siparişin iadesi önce sağlayıcıda yapılır; başarısız olursa sipariş değişmez.
-  const cardPayment = order.payments.find((p) => p.status === "SUCCEEDED");
-  if (order.status === "PAID" && order.paymentMethod === "CARD" && cardPayment?.providerRef) {
-    await paymentProvider().refund({ providerRef: cardPayment.providerRef, amountCents: cardPayment.amountCents });
-  }
-
-  await prisma.$transaction(async (tx) => {
-    const changed = await tx.order.updateMany({
-      where: { id, status: { in: [...CANCELLABLE] } },
-      data: { status: order.status === "PAID" ? "REFUNDED" : "CANCELLED", cancelledAt: new Date() },
-    });
-    if (changed.count === 0) throw new AppError(409, "ORDER_CHANGED", "Sipariş durumu değişti, lütfen yenileyin");
-    await restoreStock(tx, id);
-
-    if (order.status === "PENDING_PAYMENT") {
-      await tx.payment.updateMany({
-        where: { orderId: id, status: "PENDING" },
-        data: { status: "FAILED", failureReason: "Sipariş iptal edildi", completedAt: new Date() },
-      });
-    } else if (order.paymentMethod === "WALLET") {
-      const user = await tx.user.update({
-        where: { id: uid },
-        data: { walletBalanceCents: { increment: order.totalCents } },
-      });
-      await tx.walletTransaction.create({
-        data: {
-          userId: uid,
-          type: "REFUND",
-          amountCents: order.totalCents,
-          balanceAfterCents: user.walletBalanceCents,
-          description: `Sipariş iadesi (${order.orderNumber})`,
-          orderId: id,
-        },
-      });
-    } else if (cardPayment) {
-      await tx.payment.update({ where: { id: cardPayment.id }, data: { status: "REFUNDED" } });
-    }
-  });
-
-  const updated = await prisma.order.findUniqueOrThrow({ where: { id }, include });
-  await notify(uid, {
-    type: "order_status",
-    title: "Siparişiniz iptal edildi",
-    body:
-      order.status === "PAID"
-        ? `${order.orderNumber}: ${formatTL(order.totalCents)} iadeniz ${order.paymentMethod === "WALLET" ? "cüzdanınıza yüklendi" : "kartınıza yapıldı"}.`
-        : `${order.orderNumber} numaralı siparişiniz iptal edildi.`,
-    data: { orderId: id },
-  });
-  res.json({ order: serialize(updated) });
+  const owned = await prisma.order.findFirst({ where: { id, userId: userId(req) }, select: { id: true } });
+  if (!owned) throw notFound("Sipariş bulunamadı");
+  const order = await cancelOrder(id, { by: "customer", reason: "Müşteri iptal etti", allowed: CUSTOMER_CANCELLABLE });
+  res.json({ order: serializeOrder(order) });
 });

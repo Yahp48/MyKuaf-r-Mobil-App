@@ -224,26 +224,204 @@ async function main() {
     categoryIds.set(c.slug, row.id);
   }
 
+  // Demo satıcı işletmesi: tüm örnek ürünler buna ait
+  const seller = await prisma.business.upsert({
+    where: { taxNumber: "1234567890" },
+    create: {
+      type: "SELLER",
+      displayName: "Woman Hair Store",
+      legalName: "Woman Hair Kozmetik Ticaret Ltd. Şti.",
+      taxNumber: "1234567890",
+      taxOffice: "Kırşehir",
+      address: "Ahievran Mah. Aşk Paşa Blv. No:31",
+      city: "Kırşehir",
+      district: "Merkez",
+      phone: "03862130010",
+      email: "magaza@mykuafor.test",
+      iban: "TR330006100519786457841326",
+      returnPolicy: "Açılmamış ürünlerde 14 gün içinde ücretsiz iade.",
+    },
+    update: {},
+  });
+
   for (const { category, ...p } of products) {
-    const data = { ...p, categoryId: categoryIds.get(category)! };
+    const data = { ...p, categoryId: categoryIds.get(category)!, sellerId: seller.id };
     await prisma.product.upsert({ where: { slug: p.slug }, create: data, update: data });
   }
 
-  // Yalnızca yerel geliştirme için test hesabı.
+  // Yalnızca yerel geliştirme: demo hesaplar ve paneller boş görünmesin diye örnek hareketler
   if (process.env.NODE_ENV !== "production") {
-    await prisma.user.upsert({
-      where: { email: "demo@mykuafor.test" },
-      create: {
-        email: "demo@mykuafor.test",
-        name: "Demo Kullanıcı",
-        phone: "+905550000000",
-        passwordHash: await hashPassword("Demo12345"),
-      },
-      update: {},
-    });
+    await seedDemo(seller);
   }
 
   console.log(`Seed tamam: ${salons.length} salon, ${products.length} ürün.`);
+}
+
+async function seedDemo(seller: { id: string; shippingFeeCents: number; freeShippingThresholdCents: number }) {
+  const passwordHash = await hashPassword("Demo12345");
+  const customer = await prisma.user.upsert({
+    where: { email: "demo@mykuafor.test" },
+    create: { email: "demo@mykuafor.test", name: "Demo Kullanıcı", phone: "+905550000000", passwordHash },
+    update: {},
+  });
+
+  // Demo kuaför işletmesi → Zeynep Bayan Kuaför
+  const salon = await prisma.salon.findUniqueOrThrow({ where: { slug: "zeynep-bayan-kuafor" } });
+  const salonBiz = await prisma.business.upsert({
+    where: { taxNumber: "10000000146" },
+    create: {
+      type: "SALON",
+      displayName: salon.name,
+      legalName: "Zeynep Yıldız - Kuaförlük Hizmetleri",
+      taxNumber: "10000000146",
+      taxOffice: "Kırşehir",
+      address: salon.address,
+      city: "Kırşehir",
+      district: "Merkez",
+      phone: "03862130001",
+      email: "zeynep@mykuafor.test",
+    },
+    update: {},
+  });
+  await prisma.salon.update({ where: { id: salon.id }, data: { businessId: salonBiz.id } });
+
+  const owners: [string, string, string][] = [
+    ["salon@mykuafor.test", "Zeynep Yıldız", salonBiz.id],
+    ["satici@mykuafor.test", "Mert Aydın", seller.id],
+  ];
+  for (const [email, name, businessId] of owners) {
+    await prisma.user.upsert({
+      where: { email },
+      create: { email, name, phone: "+905551112233", passwordHash, role: "BUSINESS_OWNER", businessId },
+      update: { role: "BUSINESS_OWNER", businessId },
+    });
+  }
+
+  if ((await prisma.appointment.count({ where: { salonId: salon.id, code: { startsWith: "RV-DEMO" } } })) === 0) {
+    const staff = await prisma.staff.findMany({ where: { salonId: salon.id }, orderBy: { sortOrder: "asc" } });
+    const svc = await prisma.service.findMany({ where: { salonId: salon.id }, orderBy: { sortOrder: "asc" } });
+    const names = [
+      "Elif Kaya",
+      "Merve Şahin",
+      "Seda Arslan",
+      "Büşra Çelik",
+      "Gizem Öztürk",
+      "Derya Aksoy",
+      "Ece Doğan",
+    ];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let n = 0;
+    // Son 20 günün sonuçlanmış randevuları + bugün ve yarın aktif randevular
+    for (let day = -20; day <= 1; day++) {
+      const perDay = day < 0 ? 2 + (Math.abs(day) % 3) : 4;
+      for (let k = 0; k < perDay; k++) {
+        const s = svc[(n + k) % svc.length]!;
+        const st = staff[k % staff.length]!;
+        const start = new Date(today);
+        start.setDate(start.getDate() + day);
+        start.setHours(10 + k * 2, day === 0 ? 0 : 30, 0, 0);
+        if (start.getDay() === 0) continue; // Pazar kapalı
+        const status = day < 0 ? (n % 9 === 0 ? "CANCELLED" : n % 13 === 0 ? "NO_SHOW" : "COMPLETED") : "CONFIRMED";
+        const isApp = n % 3 === 0;
+        await prisma.appointment.create({
+          data: {
+            code: `RV-DEMO${String(n).padStart(4, "0")}`,
+            salonId: salon.id,
+            staffId: st.id,
+            userId: isApp ? customer.id : null,
+            source: isApp ? "APP" : "MANUAL",
+            status,
+            startsAt: start,
+            endsAt: new Date(start.getTime() + s.durationMinutes * 60_000),
+            totalCents: s.priceCents,
+            customerName: isApp ? customer.name : names[n % names.length]!,
+            customerPhone: isApp ? customer.phone : `0555${String(1000000 + n * 7).slice(-7)}`,
+            ...(status === "COMPLETED" ? { completedAt: start } : {}),
+            ...(status === "CANCELLED" ? { cancelledAt: start, cancelReason: "Müşteri iptal etti" } : {}),
+            services: {
+              create: [
+                { serviceId: s.id, nameSnapshot: s.name, priceCents: s.priceCents, durationMinutes: s.durationMinutes },
+              ],
+            },
+          },
+        });
+        n++;
+      }
+    }
+    const month = new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1));
+    const day = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+    await prisma.ledgerEntry.createMany({
+      data: [
+        { businessId: salonBiz.id, type: "EXPENSE", category: "Kira", amountCents: 1_500_000, date: month },
+        { businessId: salonBiz.id, type: "EXPENSE", category: "Maaş", amountCents: 4_200_000, date: month },
+        { businessId: salonBiz.id, type: "EXPENSE", category: "Malzeme", amountCents: 380_000, date: day },
+        { businessId: salonBiz.id, type: "EXPENSE", category: "Fatura", amountCents: 145_000, date: day },
+        { businessId: salonBiz.id, type: "INCOME", category: "Ürün satışı", amountCents: 92_000, date: day },
+      ],
+    });
+  }
+
+  if ((await prisma.order.count({ where: { sellerId: seller.id, orderNumber: { startsWith: "MK-DEMO" } } })) === 0) {
+    const sellable = await prisma.product.findMany({ where: { sellerId: seller.id, stock: { gt: 0 } } });
+    const statuses = [
+      "PAID",
+      "PAID",
+      "PREPARING",
+      "SHIPPED",
+      "DELIVERED",
+      "DELIVERED",
+      "DELIVERED",
+      "REFUNDED",
+    ] as const;
+    for (let i = 0; i < 14; i++) {
+      const p = sellable[i % sellable.length]!;
+      const qty = 1 + (i % 2);
+      const subtotal = p.priceCents * qty;
+      const shipping = subtotal >= seller.freeShippingThresholdCents ? 0 : seller.shippingFeeCents;
+      const paidAt = new Date(Date.now() - (i * 2 + 0.2) * 86_400_000);
+      const status = statuses[i % statuses.length]!;
+      const shipped = status === "SHIPPED" || status === "DELIVERED";
+      await prisma.order.create({
+        data: {
+          orderNumber: `MK-DEMO${String(i).padStart(5, "0")}`,
+          userId: customer.id,
+          sellerId: seller.id,
+          paymentMethod: i % 3 === 0 ? "WALLET" : "CARD",
+          status,
+          subtotalCents: subtotal,
+          shippingCents: shipping,
+          totalCents: subtotal + shipping,
+          customerEmail: customer.email,
+          shippingAddress: {
+            title: "Ev",
+            fullName: "Demo Kullanıcı",
+            phone: "05550000000",
+            city: "Kırşehir",
+            district: "Merkez",
+            line: "Kayabaşı Mah. Demo Sok. No:4 D:2",
+            postalCode: "40100",
+          },
+          paidAt,
+          ...(shipped ? { carrier: "Yurtiçi Kargo", trackingNumber: `YK${100000000 + i}`, shippedAt: paidAt } : {}),
+          ...(status === "DELIVERED" ? { deliveredAt: paidAt } : {}),
+          ...(status === "REFUNDED" ? { cancelledAt: paidAt, cancelReason: "Müşteri iptal etti" } : {}),
+          items: {
+            create: [
+              {
+                productId: p.id,
+                nameSnapshot: p.name,
+                imageSnapshot: p.images[0] ?? null,
+                unitPriceCents: p.priceCents,
+                quantity: qty,
+                lineTotalCents: subtotal,
+              },
+            ],
+          },
+        },
+      });
+    }
+  }
 }
 
 main()

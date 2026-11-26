@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { sellableProductWhere } from "../../lib/visibility.ts";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.ts";
 import { pageResult, paginate, parse, zId, zPagination } from "../../lib/validate.ts";
@@ -23,7 +24,7 @@ productsRouter.get("/categories", async (_req, res) => {
   const categories = await prisma.category.findMany({
     where: { isActive: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, slug: true, name: true, _count: { select: { products: { where: { isActive: true } } } } },
+    select: { id: true, slug: true, name: true, _count: { select: { products: { where: sellableProductWhere } } } },
   });
   res.json({
     items: categories.map((c) => ({ id: c.id, slug: c.slug, name: c.name, productCount: c._count.products })),
@@ -55,7 +56,7 @@ const ORDER_BY: Record<string, Prisma.ProductOrderByWithRelationInput[]> = {
 productsRouter.get("/", optionalAuth, async (req, res) => {
   const q = parse(listSchema, req.query);
   const where: Prisma.ProductWhereInput = {
-    isActive: true,
+    ...sellableProductWhere,
     category: { isActive: true, ...(q.category ? { slug: q.category } : {}) },
     ...(q.featured !== undefined ? { isFeatured: q.featured } : {}),
     ...(q.inStock ? { stock: { gt: 0 } } : {}),
@@ -94,7 +95,7 @@ productsRouter.get("/", optionalAuth, async (req, res) => {
 
 productsRouter.get("/:id", optionalAuth, async (req, res) => {
   const id = parse(zId, req.params.id);
-  const product = await prisma.product.findFirst({ where: { id, isActive: true }, include: productInclude });
+  const product = await prisma.product.findFirst({ where: { id, ...sellableProductWhere }, include: productInclude });
   if (!product) throw notFound("Ürün bulunamadı");
   const favs = await favoriteSet(req.user?.id, [id]);
   res.json({ product: serializeProduct(product, { isFavorite: favs?.has(id) }) });
@@ -102,10 +103,10 @@ productsRouter.get("/:id", optionalAuth, async (req, res) => {
 
 productsRouter.get("/:id/related", optionalAuth, async (req, res) => {
   const id = parse(zId, req.params.id);
-  const product = await prisma.product.findFirst({ where: { id, isActive: true } });
+  const product = await prisma.product.findFirst({ where: { id, ...sellableProductWhere } });
   if (!product) throw notFound("Ürün bulunamadı");
   const rows = await prisma.product.findMany({
-    where: { isActive: true, categoryId: product.categoryId, id: { not: id } },
+    where: { ...sellableProductWhere, categoryId: product.categoryId, id: { not: id } },
     include: productInclude,
     orderBy: [{ ratingAvg: "desc" }, { createdAt: "desc" }],
     take: 8,

@@ -15,6 +15,7 @@ datasource db {
 
 enum Role {
   CUSTOMER
+  BUSINESS_OWNER
   ADMIN
 }
 
@@ -27,25 +28,100 @@ model User {
   role               Role      @default(CUSTOMER)
   walletBalanceCents Int       @default(0)
   marketingOptIn     Boolean   @default(false)
+  // İşletme hesabı ise bağlı olduğu işletme (panel girişi)
+  businessId         String?   @db.Uuid
   deletedAt          DateTime? @db.Timestamptz(3)
   createdAt          DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt          DateTime  @updatedAt @db.Timestamptz(3)
 
-  refreshTokens       RefreshToken[]
-  passwordResets      PasswordReset[]
-  appointments        Appointment[]
-  salonReviews        SalonReview[]
-  productReviews      ProductReview[]
-  cartItems           CartItem[]
-  favoriteProducts    FavoriteProduct[]
-  favoriteSalons      FavoriteSalon[]
-  addresses           Address[]
-  orders              Order[]
-  walletTransactions  WalletTransaction[]
-  payments            Payment[]
-  notifications       Notification[]
-  pushTokens          PushToken[]
-  supportTickets      SupportTicket[]
+  refreshTokens      RefreshToken[]
+  passwordResets     PasswordReset[]
+  appointments       Appointment[]
+  salonReviews       SalonReview[]
+  productReviews     ProductReview[]
+  cartItems          CartItem[]
+  favoriteProducts   FavoriteProduct[]
+  favoriteSalons     FavoriteSalon[]
+  addresses          Address[]
+  orders             Order[]
+  walletTransactions WalletTransaction[]
+  payments           Payment[]
+  notifications      Notification[]
+  pushTokens         PushToken[]
+  supportTickets     SupportTicket[]
+  business           Business?           @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  @@index([businessId])
+}
+
+// ───────────────────────────── İşletme ─────────────────────────────
+
+enum BusinessType {
+  SALON
+  SELLER
+}
+
+enum BusinessStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model Business {
+  id          String         @id @default(uuid(7)) @db.Uuid
+  type        BusinessType
+  status      BusinessStatus @default(ACTIVE)
+  // Müşterinin gördüğü ad (mağaza / salon adı)
+  displayName String
+  // Ticari unvan (faturada yazan ad) ve vergi bilgileri
+  legalName   String
+  // Vergi kimlik no (10 hane, şirket) veya TC kimlik no (11 hane, şahıs işletmesi)
+  taxNumber   String         @unique
+  taxOffice   String
+  mersisNo    String?
+  kepAddress  String?
+  address     String
+  city        String
+  district    String
+  postalCode  String?
+  phone       String
+  email       String
+  iban        String?
+
+  // Satıcı ayarları (her satıcı kendi kargosunu gönderir)
+  shippingFeeCents           Int     @default(2999)
+  freeShippingThresholdCents Int     @default(50000)
+  returnPolicy               String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  members       User[]
+  salon         Salon?
+  products      Product[]
+  orders        Order[]
+  ledgerEntries LedgerEntry[]
+}
+
+enum LedgerType {
+  INCOME
+  EXPENSE
+}
+
+/// Salonun elle girdiği gelir/gider kayıtları (kira, maaş, malzeme, salonda ürün satışı...).
+/// Tamamlanan randevuların geliri ayrıca otomatik hesaplanır.
+model LedgerEntry {
+  id          String     @id @default(uuid(7)) @db.Uuid
+  businessId  String     @db.Uuid
+  type        LedgerType
+  category    String
+  amountCents Int
+  date        DateTime   @db.Date
+  description String?
+  createdAt   DateTime   @default(now()) @db.Timestamptz(3)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, date])
 }
 
 model RefreshToken {
@@ -84,6 +160,7 @@ model PasswordReset {
 
 model Salon {
   id                      String   @id @default(uuid(7)) @db.Uuid
+  businessId              String?  @unique @db.Uuid
   slug                    String   @unique
   name                    String
   description             String?
@@ -110,6 +187,7 @@ model Salon {
   createdAt               DateTime @default(now()) @db.Timestamptz(3)
   updatedAt               DateTime @updatedAt @db.Timestamptz(3)
 
+  business     Business?       @relation(fields: [businessId], references: [id], onDelete: SetNull)
   workingHours WorkingHours[]
   staff        Staff[]
   services     Service[]
@@ -181,6 +259,11 @@ model Service {
   @@index([salonId])
 }
 
+enum AppointmentSource {
+  APP
+  MANUAL
+}
+
 enum AppointmentStatus {
   PENDING
   CONFIRMED
@@ -198,10 +281,15 @@ model Appointment {
   startsAt      DateTime          @db.Timestamptz(3)
   endsAt        DateTime          @db.Timestamptz(3)
   status        AppointmentStatus @default(PENDING)
+  // APP: müşteri uygulamadan aldı, MANUAL: salon telefonla/kapıda girdi
+  source        AppointmentSource @default(APP)
   totalCents    Int
   customerName  String
   customerPhone String?
   customerNote  String?
+  // Yalnızca salonun gördüğü not
+  businessNote  String?
+  completedAt   DateTime?         @db.Timestamptz(3)
   cancelledAt   DateTime?         @db.Timestamptz(3)
   cancelReason  String?
   createdAt     DateTime          @default(now()) @db.Timestamptz(3)
@@ -270,6 +358,8 @@ model Product {
   description         String?
   brand               String?
   categoryId          String   @db.Uuid
+  sellerId            String   @db.Uuid
+  sku                 String?
   priceCents          Int
   // İndirim öncesi fiyat (üstü çizili gösterilir)
   compareAtPriceCents Int?
@@ -284,12 +374,14 @@ model Product {
   updatedAt           DateTime @updatedAt @db.Timestamptz(3)
 
   category    Category          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  seller      Business          @relation(fields: [sellerId], references: [id], onDelete: Restrict)
   reviews     ProductReview[]
   cartItems   CartItem[]
   orderItems  OrderItem[]
   favoritedBy FavoriteProduct[]
 
   @@index([categoryId])
+  @@index([sellerId])
   @@index([isActive, isFeatured])
 }
 
@@ -382,6 +474,10 @@ model Order {
   id              String        @id @default(uuid(7)) @db.Uuid
   orderNumber     String        @unique
   userId          String?       @db.Uuid
+  // Her sipariş tek satıcıya aittir; çok satıcılı sepet ödemede satıcı başına siparişe bölünür.
+  sellerId        String        @db.Uuid
+  // Aynı ödemeyle alınan siparişler aynı Payment'a bağlanır.
+  paymentId       String?       @db.Uuid
   status          OrderStatus   @default(PENDING_PAYMENT)
   paymentMethod   PaymentMethod
   subtotalCents   Int
@@ -390,25 +486,31 @@ model Order {
   // Sipariş anındaki teslimat adresi (adres sonradan değişse/silinse de korunur)
   shippingAddress Json
   customerEmail   String
+  carrier         String?
   trackingNumber  String?
   paidAt          DateTime?     @db.Timestamptz(3)
+  shippedAt       DateTime?     @db.Timestamptz(3)
+  deliveredAt     DateTime?     @db.Timestamptz(3)
+  cancelReason    String?
   cancelledAt     DateTime?     @db.Timestamptz(3)
   createdAt       DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
 
   // Yasal saklama yükümlülüğü: hesap silinse de sipariş kaydı korunur.
-  user     User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
-  items    OrderItem[]
-  payments Payment[]
+  user    User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  seller  Business    @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  payment Payment?    @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  items   OrderItem[]
 
   @@index([userId, createdAt])
+  @@index([sellerId, createdAt])
   @@index([status])
 }
 
 model OrderItem {
-  id             String @id @default(uuid(7)) @db.Uuid
-  orderId        String @db.Uuid
-  productId      String @db.Uuid
+  id             String  @id @default(uuid(7)) @db.Uuid
+  orderId        String  @db.Uuid
+  productId      String  @db.Uuid
   nameSnapshot   String
   imageSnapshot  String?
   unitPriceCents Int
@@ -467,20 +569,23 @@ model Payment {
   id            String          @id @default(uuid(7)) @db.Uuid
   userId        String?         @db.Uuid
   purpose       PaymentPurpose
-  orderId       String?         @db.Uuid
   amountCents   Int
+  // Kısmi iadeler (ör. çok satıcılı ödemede tek siparişin iptali)
+  refundedCents Int             @default(0)
   currency      String          @default("TRY")
   provider      PaymentProvider
   // Sağlayıcının oturum/işlem kimliği (iyzico checkout token vb.)
   providerRef   String?         @unique
   status        PaymentStatus   @default(PENDING)
   failureReason String?
+  // Ödeme sayfası bitince yönlendirilecek uygulama adresi (doğrulanmış)
+  returnUrl     String?
   completedAt   DateTime?       @db.Timestamptz(3)
   createdAt     DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt     DateTime        @updatedAt @db.Timestamptz(3)
 
-  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
-  order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orders Order[]
 
   @@index([userId, createdAt])
 }

@@ -25,6 +25,15 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     return;
   }
 
+  const m = err as { name?: string; code?: string };
+  if (m?.name === "MulterError") {
+    const tooLarge = m.code === "LIMIT_FILE_SIZE";
+    res.status(tooLarge ? 413 : 400).json({
+      error: { code: "UPLOAD_ERROR", message: tooLarge ? "Dosya en fazla 5 MB olabilir" : "Dosya yüklenemedi" },
+    });
+    return;
+  }
+
   logger.error({ err, method: req.method, path: req.path }, "Beklenmeyen hata");
   res.status(500).json({
     error: { code: "INTERNAL_ERROR", message: "Beklenmeyen bir hata oluştu, lütfen daha sonra tekrar deneyin" },

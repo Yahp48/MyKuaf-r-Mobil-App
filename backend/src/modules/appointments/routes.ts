@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { visibleSalonWhere } from "../../lib/visibility.ts";
 import { z } from "zod";
 import { DateTime } from "luxon";
 import { prisma, pgErrorCode } from "../../lib/prisma.ts";
@@ -9,7 +10,7 @@ import { toTL } from "../../lib/money.ts";
 import { requireAuth, userId } from "../../middleware/auth.ts";
 import { ACTIVE_APPOINTMENT_STATUSES, computeAvailability, resolveServices, salonDay } from "../salons/availability.ts";
 import { notify } from "../notifications/notify.ts";
-import { emitToUser } from "../../realtime/socket.ts";
+import { emitToBusiness, emitToUser } from "../../realtime/socket.ts";
 import type { Prisma } from "../../generated/prisma/client.ts";
 
 export const appointmentsRouter = Router();
@@ -77,7 +78,7 @@ appointmentsRouter.post("/", async (req, res) => {
 
   const [user, salon] = await Promise.all([
     prisma.user.findUniqueOrThrow({ where: { id: uid } }),
-    prisma.salon.findFirst({ where: { id: body.salonId, isActive: true } }),
+    prisma.salon.findFirst({ where: { id: body.salonId, ...visibleSalonWhere } }),
   ]);
   if (user.deletedAt) throw unauthorized();
   if (!salon) throw notFound("Salon bulunamadı");
@@ -129,6 +130,7 @@ appointmentsRouter.post("/", async (req, res) => {
   }
 
   const out = serialize(appointment);
+  if (salon.businessId) emitToBusiness(salon.businessId, "appointment:new", { id: appointment.id });
   await notify(uid, {
     type: "appointment_confirmed",
     title: appointment.status === "CONFIRMED" ? "Randevunuz onaylandı" : "Randevu talebiniz alındı",
@@ -196,6 +198,8 @@ appointmentsRouter.post("/:id/cancel", async (req, res) => {
   });
   const out = serialize(updated);
   emitToUser(uid, "appointment:updated", out);
+  const owner = await prisma.salon.findUnique({ where: { id: a.salon.id }, select: { businessId: true } });
+  if (owner?.businessId) emitToBusiness(owner.businessId, "appointment:updated", { id });
   await notify(uid, {
     type: "appointment_cancelled",
     title: "Randevunuz iptal edildi",

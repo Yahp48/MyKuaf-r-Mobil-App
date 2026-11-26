@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { sellableProductWhere } from "../../lib/visibility.ts";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.ts";
 import { parse, zId } from "../../lib/validate.ts";
@@ -15,7 +16,7 @@ async function respond(uid: string) {
 }
 
 async function sellableProduct(productId: string) {
-  const product = await prisma.product.findFirst({ where: { id: productId, isActive: true } });
+  const product = await prisma.product.findFirst({ where: { id: productId, ...sellableProductWhere } });
   if (!product) throw notFound("Ürün bulunamadı");
   return product;
 }
@@ -94,7 +95,7 @@ cartRouter.post("/merge", async (req, res) => {
   const { items } = parse(mergeSchema, req.body);
   const uid = userId(req);
   const products = await prisma.product.findMany({
-    where: { id: { in: items.map((i) => i.productId) }, isActive: true },
+    where: { id: { in: items.map((i) => i.productId) }, ...sellableProductWhere },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
   const current = new Map((await prisma.cartItem.findMany({ where: { userId: uid } })).map((c) => [c.productId, c]));

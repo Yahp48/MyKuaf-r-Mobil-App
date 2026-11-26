@@ -16,6 +16,7 @@ export function serializeProduct(
     ratingAvg: number;
     ratingCount: number;
     category: { id: string; slug: string; name: string };
+    seller: { id: string; displayName: string };
   },
   extra: { isFavorite?: boolean } = {},
 ) {
@@ -41,8 +42,12 @@ export function serializeProduct(
     rating: Math.round(p.ratingAvg * 10) / 10,
     ratingCount: p.ratingCount,
     category: p.category,
+    seller: { id: p.seller.id, name: p.seller.displayName },
     ...(extra.isFavorite !== undefined ? { isFavorite: extra.isFavorite } : {}),
   };
 }
 
-export const productInclude = { category: { select: { id: true, slug: true, name: true } } } as const;
+export const productInclude = {
+  category: { select: { id: true, slug: true, name: true } },
+  seller: { select: { id: true, displayName: true, shippingFeeCents: true, freeShippingThresholdCents: true } },
+} as const;

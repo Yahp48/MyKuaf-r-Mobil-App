@@ -36,6 +36,10 @@ export async function computeAvailability(params: {
   durationMinutes: number;
   staffId?: string;
   now?: Date;
+  /** Saat değiştirmede randevunun kendi aralığı dolu sayılmaz. */
+  excludeAppointmentId?: string;
+  /** Salon kendisi randevu girerken hazırlık süresi kuralı uygulanmaz. */
+  skipLeadTime?: boolean;
 }): Promise<{ staffId: string; slots: string[] }[]> {
   const { salon, date, durationMinutes } = params;
   const now = DateTime.fromJSDate(params.now ?? new Date());
@@ -66,6 +70,7 @@ export async function computeAvailability(params: {
       where: {
         staffId: { in: staffIds },
         status: { in: [...ACTIVE_APPOINTMENT_STATUSES] },
+        ...(params.excludeAppointmentId ? { id: { not: params.excludeAppointmentId } } : {}),
         startsAt: { lt: dayEnd },
         endsAt: { gt: dayStart },
       },
@@ -84,7 +89,7 @@ export async function computeAvailability(params: {
     busy.set(b.staffId, list);
   }
 
-  const earliest = now.plus({ minutes: salon.bookingLeadMinutes }).toMillis();
+  const earliest = now.plus({ minutes: params.skipLeadTime ? 0 : salon.bookingLeadMinutes }).toMillis();
   const step = salon.slotIntervalMinutes;
 
   return staffIds.map((staffId) => {

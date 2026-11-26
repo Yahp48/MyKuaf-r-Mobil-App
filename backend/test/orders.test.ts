@@ -58,8 +58,8 @@ describe("kartla sipariş", () => {
 
     const res = await api().post("/api/orders").set(u.auth).send({ addressId: u.addressId, paymentMethod: "CARD" });
     expect(res.status).toBe(201);
-    expect(res.body.order.status).toBe("PENDING_PAYMENT");
-    expect(res.body.order.total).toBe(229.99);
+    expect(res.body.orders[0].status).toBe("PENDING_PAYMENT");
+    expect(res.body.orders[0].total).toBe(229.99);
     expect(res.body.checkoutUrl).toContain("/api/payments/mock/checkout/");
     expect((await prisma.product.findUniqueOrThrow({ where: { id: p.id } })).stock).toBe(3);
 
@@ -67,7 +67,7 @@ describe("kartla sipariş", () => {
     // Sağlayıcı geri çağrısı tekrar gelirse etkisiz olmalı
     await completeMockPayment(res.body.checkoutUrl, "success");
 
-    const order = await api().get(`/api/orders/${res.body.order.id}`).set(u.auth);
+    const order = await api().get(`/api/orders/${res.body.orders[0].id}`).set(u.auth);
     expect(order.body.order.status).toBe("PAID");
     expect(order.body.order.payment.status).toBe("SUCCEEDED");
     expect((await api().get("/api/cart").set(u.auth)).body.items).toHaveLength(0);
@@ -82,7 +82,7 @@ describe("kartla sipariş", () => {
 
     await completeMockPayment(res.body.checkoutUrl, "fail");
 
-    const order = await api().get(`/api/orders/${res.body.order.id}`).set(u.auth);
+    const order = await api().get(`/api/orders/${res.body.orders[0].id}`).set(u.auth);
     expect(order.body.order.status).toBe("CANCELLED");
     expect((await prisma.product.findUniqueOrThrow({ where: { id: p.id } })).stock).toBe(5);
     expect((await api().get("/api/cart").set(u.auth)).body.items).toHaveLength(1);
@@ -97,7 +97,7 @@ describe("kartla sipariş", () => {
 
     const expired = await expireStalePayments(new Date(Date.now() + PAYMENT_TIMEOUT_MS + 1000));
     expect(expired).toBe(1);
-    expect((await prisma.order.findUniqueOrThrow({ where: { id: res.body.order.id } })).status).toBe("CANCELLED");
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: res.body.orders[0].id } })).status).toBe("CANCELLED");
     expect((await prisma.product.findUniqueOrThrow({ where: { id: p.id } })).stock).toBe(1);
   });
 
@@ -143,10 +143,10 @@ describe("cüzdan", () => {
 
     const paid = await api().post("/api/orders").set(u.auth).send({ addressId: u.addressId, paymentMethod: "WALLET" });
     expect(paid.status).toBe(201);
-    expect(paid.body.order.status).toBe("PAID");
+    expect(paid.body.orders[0].status).toBe("PAID");
     expect((await api().get("/api/wallet").set(u.auth)).body.balance).toBe(70.01);
 
-    const cancel = await api().post(`/api/orders/${paid.body.order.id}/cancel`).set(u.auth);
+    const cancel = await api().post(`/api/orders/${paid.body.orders[0].id}/cancel`).set(u.auth);
     expect(cancel.status).toBe(200);
     expect(cancel.body.order.status).toBe("REFUNDED");
     const wallet = await api().get("/api/wallet").set(u.auth);

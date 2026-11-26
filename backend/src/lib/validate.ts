@@ -32,6 +32,12 @@ export const zPhone = z
   .trim()
   .transform((v) => v.replace(/[\s()-]/g, ""))
   .pipe(z.string().regex(/^(\+90|0)?5\d{9}$/, "Geçerli bir cep telefonu numarası girin (5XX XXX XX XX)"));
+/** Sabit hat dahil Türkiye telefonu (işletmeler için): 0XXX XXX XX XX */
+export const zTrPhone = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/[\s()-]/g, ""))
+  .pipe(z.string().regex(/^(\+90|0)?[2-5]\d{9}$/, "Geçerli bir telefon numarası girin (0XXX XXX XX XX)"));
 export const zName = z.string().trim().min(2, "Ad en az 2 karakter olmalı").max(80);
 
 export const zPagination = z.object({

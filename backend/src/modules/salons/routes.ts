@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { visibleSalonWhere } from "../../lib/visibility.ts";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.ts";
 import { pageResult, paginate, parse, zId, zPagination } from "../../lib/validate.ts";
@@ -27,7 +28,7 @@ const listSchema = zPagination.extend({
 salonsRouter.get("/", optionalAuth, async (req, res) => {
   const query = parse(listSchema, req.query);
   const where = {
-    isActive: true,
+    ...visibleSalonWhere,
     ...(query.city ? { city: { equals: query.city, mode: "insensitive" as const } } : {}),
     ...(query.q ? { name: { contains: query.q, mode: "insensitive" as const } } : {}),
   };
@@ -70,7 +71,7 @@ salonsRouter.get("/", optionalAuth, async (req, res) => {
 });
 
 async function activeSalon(id: string) {
-  const salon = await prisma.salon.findFirst({ where: { id, isActive: true } });
+  const salon = await prisma.salon.findFirst({ where: { id, ...visibleSalonWhere } });
   if (!salon) throw notFound("Salon bulunamadı");
   return salon;
 }
@@ -78,7 +79,7 @@ async function activeSalon(id: string) {
 salonsRouter.get("/:id", optionalAuth, async (req, res) => {
   const id = parse(zId, req.params.id);
   const salon = await prisma.salon.findFirst({
-    where: { id, isActive: true },
+    where: { id, ...visibleSalonWhere },
     include: {
       workingHours: true,
       staff: { where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
