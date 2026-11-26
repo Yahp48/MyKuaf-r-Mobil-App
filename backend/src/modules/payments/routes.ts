@@ -53,7 +53,10 @@ ${
   });
 
   paymentsRouter.post("/mock/complete", urlencoded({ extended: false, limit: "4kb" }), async (req, res) => {
-    const body = parse(z.object({ ref: z.string().regex(/^mock_[\w-]+$/), result: z.enum(["success", "fail"]) }), req.body);
+    const body = parse(
+      z.object({ ref: z.string().regex(/^mock_[\w-]+$/), result: z.enum(["success", "fail"]) }),
+      req.body,
+    );
     const payment = await finalizeByProviderRef(
       body.ref,
       body.result === "success" ? { ok: true } : { ok: false, reason: "Ödeme reddedildi" },

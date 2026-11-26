@@ -16,7 +16,9 @@ export const appointmentsRouter = Router();
 appointmentsRouter.use(requireAuth);
 
 const include = {
-  salon: { select: { id: true, name: true, address: true, phone: true, timezone: true, cancellationWindowHours: true } },
+  salon: {
+    select: { id: true, name: true, address: true, phone: true, timezone: true, cancellationWindowHours: true },
+  },
   staff: { select: { id: true, name: true, title: true, avatarUrl: true } },
   services: true,
   review: { select: { id: true } },

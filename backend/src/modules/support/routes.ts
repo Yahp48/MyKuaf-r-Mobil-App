@@ -42,7 +42,11 @@ supportRouter.get("/tickets", async (req, res) => {
   const uid = userId(req);
   const { page, pageSize } = parse(zPagination, req.query);
   const [rows, total] = await Promise.all([
-    prisma.supportTicket.findMany({ where: { userId: uid }, orderBy: { createdAt: "desc" }, ...paginate(page, pageSize) }),
+    prisma.supportTicket.findMany({
+      where: { userId: uid },
+      orderBy: { createdAt: "desc" },
+      ...paginate(page, pageSize),
+    }),
     prisma.supportTicket.count({ where: { userId: uid } }),
   ]);
   res.json(pageResult(rows.map(serialize), total, page, pageSize));

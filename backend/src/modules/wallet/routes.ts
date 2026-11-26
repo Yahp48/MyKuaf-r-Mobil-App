@@ -17,7 +17,11 @@ walletRouter.get("/", async (req, res) => {
   const { page, pageSize } = parse(zPagination, req.query);
   const [user, rows, total] = await Promise.all([
     prisma.user.findUniqueOrThrow({ where: { id: uid }, select: { walletBalanceCents: true } }),
-    prisma.walletTransaction.findMany({ where: { userId: uid }, orderBy: { createdAt: "desc" }, ...paginate(page, pageSize) }),
+    prisma.walletTransaction.findMany({
+      where: { userId: uid },
+      orderBy: { createdAt: "desc" },
+      ...paginate(page, pageSize),
+    }),
     prisma.walletTransaction.count({ where: { userId: uid } }),
   ]);
   res.json({

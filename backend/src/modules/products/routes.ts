@@ -78,7 +78,10 @@ productsRouter.get("/", optionalAuth, async (req, res) => {
     }),
     prisma.product.count({ where }),
   ]);
-  const favs = await favoriteSet(req.user?.id, rows.map((r) => r.id));
+  const favs = await favoriteSet(
+    req.user?.id,
+    rows.map((r) => r.id),
+  );
   res.json(
     pageResult(
       rows.map((p) => serializeProduct(p, { isFavorite: favs?.has(p.id) })),
@@ -107,7 +110,10 @@ productsRouter.get("/:id/related", optionalAuth, async (req, res) => {
     orderBy: [{ ratingAvg: "desc" }, { createdAt: "desc" }],
     take: 8,
   });
-  const favs = await favoriteSet(req.user?.id, rows.map((r) => r.id));
+  const favs = await favoriteSet(
+    req.user?.id,
+    rows.map((r) => r.id),
+  );
   res.json({ items: rows.map((p) => serializeProduct(p, { isFavorite: favs?.has(p.id) })) });
 });
 

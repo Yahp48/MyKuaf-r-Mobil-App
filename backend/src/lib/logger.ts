@@ -17,7 +17,5 @@ export const logger = pino({
     ],
     censor: "[gizli]",
   },
-  ...(isProd || isTest
-    ? {}
-    : { transport: { target: "pino-pretty", options: { translateTime: "SYS:HH:MM:ss" } } }),
+  ...(isProd || isTest ? {} : { transport: { target: "pino-pretty", options: { translateTime: "SYS:HH:MM:ss" } } }),
 });

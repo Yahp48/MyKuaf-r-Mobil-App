@@ -22,7 +22,8 @@ async function sellableProduct(productId: string) {
 
 function checkQuantity(quantity: number, stock: number) {
   if (stock === 0) throw new AppError(409, "OUT_OF_STOCK", "Bu ürün tükendi");
-  if (quantity > stock) throw new AppError(409, "INSUFFICIENT_STOCK", `Bu üründen en fazla ${stock} adet alabilirsiniz`);
+  if (quantity > stock)
+    throw new AppError(409, "INSUFFICIENT_STOCK", `Bu üründen en fazla ${stock} adet alabilirsiniz`);
   if (quantity > MAX_QTY_PER_ITEM) {
     throw new AppError(400, "QUANTITY_LIMIT", `Bir üründen en fazla ${MAX_QTY_PER_ITEM} adet alabilirsiniz`);
   }
@@ -86,9 +87,7 @@ cartRouter.delete("/", async (req, res) => {
 
 // Çevrimdışı/girişten önce oluşturulmuş yerel sepeti sunucudaki sepetle birleştirir.
 const mergeSchema = z.object({
-  items: z
-    .array(z.object({ productId: zId, quantity: z.number().int().min(1).max(MAX_QTY_PER_ITEM) }))
-    .max(50),
+  items: z.array(z.object({ productId: zId, quantity: z.number().int().min(1).max(MAX_QTY_PER_ITEM) })).max(50),
 });
 
 cartRouter.post("/merge", async (req, res) => {
@@ -105,7 +104,11 @@ cartRouter.post("/merge", async (req, res) => {
       .filter((i) => byId.has(i.productId))
       .map((i) => {
         const stock = byId.get(i.productId)!.stock;
-        const quantity = Math.min(Math.max(current.get(i.productId)?.quantity ?? 0, i.quantity), stock, MAX_QTY_PER_ITEM);
+        const quantity = Math.min(
+          Math.max(current.get(i.productId)?.quantity ?? 0, i.quantity),
+          stock,
+          MAX_QTY_PER_ITEM,
+        );
         return quantity > 0
           ? prisma.cartItem.upsert({
               where: { userId_productId: { userId: uid, productId: i.productId } },

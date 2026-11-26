@@ -32,7 +32,8 @@ favoritesRouter.get("/", async (req, res) => {
 favoritesRouter.put("/products/:id", async (req, res) => {
   const productId = parse(zId, req.params.id);
   const uid = userId(req);
-  if (!(await prisma.product.findFirst({ where: { id: productId, isActive: true } }))) throw notFound("Ürün bulunamadı");
+  if (!(await prisma.product.findFirst({ where: { id: productId, isActive: true } })))
+    throw notFound("Ürün bulunamadı");
   await prisma.favoriteProduct.upsert({
     where: { userId_productId: { userId: uid, productId } },
     create: { userId: uid, productId },

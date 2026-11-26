@@ -75,7 +75,12 @@ ordersRouter.post("/", async (req, res) => {
     const cart = summarizeCart(rows);
     if (cart.items.length === 0) throw new AppError(400, "EMPTY_CART", "Sepetiniz boş");
     if (cart.warnings.length) {
-      throw new AppError(409, "CART_CHANGED", "Sepetinizdeki bazı ürünlerde değişiklik var, lütfen kontrol edin", cart.warnings);
+      throw new AppError(
+        409,
+        "CART_CHANGED",
+        "Sepetinizdeki bazı ürünlerde değişiklik var, lütfen kontrol edin",
+        cart.warnings,
+      );
     }
 
     // Koşullu düşüm: aynı anda iki sipariş son ürünü alamaz.
@@ -125,7 +130,11 @@ ordersRouter.post("/", async (req, res) => {
         data: { walletBalanceCents: { decrement: totalCents } },
       });
       if (debited.count === 0) {
-        throw new AppError(409, "INSUFFICIENT_BALANCE", `Cüzdan bakiyeniz yetersiz. Gereken tutar: ${formatTL(totalCents)}`);
+        throw new AppError(
+          409,
+          "INSUFFICIENT_BALANCE",
+          `Cüzdan bakiyeniz yetersiz. Gereken tutar: ${formatTL(totalCents)}`,
+        );
       }
       const after = await tx.user.findUniqueOrThrow({ where: { id: uid }, select: { walletBalanceCents: true } });
       await tx.walletTransaction.create({
@@ -183,7 +192,10 @@ ordersRouter.get("/", async (req, res) => {
 });
 
 ordersRouter.get("/:id", async (req, res) => {
-  const order = await prisma.order.findFirst({ where: { id: parse(zId, req.params.id), userId: userId(req) }, include });
+  const order = await prisma.order.findFirst({
+    where: { id: parse(zId, req.params.id), userId: userId(req) },
+    include,
+  });
   if (!order) throw notFound("Sipariş bulunamadı");
   res.json({ order: serialize(order) });
 });
@@ -194,7 +206,11 @@ ordersRouter.post("/:id/cancel", async (req, res) => {
   const order = await prisma.order.findFirst({ where: { id, userId: uid }, include });
   if (!order) throw notFound("Sipariş bulunamadı");
   if (!(CANCELLABLE as readonly string[]).includes(order.status)) {
-    throw new AppError(400, "CANNOT_CANCEL", "Hazırlanmaya başlanan siparişler iptal edilemez, iade için destekle iletişime geçin");
+    throw new AppError(
+      400,
+      "CANNOT_CANCEL",
+      "Hazırlanmaya başlanan siparişler iptal edilemez, iade için destekle iletişime geçin",
+    );
   }
 
   // Kartla ödenmiş siparişin iadesi önce sağlayıcıda yapılır; başarısız olursa sipariş değişmez.

@@ -101,7 +101,9 @@ describe("şifre sıfırlama", () => {
       .send({ email: u.user.email, code, newPassword: "YeniSifre123" });
     expect(ok.status).toBe(200);
 
-    expect((await api().post("/api/auth/login").send({ email: u.user.email, password: "YeniSifre123" })).status).toBe(200);
+    expect((await api().post("/api/auth/login").send({ email: u.user.email, password: "YeniSifre123" })).status).toBe(
+      200,
+    );
     expect((await api().post("/api/auth/refresh").send({ refreshToken: u.refreshToken })).status).toBe(401);
     // Kod tek kullanımlık
     const again = await api()

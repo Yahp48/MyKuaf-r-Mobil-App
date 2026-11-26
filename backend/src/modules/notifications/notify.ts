@@ -7,11 +7,7 @@ import { isTest } from "../../config/env.ts";
 const expo = new Expo();
 
 export type NotificationType =
-  | "appointment_confirmed"
-  | "appointment_cancelled"
-  | "order_paid"
-  | "order_status"
-  | "wallet_topup";
+  "appointment_confirmed" | "appointment_cancelled" | "order_paid" | "order_status" | "wallet_topup";
 
 export interface NotifyInput {
   type: NotificationType;

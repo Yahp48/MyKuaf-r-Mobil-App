@@ -55,7 +55,12 @@ export async function createSalon(opts: { cancellationWindowHours?: number } = {
       workingHours: {
         create: Array.from({ length: 7 }, (_, i) => ({ weekday: i + 1, openMinute: 540, closeMinute: 1080 })),
       },
-      staff: { create: [{ name: "Zeynep", sortOrder: 0 }, { name: "Elif", sortOrder: 1 }] },
+      staff: {
+        create: [
+          { name: "Zeynep", sortOrder: 0 },
+          { name: "Elif", sortOrder: 1 },
+        ],
+      },
       services: {
         create: [
           { name: "Saç Kesimi", durationMinutes: 30, priceCents: 15000, sortOrder: 0 },

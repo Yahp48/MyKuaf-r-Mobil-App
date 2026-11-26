@@ -14,7 +14,11 @@ notificationsRouter.get("/", async (req, res) => {
   const uid = userId(req);
   const { page, pageSize } = parse(zPagination, req.query);
   const [rows, total, unread] = await Promise.all([
-    prisma.notification.findMany({ where: { userId: uid }, orderBy: { createdAt: "desc" }, ...paginate(page, pageSize) }),
+    prisma.notification.findMany({
+      where: { userId: uid },
+      orderBy: { createdAt: "desc" },
+      ...paginate(page, pageSize),
+    }),
     prisma.notification.count({ where: { userId: uid } }),
     prisma.notification.count({ where: { userId: uid, readAt: null } }),
   ]);
@@ -39,7 +43,9 @@ notificationsRouter.post("/:id/read", async (req, res) => {
 });
 
 notificationsRouter.delete("/:id", async (req, res) => {
-  const deleted = await prisma.notification.deleteMany({ where: { id: parse(zId, req.params.id), userId: userId(req) } });
+  const deleted = await prisma.notification.deleteMany({
+    where: { id: parse(zId, req.params.id), userId: userId(req) },
+  });
   if (deleted.count === 0) throw notFound("Bildirim bulunamadı");
   res.status(204).end();
 });

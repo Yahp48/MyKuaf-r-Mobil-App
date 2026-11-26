@@ -10,7 +10,11 @@ const schema = z
 
     JWT_ACCESS_SECRET: z.string().min(32, "JWT_ACCESS_SECRET en az 32 karakter olmalı"),
     JWT_REFRESH_SECRET: z.string().min(32, "JWT_REFRESH_SECRET en az 32 karakter olmalı"),
-    ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(15 * 60),
+    ACCESS_TOKEN_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(15 * 60),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
 
     // Virgülle ayrılmış izinli kökenler (yalnızca web istemcileri için; mobil uygulama CORS kullanmaz)
@@ -21,7 +25,10 @@ const schema = z
 
     PAYMENT_PROVIDER: z.enum(["mock", "iyzico"]).default("mock"),
     // Ödeme sayfası bitince kullanıcıyı uygulamaya döndüren derin bağlantı şeması (app.config.js → scheme)
-    APP_DEEP_LINK_SCHEME: z.string().regex(/^[a-z][a-z0-9+.-]*$/).default("mykuafor"),
+    APP_DEEP_LINK_SCHEME: z
+      .string()
+      .regex(/^[a-z][a-z0-9+.-]*$/)
+      .default("mykuafor"),
 
     GOOGLE_MAPS_SERVER_API_KEY: z.string().default(""),
 
