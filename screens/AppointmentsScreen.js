@@ -6,12 +6,15 @@ import AppHeader from "../components/AppHeader";
 import BottomNav from "../components/BottomNav";
 import { Button, EmptyState, ErrorState, Loading, StatusPill } from "../components/ui";
 import { useRemote } from "../components/useRemote";
+import { useRealtimeEvent } from "../services/realtime";
 import { APPOINTMENT_STATUS, colors, formatDate, formatTL } from "../components/theme";
 
 export default function AppointmentsScreen({ navigation }) {
   const [scope, setScope] = useState("upcoming");
   const loader = useCallback(() => appointmentApi.list(scope), [scope]);
   const { data, setData, error, loading, refreshing, reload, refresh } = useRemote(loader);
+  // Salon randevuyu onaylar/iptal eder/taşırsa liste anında güncellenir.
+  useRealtimeEvent("appointment:updated", () => reload());
   const [cancellingId, setCancellingId] = useState(null);
 
   const cancel = (a) =>

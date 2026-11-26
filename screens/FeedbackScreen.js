@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView, TextInput, Alert } from "react-native";
-import { AntDesign as Icon } from '@expo/vector-icons';
-import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
-import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
-import { useApp } from '../context/AppContext';
-import { supportApi } from '../services/api';
+import { AntDesign as Icon } from "@expo/vector-icons";
+import { FontAwesome5 as FontAwesome5 } from "@expo/vector-icons";
+import { FontAwesome6 as FontAwesome6 } from "@expo/vector-icons";
+import { useApp } from "../context/AppContext";
+import { supportApi } from "../services/api";
 
 export default function FeedbackScreen({ navigation }) {
   const [selectedRating, setSelectedRating] = useState(0);
@@ -18,46 +18,46 @@ export default function FeedbackScreen({ navigation }) {
       id: "ui",
       title: "Tasarım & Arayüz",
       icon: "palette",
-      color: "#8b5cf6"
+      color: "#8b5cf6",
     },
     {
       id: "performance",
       title: "Performans",
       icon: "tachometer-alt",
-      color: "#ef4444"
+      color: "#ef4444",
     },
     {
       id: "features",
       title: "Özellikler",
       icon: "star",
-      color: "#f59e0b"
+      color: "#f59e0b",
     },
     {
       id: "booking",
       title: "Randevu Sistemi",
       icon: "calendar-check",
-      color: "#3b82f6"
+      color: "#3b82f6",
     },
     {
       id: "search",
       title: "Arama & Filtreleme",
       icon: "search",
-      color: "#10b981"
+      color: "#10b981",
     },
     {
       id: "other",
       title: "Diğer",
       icon: "comment-dots",
-      color: "#6b7280"
-    }
+      color: "#6b7280",
+    },
   ];
 
   const ratingLabels = {
     1: "Çok Kötü",
-    2: "Kötü", 
+    2: "Kötü",
     3: "Orta",
     4: "İyi",
-    5: "Mükemmel"
+    5: "Mükemmel",
   };
 
   const submitFeedback = async () => {
@@ -86,29 +86,28 @@ export default function FeedbackScreen({ navigation }) {
       Alert.alert("Gönderilemedi", e.message);
       return;
     }
-    Alert.alert("Geri Bildirim Gönderildi", "Değerli geri bildiriminiz için teşekkürler! Görüşleriniz bizim için çok önemli.", [
-      {
-        text: "Tamam",
-        onPress: () => {
-          setSelectedRating(0);
-          setSelectedCategory(null);
-          setFeedback("");
-          navigation.goBack();
+    Alert.alert(
+      "Geri Bildirim Gönderildi",
+      "Değerli geri bildiriminiz için teşekkürler! Görüşleriniz bizim için çok önemli.",
+      [
+        {
+          text: "Tamam",
+          onPress: () => {
+            setSelectedRating(0);
+            setSelectedCategory(null);
+            setFeedback("");
+            navigation.goBack();
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
-
 
   const renderStars = () => {
     return (
       <View style={styles.starsContainer}>
         {[1, 2, 3, 4, 5].map((star) => (
-          <TouchableOpacity
-            key={star}
-            onPress={() => setSelectedRating(star)}
-            style={styles.starButton}
-          >
+          <TouchableOpacity key={star} onPress={() => setSelectedRating(star)} style={styles.starButton}>
             <FontAwesome6
               name="star"
               size={32}
@@ -123,30 +122,21 @@ export default function FeedbackScreen({ navigation }) {
 
   const CategoryCard = ({ category }) => (
     <TouchableOpacity
-      style={[
-        styles.categoryCard,
-        selectedCategory === category.id && styles.selectedCategoryCard
-      ]}
+      style={[styles.categoryCard, selectedCategory === category.id && styles.selectedCategoryCard]}
       onPress={() => setSelectedCategory(category.id)}
     >
       <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
         <FontAwesome5 name={category.icon} size={18} color="#fff" />
       </View>
-      <Text style={[
-        styles.categoryTitle,
-        selectedCategory === category.id && styles.selectedCategoryTitle
-      ]}>
+      <Text style={[styles.categoryTitle, selectedCategory === category.id && styles.selectedCategoryTitle]}>
         {category.title}
       </Text>
-      {selectedCategory === category.id && (
-        <FontAwesome6 name="check-circle" size={18} color={category.color} />
-      )}
+      {selectedCategory === category.id && <FontAwesome6 name="check-circle" size={18} color={category.color} />}
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={30} color="#fff" />
@@ -158,37 +148,32 @@ export default function FeedbackScreen({ navigation }) {
       </View>
 
       <ScrollView style={styles.content}>
-        
         <View style={styles.welcomeCard}>
           <FontAwesome6 name="heart" size={40} color="#FF4896" />
           <Text style={styles.welcomeTitle}>Görüşleriniz Bizim İçin Değerli!</Text>
           <Text style={styles.welcomeText}>
-            Woman Hair Design uygulamasını nasıl buluyorsunuz? 
-            Geri bildirimleriniz uygulamayı daha iyi hale getirmemize yardımcı oluyor.
+            Woman Hair Design uygulamasını nasıl buluyorsunuz? Geri bildirimleriniz uygulamayı daha iyi hale getirmemize
+            yardımcı oluyor.
           </Text>
         </View>
 
-     
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>⭐ Genel Memnuniyet</Text>
           <Text style={styles.ratingQuestion}>Uygulamamızı nasıl değerlendiriyorsunuz?</Text>
-          
+
           {renderStars()}
-          
+
           {selectedRating > 0 && (
             <View style={styles.ratingLabel}>
-              <Text style={styles.ratingLabelText}>
-                {ratingLabels[selectedRating]}
-              </Text>
+              <Text style={styles.ratingLabelText}>{ratingLabels[selectedRating]}</Text>
             </View>
           )}
         </View>
 
-        
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📂 Konu Kategorisi</Text>
           <Text style={styles.categoryQuestion}>Hangi konuda geri bildirim vermek istiyorsunuz?</Text>
-          
+
           <View style={styles.categoriesGrid}>
             {feedbackCategories.map((category) => (
               <CategoryCard key={category.id} category={category} />
@@ -196,13 +181,12 @@ export default function FeedbackScreen({ navigation }) {
           </View>
         </View>
 
-       
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>💬 Geri Bildiriminiz</Text>
           <Text style={styles.feedbackQuestion}>
             Detaylı görüşlerinizi paylaşın. Önerileriniz, şikayetleriniz veya beğendiklerinizi belirtin.
           </Text>
-          
+
           <TextInput
             style={styles.feedbackInput}
             value={feedback}
@@ -214,7 +198,6 @@ export default function FeedbackScreen({ navigation }) {
           />
         </View>
 
-        
         <Text style={styles.contactNote}>
           Geri bildiriminiz hesabınızla birlikte iletilir; gerekirse size kayıtlı e-posta adresinizden dönüş yapılır.
         </Text>
@@ -226,60 +209,42 @@ export default function FeedbackScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        
         <View style={styles.infoCard}>
           <FontAwesome6 name="info-circle" size={24} color="#3b82f6" />
           <Text style={styles.infoTitle}>Geri Bildirim Politikası</Text>
           <Text style={styles.infoText}>
-            • Tüm geri bildirimler değerlendirilir{"\n"}
-            • Kişisel bilgileriniz korunur{"\n"}
-            • Yapıcı eleştiriler özellikle değerlidir{"\n"}
-            • Yanıt süresi: 1-3 iş günü
+            • Tüm geri bildirimler değerlendirilir{"\n"}• Kişisel bilgileriniz korunur{"\n"}• Yapıcı eleştiriler
+            özellikle değerlidir{"\n"}• Yanıt süresi: 1-3 iş günü
           </Text>
         </View>
       </ScrollView>
 
-      
       <View style={styles.bottomNav}>
-  <TouchableOpacity 
-    onPress={() => navigation.navigate("Appointments")}
-    style={styles.navButton}
-  >
-    <FontAwesome5 name="calendar-alt" size={24} color="#fff" />
-    <Text style={styles.navText}>Randevular</Text>
-  </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate("Appointments")} style={styles.navButton}>
+          <FontAwesome5 name="calendar-alt" size={24} color="#fff" />
+          <Text style={styles.navText}>Randevular</Text>
+        </TouchableOpacity>
 
-  <TouchableOpacity 
-    onPress={() => navigation.navigate("Home")}
-    style={styles.navButton}
-  >
-    <FontAwesome5 name="map-marked-alt" size={24} color="#fff" />
-    <Text style={styles.navText}>Harita</Text>
-  </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
+          <FontAwesome5 name="map-marked-alt" size={24} color="#fff" />
+          <Text style={styles.navText}>Harita</Text>
+        </TouchableOpacity>
 
-  <TouchableOpacity 
-    onPress={() => navigation.navigate("Shop")}
-    style={styles.navButton}
-  >
-    <FontAwesome5 name="shopping-bag" size={28} color="#fff" />
-    {cartCount > 0 && (
-      <View style={styles.navCartBadge}>
-        <Text style={styles.navCartBadgeText}>
-          {cartCount > 99 ? '99+' : cartCount}
-        </Text>
+        <TouchableOpacity onPress={() => navigation.navigate("Shop")} style={styles.navButton}>
+          <FontAwesome5 name="shopping-bag" size={28} color="#fff" />
+          {cartCount > 0 && (
+            <View style={styles.navCartBadge}>
+              <Text style={styles.navCartBadgeText}>{cartCount > 99 ? "99+" : cartCount}</Text>
+            </View>
+          )}
+          <Text style={styles.navText}>Mağaza</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate("Profile")} style={styles.navButton}>
+          <FontAwesome6 name="user" size={24} color="#fff" />
+          <Text style={styles.navText}>Profil</Text>
+        </TouchableOpacity>
       </View>
-    )}
-    <Text style={styles.navText}>Mağaza</Text>
-  </TouchableOpacity>
-
-  <TouchableOpacity 
-    onPress={() => navigation.navigate("Profile")}
-    style={styles.navButton}
-  >
-    <FontAwesome6 name="user" size={24} color="#fff" />
-    <Text style={styles.navText}>Profil</Text>
-  </TouchableOpacity>
-</View>
     </View>
   );
 }
@@ -502,49 +467,49 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#FF4896',
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    backgroundColor: "#FF4896",
     height: 70,
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
-    width: '100%',
+    width: "100%",
     paddingHorizontal: 10,
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
   navButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     flex: 1,
     paddingVertical: 8,
   },
   navText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 11,
     marginTop: 4,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   navCartBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -4,
     right: 8,
-    backgroundColor: '#e00061',
+    backgroundColor: "#e00061",
     borderRadius: 10,
     minWidth: 20,
     height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: '#FF4896',
+    borderColor: "#FF4896",
   },
   navCartBadgeText: {
-    color: 'white',
+    color: "white",
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });

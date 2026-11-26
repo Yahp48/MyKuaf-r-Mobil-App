@@ -200,7 +200,7 @@ export const cartApi = {
 };
 
 export const orderApi = {
-  create: (addressId, paymentMethod) => post("/orders", { addressId, paymentMethod }),
+  create: (addressId, paymentMethod, returnUrl) => post("/orders", { addressId, paymentMethod, returnUrl }),
   list: (page = 1) => get("/orders", { page }),
   detail: (id) => get(`/orders/${id}`),
   cancel: (id) => post(`/orders/${id}/cancel`),
@@ -208,7 +208,7 @@ export const orderApi = {
 
 export const walletApi = {
   get: (page = 1) => get("/wallet", { page }),
-  topup: (amount) => post("/wallet/topups", { amount }),
+  topup: (amount, returnUrl) => post("/wallet/topups", { amount, returnUrl }),
 };
 
 export const paymentApi = {

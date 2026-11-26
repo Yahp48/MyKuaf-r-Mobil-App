@@ -18,6 +18,7 @@ import AppHeader from "../components/AppHeader";
 import ProductCard from "../components/ProductCard";
 import { Button, ErrorState, Loading } from "../components/ui";
 import { useRemote } from "../components/useRemote";
+import { useRealtimeEvent } from "../services/realtime";
 import { colors, formatDate, formatTL } from "../components/theme";
 
 const { width } = Dimensions.get("window");
@@ -34,6 +35,7 @@ export default function ProductDetailScreen({ navigation, route }) {
     return { product, related: related.items, reviews };
   }, [productId]);
   const { data, setData, error, loading, reload } = useRemote(loader, { refetchOnFocus: false });
+  useRealtimeEvent("catalog:changed", (p) => (!p?.productId || p.productId === productId) && reload());
   const [quantity, setQuantity] = useState(1);
   const [imageIndex, setImageIndex] = useState(0);
   const [adding, setAdding] = useState(false);
@@ -135,6 +137,7 @@ export default function ProductDetailScreen({ navigation, route }) {
         <View style={styles.body}>
           {p.brand ? <Text style={styles.brand}>{p.brand}</Text> : null}
           <Text style={styles.name}>{p.name}</Text>
+          {p.seller ? <Text style={styles.muted}>Satıcı: {p.seller.name}</Text> : null}
           <View style={styles.row}>
             <FontAwesome name="star" size={15} color="#f5a623" />
             <Text style={styles.muted}>

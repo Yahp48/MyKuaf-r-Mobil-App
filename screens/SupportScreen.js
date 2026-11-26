@@ -1,16 +1,16 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView, TextInput, Alert, Linking } from "react-native";
-import { AntDesign as Icon } from '@expo/vector-icons';
-import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
-import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
-import { useApp } from '../context/AppContext';
-import { supportApi } from '../services/api';
+import { AntDesign as Icon } from "@expo/vector-icons";
+import { FontAwesome5 as FontAwesome5 } from "@expo/vector-icons";
+import { FontAwesome6 as FontAwesome6 } from "@expo/vector-icons";
+import { useApp } from "../context/AppContext";
+import { supportApi } from "../services/api";
 
 export default function SupportScreen({ navigation }) {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [message, setMessage] = useState("");
   const { state } = useApp();
-    const cartCount = state.cartItems.length;
+  const cartCount = state.cartItems.length;
 
   const supportCategories = [
     {
@@ -18,43 +18,43 @@ export default function SupportScreen({ navigation }) {
       title: "Randevu Sorunları",
       icon: "calendar-alt",
       description: "Randevu alma, iptal etme, değiştirme",
-      color: "#3b82f6"
+      color: "#3b82f6",
     },
     {
       id: "payment",
       title: "Ödeme Sorunları",
       icon: "credit-card",
       description: "Ödeme, fatura, iade işlemleri",
-      color: "#10b981"
+      color: "#10b981",
     },
     {
       id: "account",
       title: "Hesap Sorunları",
       icon: "user-circle",
       description: "Giriş, şifre, profil ayarları",
-      color: "#f59e0b"
+      color: "#f59e0b",
     },
     {
       id: "technical",
       title: "Teknik Sorunlar",
       icon: "cog",
       description: "Uygulama hataları, performans",
-      color: "#ef4444"
+      color: "#ef4444",
     },
     {
       id: "salon",
       title: "Kuaför Hakkında",
       icon: "store",
       description: "Kuaför kalitesi, şikayet",
-      color: "#8b5cf6"
+      color: "#8b5cf6",
     },
     {
       id: "other",
       title: "Diğer",
       icon: "question-circle",
       description: "Diğer sorular ve öneriler",
-      color: "#6b7280"
-    }
+      color: "#6b7280",
+    },
   ];
 
   const quickActions = [
@@ -63,48 +63,51 @@ export default function SupportScreen({ navigation }) {
       subtitle: "7/24 anlık yardım",
       icon: "comment-dots",
       color: "#10b981",
-      action: () => Alert.alert("Canlı Destek", "Canlı destek yakında aktif olacak!")
+      action: () => Alert.alert("Canlı Destek", "Canlı destek yakında aktif olacak!"),
     },
     {
       title: "Telefon",
       subtitle: "0850 123 45 67",
       icon: "phone",
       color: "#3b82f6",
-      action: () => Linking.openURL("tel:08501234567")
+      action: () => Linking.openURL("tel:08501234567"),
     },
     {
       title: "WhatsApp",
       subtitle: "Hızlı iletişim",
       icon: "whatsapp",
       color: "#25d366",
-      action: () => Linking.openURL("https://wa.me/908501234567")
+      action: () => Linking.openURL("https://wa.me/908501234567"),
     },
     {
       title: "E-posta",
       subtitle: "destek@womanhair.com",
       icon: "envelope",
       color: "#f59e0b",
-      action: () => Linking.openURL("mailto:destek@womanhair.com")
-    }
+      action: () => Linking.openURL("mailto:destek@womanhair.com"),
+    },
   ];
 
   const faqItems = [
     {
       question: "Randevumu nasıl iptal edebilirim?",
-      answer: "Randevularım sayfasından randevunuzu seçip 'İptal Et' butonuna tıklayabilirsiniz. Randevu saatinden en az 2 saat önce iptal etmeniz gerekir."
+      answer:
+        "Randevularım sayfasından randevunuzu seçip 'İptal Et' butonuna tıklayabilirsiniz. Randevu saatinden en az 2 saat önce iptal etmeniz gerekir.",
     },
     {
       question: "Ödeme yaparken sorun yaşıyorum",
-      answer: "Ödeme sorunları için kartınızın limit durumunu kontrol edin. Sorun devam ederse müşteri hizmetleri ile iletişime geçin."
+      answer:
+        "Ödeme sorunları için kartınızın limit durumunu kontrol edin. Sorun devam ederse müşteri hizmetleri ile iletişime geçin.",
     },
     {
       question: "Kuaför puanları nasıl hesaplanıyor?",
-      answer: "Kuaför puanları, müşteri değerlendirmeleri, randevu iptal oranları ve genel hizmet kalitesi kriterlerine göre hesaplanır."
+      answer:
+        "Kuaför puanları, müşteri değerlendirmeleri, randevu iptal oranları ve genel hizmet kalitesi kriterlerine göre hesaplanır.",
     },
     {
       question: "Favori kuaförlerimi nasıl görebilirim?",
-      answer: "Profil menüsünden 'Favorilerim' seçeneğine tıklayarak favori kuaförlerinizi görüntüleyebilirsiniz."
-    }
+      answer: "Profil menüsünden 'Favorilerim' seçeneğine tıklayarak favori kuaförlerinizi görüntüleyebilirsiniz.",
+    },
   ];
 
   const sendSupportMessage = async () => {
@@ -140,13 +143,9 @@ export default function SupportScreen({ navigation }) {
     ]);
   };
 
-
   const CategoryCard = ({ category }) => (
     <TouchableOpacity
-      style={[
-        styles.categoryCard,
-        selectedCategory === category.id && styles.selectedCategoryCard
-      ]}
+      style={[styles.categoryCard, selectedCategory === category.id && styles.selectedCategoryCard]}
       onPress={() => setSelectedCategory(category.id)}
     >
       <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
@@ -156,9 +155,7 @@ export default function SupportScreen({ navigation }) {
         <Text style={styles.categoryTitle}>{category.title}</Text>
         <Text style={styles.categoryDescription}>{category.description}</Text>
       </View>
-      {selectedCategory === category.id && (
-        <FontAwesome6 name="check-circle" size={20} color={category.color} />
-      )}
+      {selectedCategory === category.id && <FontAwesome6 name="check-circle" size={20} color={category.color} />}
     </TouchableOpacity>
   );
 
@@ -177,19 +174,12 @@ export default function SupportScreen({ navigation }) {
 
   const FAQItem = ({ item, index }) => {
     const [expanded, setExpanded] = useState(false);
-    
+
     return (
       <View style={styles.faqItem}>
-        <TouchableOpacity
-          style={styles.faqQuestion}
-          onPress={() => setExpanded(!expanded)}
-        >
+        <TouchableOpacity style={styles.faqQuestion} onPress={() => setExpanded(!expanded)}>
           <Text style={styles.faqQuestionText}>{item.question}</Text>
-          <FontAwesome6 
-            name={expanded ? "chevron-up" : "chevron-down"} 
-            size={12} 
-            color="#666" 
-          />
+          <FontAwesome6 name={expanded ? "chevron-up" : "chevron-down"} size={12} color="#666" />
         </TouchableOpacity>
         {expanded && (
           <View style={styles.faqAnswer}>
@@ -202,7 +192,6 @@ export default function SupportScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={30} color="#fff" />
@@ -214,7 +203,6 @@ export default function SupportScreen({ navigation }) {
       </View>
 
       <ScrollView style={styles.content}>
-        
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🚀 Hızlı İletişim</Text>
           <View style={styles.quickActionsGrid}>
@@ -224,10 +212,9 @@ export default function SupportScreen({ navigation }) {
           </View>
         </View>
 
-        
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📝 Destek Talebi Oluştur</Text>
-          
+
           <Text style={styles.formLabel}>Konu Kategorisi</Text>
           <View style={styles.categoriesContainer}>
             {supportCategories.map((category) => (
@@ -252,7 +239,6 @@ export default function SupportScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-       
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>❓ Sıkça Sorulan Sorular</Text>
           {faqItems.map((item, index) => (
@@ -260,10 +246,9 @@ export default function SupportScreen({ navigation }) {
           ))}
         </View>
 
-        
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📞 İletişim Bilgileri</Text>
-          
+
           <View style={styles.contactInfo}>
             <View style={styles.contactItem}>
               <FontAwesome6 name="clock" size={16} color="#FF4896" />
@@ -300,43 +285,28 @@ export default function SupportScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      
       <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Appointments")}
-          style={styles.navButton}
-        >
+        <TouchableOpacity onPress={() => navigation.navigate("Appointments")} style={styles.navButton}>
           <FontAwesome5 name="calendar-alt" size={24} color="#fff" />
           <Text style={styles.navText}>Randevular</Text>
         </TouchableOpacity>
-      
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Home")}
-          style={styles.navButton}
-        >
+
+        <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
           <FontAwesome5 name="map-marked-alt" size={24} color="#fff" />
           <Text style={styles.navText}>Harita</Text>
         </TouchableOpacity>
-      
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Shop")}
-          style={styles.navButton}
-        >
+
+        <TouchableOpacity onPress={() => navigation.navigate("Shop")} style={styles.navButton}>
           <FontAwesome5 name="shopping-bag" size={28} color="#fff" />
           {cartCount > 0 && (
             <View style={styles.navCartBadge}>
-              <Text style={styles.navCartBadgeText}>
-                {cartCount > 99 ? '99+' : cartCount}
-              </Text>
+              <Text style={styles.navCartBadgeText}>{cartCount > 99 ? "99+" : cartCount}</Text>
             </View>
           )}
           <Text style={styles.navText}>Mağaza</Text>
         </TouchableOpacity>
-      
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Profile")}
-          style={styles.navButton}
-        >
+
+        <TouchableOpacity onPress={() => navigation.navigate("Profile")} style={styles.navButton}>
           <FontAwesome6 name="user" size={24} color="#fff" />
           <Text style={styles.navText}>Profil</Text>
         </TouchableOpacity>
@@ -526,49 +496,49 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#FF4896',
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    backgroundColor: "#FF4896",
     height: 70,
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
-    width: '100%',
+    width: "100%",
     paddingHorizontal: 10,
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
   navButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     flex: 1,
     paddingVertical: 8,
   },
   navText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 11,
     marginTop: 4,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   navCartBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -4,
     right: 8,
-    backgroundColor: '#e00061',
+    backgroundColor: "#e00061",
     borderRadius: 10,
     minWidth: 20,
     height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: '#FF4896',
+    borderColor: "#FF4896",
   },
   navCartBadgeText: {
-    color: 'white',
+    color: "white",
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });

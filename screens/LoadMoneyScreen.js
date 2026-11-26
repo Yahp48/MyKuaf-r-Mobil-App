@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { walletApi } from "../services/api";
-import { openCheckout } from "../services/checkout";
+import { openCheckout, paymentReturnUrl } from "../services/checkout";
 import { useApp } from "../context/AppContext";
 import AppHeader from "../components/AppHeader";
 import { Button, Field } from "../components/ui";
@@ -31,7 +31,7 @@ export default function LoadMoneyScreen({ navigation, route }) {
   const submit = async () => {
     setLoading(true);
     try {
-      const { payment, checkoutUrl } = await walletApi.topup(Math.round(value * 100) / 100);
+      const { payment, checkoutUrl } = await walletApi.topup(Math.round(value * 100) / 100, paymentReturnUrl());
       const status = await openCheckout(checkoutUrl, payment.id);
       if (status === "SUCCEEDED") {
         actions.refreshUnread().catch(() => {});

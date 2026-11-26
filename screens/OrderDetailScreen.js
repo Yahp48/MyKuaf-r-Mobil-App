@@ -5,6 +5,7 @@ import { useApp } from "../context/AppContext";
 import AppHeader from "../components/AppHeader";
 import { Button, ErrorState, Loading, StatusPill } from "../components/ui";
 import { useRemote } from "../components/useRemote";
+import { useRealtimeEvent } from "../services/realtime";
 import { ORDER_STATUS, colors, formatDate, formatTL } from "../components/theme";
 
 export default function OrderDetailScreen({ route }) {
@@ -12,6 +13,8 @@ export default function OrderDetailScreen({ route }) {
   const { actions } = useApp();
   const loader = useCallback(() => orderApi.detail(orderId).then((r) => r.order), [orderId]);
   const { data: order, setData, error, loading, reload } = useRemote(loader);
+  // Satıcı kargoya verince takip numarası anında görünür.
+  useRealtimeEvent("order:updated", (o) => o?.id === orderId && setData(o));
   const [busy, setBusy] = useState(false);
 
   if (loading && !order)
@@ -65,7 +68,12 @@ export default function OrderDetailScreen({ route }) {
           <StatusPill label={status.label} color={status.color} />
         </View>
         <Text style={styles.meta}>{formatDate(order.createdAt, true)}</Text>
-        {order.trackingNumber ? <Text style={styles.meta}>Kargo takip no: {order.trackingNumber}</Text> : null}
+        {order.seller ? <Text style={styles.meta}>Satıcı: {order.seller.name}</Text> : null}
+        {order.trackingNumber ? (
+          <Text style={styles.meta}>
+            Kargo: {order.carrier} · takip no: {order.trackingNumber}
+          </Text>
+        ) : null}
 
         <Text style={styles.section}>Ürünler</Text>
         {order.items.map((i) => (

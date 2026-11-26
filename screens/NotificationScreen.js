@@ -7,6 +7,7 @@ import AppHeader from "../components/AppHeader";
 import BottomNav from "../components/BottomNav";
 import { EmptyState, ErrorState, Loading } from "../components/ui";
 import { useRemote } from "../components/useRemote";
+import { useRealtimeEvent } from "../services/realtime";
 import { colors, formatDate } from "../components/theme";
 
 const ICONS = {
@@ -27,6 +28,7 @@ export default function NotificationScreen({ navigation }) {
     return res;
   }, [setUnread]);
   const { data, setData, error, loading, refreshing, reload, refresh } = useRemote(loader);
+  useRealtimeEvent("notification:new", () => reload());
 
   const markRead = (n) => {
     if (n.read) return;

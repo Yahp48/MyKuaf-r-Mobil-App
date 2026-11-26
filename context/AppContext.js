@@ -10,6 +10,7 @@ import {
   userApi,
 } from "../services/api";
 import { registerForPush, unregisterPush } from "../services/push";
+import { connectRealtime, disconnectRealtime, onRealtime } from "../services/realtime";
 
 const AppContext = createContext(null);
 
@@ -26,6 +27,7 @@ export function AppProvider({ children }) {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   const resetLocalState = useCallback(() => {
+    disconnectRealtime();
     setUser(null);
     setCart(EMPTY_CART);
     setUnreadNotifications(0);
@@ -50,6 +52,7 @@ export function AppProvider({ children }) {
       refreshCart().catch(() => {});
       refreshUnread().catch(() => {});
       registerForPush().catch(() => {});
+      connectRealtime();
     },
     [refreshCart, refreshUnread],
   );
@@ -70,6 +73,17 @@ export function AppProvider({ children }) {
       }
     }
   }, [afterSignIn]);
+
+  // Canlı olaylar: yeni bildirim rozeti artırır; sipariş/randevu değişince sepet ve sayaç tazelenir.
+  useEffect(() => {
+    const offs = [
+      onRealtime("notification:new", () => setUnreadNotifications((n) => n + 1)),
+      onRealtime("order:updated", () => refreshCart().catch(() => {})),
+      onRealtime("catalog:changed", () => refreshCart().catch(() => {})),
+      onRealtime("realtime:connected", () => refreshUnread().catch(() => {})),
+    ];
+    return () => offs.forEach((off) => off());
+  }, [refreshCart, refreshUnread]);
 
   useEffect(() => {
     setSessionExpiredHandler(resetLocalState);

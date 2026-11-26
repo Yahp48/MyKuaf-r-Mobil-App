@@ -1,28 +1,28 @@
 import React from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Linking } from "react-native";
-import { AntDesign as Icon } from '@expo/vector-icons';
-import { FontAwesome5 as FontAwesome5 } from '@expo/vector-icons';
-import { FontAwesome6 as FontAwesome6 } from '@expo/vector-icons';
-import { useApp } from '../context/AppContext';
+import { AntDesign as Icon } from "@expo/vector-icons";
+import { FontAwesome5 as FontAwesome5 } from "@expo/vector-icons";
+import { FontAwesome6 as FontAwesome6 } from "@expo/vector-icons";
+import { useApp } from "../context/AppContext";
 
 export default function AboutScreen({ navigation }) {
   const appVersion = "2.1.4";
   const buildNumber = "247";
   const { state } = useApp();
-    const cartCount = state.cartItems.length;
+  const cartCount = state.cartItems.length;
 
   const teamMembers = [
     { name: "Ahmet Yılmaz", role: "Kurucu & CEO", icon: "user-tie" },
     { name: "Ayşe Demir", role: "CTO", icon: "laptop-code" },
     { name: "Mehmet Kaya", role: "Tasarım Direktörü", icon: "paint-brush" },
-    { name: "Fatma Öz", role: "Ürün Müdürü", icon: "chart-line" }
+    { name: "Fatma Öz", role: "Ürün Müdürü", icon: "chart-line" },
   ];
 
   const achievements = [
     { title: "50,000+", subtitle: "Aktif Kullanıcı", icon: "users" },
     { title: "1,200+", subtitle: "Kayıtlı Kuaför", icon: "store" },
     { title: "100,000+", subtitle: "Tamamlanan Randevu", icon: "calendar-check" },
-    { title: "4.8/5", subtitle: "Uygulama Puanı", icon: "star" }
+    { title: "4.8/5", subtitle: "Uygulama Puanı", icon: "star" },
   ];
 
   const socialLinks = [
@@ -30,7 +30,7 @@ export default function AboutScreen({ navigation }) {
     { name: "Instagram", url: "https://instagram.com/womanhair", icon: "instagram" },
     { name: "Facebook", url: "https://facebook.com/womanhair", icon: "facebook" },
     { name: "Twitter", url: "https://twitter.com/womanhair", icon: "twitter" },
-    { name: "LinkedIn", url: "https://linkedin.com/company/womanhair", icon: "linkedin" }
+    { name: "LinkedIn", url: "https://linkedin.com/company/womanhair", icon: "linkedin" },
   ];
 
   const openLink = (url) => {
@@ -58,10 +58,7 @@ export default function AboutScreen({ navigation }) {
   );
 
   const SocialLinkCard = ({ link }) => (
-    <TouchableOpacity
-      style={styles.socialLinkCard}
-      onPress={() => openLink(link.url)}
-    >
+    <TouchableOpacity style={styles.socialLinkCard} onPress={() => openLink(link.url)}>
       <FontAwesome5 name={link.icon} size={20} color="#FF4896" />
       <Text style={styles.socialLinkText}>{link.name}</Text>
       <FontAwesome6 name="external-link-alt" size={12} color="#666" />
@@ -70,7 +67,6 @@ export default function AboutScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-     
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={30} color="#fff" />
@@ -82,7 +78,6 @@ export default function AboutScreen({ navigation }) {
       </View>
 
       <ScrollView style={styles.content}>
-        
         <View style={styles.appInfoCard}>
           <View style={styles.appIcon}>
             <Text style={styles.appIconText}>W</Text>
@@ -90,21 +85,21 @@ export default function AboutScreen({ navigation }) {
           <Text style={styles.appName}>Woman Hair Design</Text>
           <Text style={styles.appTagline}>Güzelliğinizi Keşfedin</Text>
           <View style={styles.versionInfo}>
-            <Text style={styles.versionText}>Sürüm {appVersion} (Build {buildNumber})</Text>
+            <Text style={styles.versionText}>
+              Sürüm {appVersion} (Build {buildNumber})
+            </Text>
           </View>
         </View>
 
-      
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🎯 Misyonumuz</Text>
           <Text style={styles.missionText}>
-            Woman Hair Design olarak, kadınların güzellik ihtiyaçlarını karşılamak ve 
-            en kaliteli kuaför hizmetlerine kolay erişim sağlamak için buradayız. 
-            Teknoloji ile güzelliği birleştirerek, her kadının kendini özel hissetmesini sağlıyoruz.
+            Woman Hair Design olarak, kadınların güzellik ihtiyaçlarını karşılamak ve en kaliteli kuaför hizmetlerine
+            kolay erişim sağlamak için buradayız. Teknoloji ile güzelliği birleştirerek, her kadının kendini özel
+            hissetmesini sağlıyoruz.
           </Text>
         </View>
 
-        
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🏆 Başarılarımız</Text>
           <View style={styles.achievementsGrid}>
@@ -114,7 +109,6 @@ export default function AboutScreen({ navigation }) {
           </View>
         </View>
 
-       
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>✨ Özelliklerimiz</Text>
           <View style={styles.featuresList}>
@@ -145,7 +139,6 @@ export default function AboutScreen({ navigation }) {
           </View>
         </View>
 
-       
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>👥 Ekibimiz</Text>
           <Text style={styles.teamDescription}>
@@ -158,7 +151,6 @@ export default function AboutScreen({ navigation }) {
           </View>
         </View>
 
-        
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🌐 Bizi Takip Edin</Text>
           <View style={styles.socialLinksContainer}>
@@ -168,7 +160,6 @@ export default function AboutScreen({ navigation }) {
           </View>
         </View>
 
-        
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📄 Yasal</Text>
           <View style={styles.legalLinks}>
@@ -190,7 +181,6 @@ export default function AboutScreen({ navigation }) {
           </View>
         </View>
 
-        
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📞 İletişim</Text>
           <View style={styles.contactInfo}>
@@ -209,54 +199,34 @@ export default function AboutScreen({ navigation }) {
           </View>
         </View>
 
-       
         <View style={styles.copyrightSection}>
-          <Text style={styles.copyrightText}>
-            © 2025 Woman Hair Design. Tüm hakları saklıdır.
-          </Text>
-          <Text style={styles.copyrightSubtext}>
-            Made with ❤️ in Turkey
-          </Text>
+          <Text style={styles.copyrightText}>© 2025 Woman Hair Design. Tüm hakları saklıdır.</Text>
+          <Text style={styles.copyrightSubtext}>Made with ❤️ in Turkey</Text>
         </View>
       </ScrollView>
 
-      
       <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Appointments")}
-          style={styles.navButton}
-        >
+        <TouchableOpacity onPress={() => navigation.navigate("Appointments")} style={styles.navButton}>
           <FontAwesome5 name="calendar-alt" size={24} color="#fff" />
           <Text style={styles.navText}>Randevular</Text>
         </TouchableOpacity>
-      
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Home")}
-          style={styles.navButton}
-        >
+
+        <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
           <FontAwesome5 name="map-marked-alt" size={24} color="#fff" />
           <Text style={styles.navText}>Harita</Text>
         </TouchableOpacity>
-      
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Shop")}
-          style={styles.navButton}
-        >
+
+        <TouchableOpacity onPress={() => navigation.navigate("Shop")} style={styles.navButton}>
           <FontAwesome5 name="shopping-bag" size={28} color="#fff" />
           {cartCount > 0 && (
             <View style={styles.navCartBadge}>
-              <Text style={styles.navCartBadgeText}>
-                {cartCount > 99 ? '99+' : cartCount}
-              </Text>
+              <Text style={styles.navCartBadgeText}>{cartCount > 99 ? "99+" : cartCount}</Text>
             </View>
           )}
           <Text style={styles.navText}>Mağaza</Text>
         </TouchableOpacity>
-      
-        <TouchableOpacity 
-          onPress={() => navigation.navigate("Profile")}
-          style={styles.navButton}
-        >
+
+        <TouchableOpacity onPress={() => navigation.navigate("Profile")} style={styles.navButton}>
           <FontAwesome6 name="user" size={24} color="#fff" />
           <Text style={styles.navText}>Profil</Text>
         </TouchableOpacity>
@@ -490,49 +460,49 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#FF4896',
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    backgroundColor: "#FF4896",
     height: 70,
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
-    width: '100%',
+    width: "100%",
     paddingHorizontal: 10,
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
   navButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     flex: 1,
     paddingVertical: 8,
   },
   navText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 11,
     marginTop: 4,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   navCartBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -4,
     right: 8,
-    backgroundColor: '#e00061',
+    backgroundColor: "#e00061",
     borderRadius: 10,
     minWidth: 20,
     height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: '#FF4896',
+    borderColor: "#FF4896",
   },
   navCartBadgeText: {
-    color: 'white',
+    color: "white",
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });

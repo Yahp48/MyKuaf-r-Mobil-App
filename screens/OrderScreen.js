@@ -5,11 +5,13 @@ import { orderApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import { EmptyState, ErrorState, Loading, StatusPill } from "../components/ui";
 import { useRemote } from "../components/useRemote";
+import { useRealtimeEvent } from "../services/realtime";
 import { ORDER_STATUS, colors, formatDate, formatTL } from "../components/theme";
 
 export default function OrderScreen({ navigation }) {
   const loader = useCallback(() => orderApi.list(), []);
   const { data, error, loading, refreshing, reload, refresh } = useRemote(loader);
+  useRealtimeEvent("order:updated", () => reload());
 
   const renderItem = ({ item: o }) => {
     const status = ORDER_STATUS[o.status] ?? { label: o.status, color: colors.muted };

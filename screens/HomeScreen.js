@@ -23,6 +23,7 @@ import { AntDesign, FontAwesome, FontAwesome5, MaterialIcons } from "@expo/vecto
 import AppHeader from "../components/AppHeader";
 import BottomNav from "../components/BottomNav";
 import { colors } from "../components/theme";
+import { useRealtimeEvent } from "../services/realtime";
 import { favoriteApi, mapsApi, salonApi } from "../services/api";
 
 // Konum izni verilmezse Kırşehir merkezi gösterilir.
@@ -79,6 +80,9 @@ export default function HomeScreen({ navigation }) {
     AsyncStorage.setItem(PROMO_SEEN_KEY, "1").catch(() => {});
     if (goShop) navigation.navigate("Shop");
   };
+
+  // İşletme panelinde yeni salon açılınca veya salon bilgisi değişince harita anında tazelenir.
+  useRealtimeEvent("salons:changed", () => loadSalons(userLocation));
 
   const visibleSalons = search.trim()
     ? salons.filter((s) => s.name.toLocaleLowerCase("tr-TR").includes(search.trim().toLocaleLowerCase("tr-TR")))

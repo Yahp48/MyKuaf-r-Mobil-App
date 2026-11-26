@@ -3,7 +3,7 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "rea
 import { MaterialIcons } from "@expo/vector-icons";
 import { useApp } from "../context/AppContext";
 import { orderApi, userApi } from "../services/api";
-import { openCheckout } from "../services/checkout";
+import { openCheckout, paymentReturnUrl } from "../services/checkout";
 import AppHeader from "../components/AppHeader";
 import { Button, Checkbox, ErrorState, Loading } from "../components/ui";
 import { useRemote } from "../components/useRemote";
@@ -22,13 +22,17 @@ export default function CheckoutScreen({ navigation }) {
   const summary = cart.summary;
   const walletEnough = (user?.walletBalance ?? 0) >= (summary?.total ?? 0);
 
-  const finish = (order) => {
+  // Çok satıcılı sepet satıcı başına ayrı siparişe bölünür: tekse detaya, birden fazlaysa listeye git.
+  const finish = (orders) => {
     actions.refreshCart().catch(() => {});
     actions.refreshUser().catch(() => {});
     actions.refreshUnread().catch(() => {});
     navigation.reset({
       index: 1,
-      routes: [{ name: "Shop" }, { name: "OrderDetail", params: { orderId: order.id } }],
+      routes: [
+        { name: "Shop" },
+        orders.length === 1 ? { name: "OrderDetail", params: { orderId: orders[0].id } } : { name: "Order" },
+      ],
     });
   };
 
@@ -38,15 +42,19 @@ export default function CheckoutScreen({ navigation }) {
       return Alert.alert("Onay gerekli", "Ön bilgilendirme formunu ve mesafeli satış sözleşmesini onaylayın.");
     setPlacing(true);
     try {
-      const { order, checkoutUrl } = await orderApi.create(selectedId, method);
+      const { orders, payment, checkoutUrl } = await orderApi.create(selectedId, method, paymentReturnUrl());
+      const label =
+        orders.length > 1
+          ? `${orders.length} satıcıdan siparişleriniz`
+          : `${orders[0].orderNumber} numaralı siparişiniz`;
       if (method === "WALLET") {
-        Alert.alert("Siparişiniz alındı 🎉", `${order.orderNumber} numaralı siparişiniz cüzdanınızdan ödendi.`);
-        return finish(order);
+        Alert.alert("Siparişiniz alındı 🎉", `${label} cüzdanınızdan ödendi.`);
+        return finish(orders);
       }
-      const status = await openCheckout(checkoutUrl, order.payment.id);
+      const status = await openCheckout(checkoutUrl, payment.id);
       if (status === "SUCCEEDED") {
-        Alert.alert("Siparişiniz alındı 🎉", `${order.orderNumber} numaralı siparişinizin ödemesi alındı.`);
-        finish(order);
+        Alert.alert("Siparişiniz alındı 🎉", `${label} için ödeme alındı.`);
+        finish(orders);
       } else if (status === "FAILED") {
         Alert.alert("Ödeme başarısız", "Kartınızdan çekim yapılmadı, sepetiniz korunuyor. Lütfen tekrar deneyin.");
         actions.refreshCart().catch(() => {});
@@ -54,7 +62,7 @@ export default function CheckoutScreen({ navigation }) {
         Alert.alert(
           "Ödeme tamamlanmadı",
           "Ödeme sayfasını kapattınız. Sipariş 30 dakika içinde ödenmezse otomatik iptal edilir ve sepetiniz korunur.",
-          [{ text: "Siparişi gör", onPress: () => finish(order) }],
+          [{ text: "Siparişi gör", onPress: () => finish(orders) }],
         );
       }
     } catch (e) {
@@ -129,6 +137,15 @@ export default function CheckoutScreen({ navigation }) {
           <View style={styles.summary}>
             <Row label="Ara toplam" value={formatTL(summary.subtotal)} />
             <Row label="Kargo" value={summary.shipping === 0 ? "Ücretsiz" : formatTL(summary.shipping)} />
+            {summary.sellers?.length > 1
+              ? summary.sellers.map((s) => (
+                  <Row
+                    key={s.id}
+                    label={`  ${s.name} kargosu`}
+                    value={s.shipping === 0 ? "Ücretsiz" : formatTL(s.shipping)}
+                  />
+                ))
+              : null}
             <Row label="Ödenecek tutar" value={formatTL(summary.total)} bold />
           </View>
         ) : null}

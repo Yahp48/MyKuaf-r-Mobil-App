@@ -18,6 +18,7 @@ import AppHeader from "../components/AppHeader";
 import BottomNav from "../components/BottomNav";
 import ProductCard from "../components/ProductCard";
 import { EmptyState, ErrorState, Loading } from "../components/ui";
+import { useRealtimeEvent } from "../services/realtime";
 import { colors } from "../components/theme";
 
 const SORTS = [
@@ -88,6 +89,9 @@ export default function ShopScreen({ navigation }) {
     },
     [category, sort, query],
   );
+
+  // Satıcı ürün ekleyince, fiyat veya stok değiştirince liste sessizce tazelenir.
+  useRealtimeEvent("catalog:changed", () => load(1, "silent"));
 
   useEffect(() => {
     load(1, "initial");

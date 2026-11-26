@@ -1,6 +1,12 @@
 import * as WebBrowser from "expo-web-browser";
-import { APP_SCHEME } from "../config";
+import * as Linking from "expo-linking";
 import { paymentApi } from "./api";
+
+/**
+ * Ödeme sayfası bitince dönülecek adres. Geliştirme derlemesinde/mağaza sürümünde "mykuafor://",
+ * Expo Go'da "exp://..." olur; sunucu yalnızca bu iki biçimi kabul eder.
+ */
+export const paymentReturnUrl = () => Linking.createURL("payment-result");
 
 /**
  * Ödeme sağlayıcısının güvenli sayfasını uygulama içi tarayıcıda açar.
@@ -9,7 +15,7 @@ import { paymentApi } from "./api";
  * @returns {Promise<"SUCCEEDED"|"FAILED"|"PENDING"|"REFUNDED">}
  */
 export async function openCheckout(checkoutUrl, paymentId) {
-  await WebBrowser.openAuthSessionAsync(checkoutUrl, `${APP_SCHEME}://payment-result`);
+  await WebBrowser.openAuthSessionAsync(checkoutUrl, paymentReturnUrl());
   const { payment } = await paymentApi.status(paymentId);
   return payment.status;
 }

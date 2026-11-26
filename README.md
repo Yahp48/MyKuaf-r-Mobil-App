@@ -7,6 +7,7 @@ online randevu, salon ürünleri mağazası, güvenli ödeme, cüzdan ve bildiri
 | --- | --- |
 | `/` | Expo (React Native) mobil uygulaması — Android ve iOS |
 | `backend/` | Node.js + TypeScript REST API, PostgreSQL ([ayrıntılar](backend/README.md)) |
+| `dashboard/` | Kuaför ve satıcı işletme paneli, React + Vite ([ayrıntılar](dashboard/README.md)) |
 
 ## Hızlı başlangıç
 
@@ -20,14 +21,20 @@ npm run db:deploy
 npm run db:seed
 npm run dev
 
-# 2) Mobil (yeni terminalde, kök dizinde)
+# 2) İşletme paneli (yeni terminalde)
+cd dashboard
+npm install
+npm run dev                 # http://localhost:5173
+
+# 3) Mobil (yeni terminalde, kök dizinde)
 copy .env.example .env
 npm install
 npx expo start
 ```
 
 Telefon ve bilgisayar aynı Wi-Fi ağındaysa uygulama backend'i otomatik bulur.
-Demo hesabı: `demo@mykuafor.test` / `Demo12345`
+Demo hesapları (şifre `Demo12345`): müşteri `demo@mykuafor.test`, kuaför paneli `salon@mykuafor.test`,
+satıcı paneli `satici@mykuafor.test`.
 
 > Haritalar ve ödeme dönüşü (`mykuafor://`) için Expo Go yerine geliştirme derlemesi önerilir:
 > `npx expo run:android` veya EAS Build.

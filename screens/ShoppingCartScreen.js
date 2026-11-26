@@ -124,6 +124,15 @@ export default function ShoppingCartScreen({ navigation }) {
         <View style={styles.footer}>
           <Row label={`Ara toplam (${summary.itemCount} ürün)`} value={formatTL(summary.subtotal)} />
           <Row label="Kargo" value={summary.shipping === 0 ? "Ücretsiz" : formatTL(summary.shipping)} />
+          {summary.sellers?.length > 1
+            ? summary.sellers.map((s) => (
+                <Row
+                  key={s.id}
+                  label={`  ${s.name} kargosu`}
+                  value={s.shipping === 0 ? "Ücretsiz" : formatTL(s.shipping)}
+                />
+              ))
+            : null}
           {summary.remainingForFreeShipping > 0 ? (
             <Text style={styles.freeShip}>
               {formatTL(summary.remainingForFreeShipping)} daha ekleyin, kargo ücretsiz olsun.
