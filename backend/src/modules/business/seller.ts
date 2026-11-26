@@ -129,7 +129,7 @@ sellerPanelRouter.get("/orders", async (req, res) => {
     prisma.order.findMany({
       where,
       include: orderInclude,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ paidAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
       ...paginate(q.page, q.pageSize),
     }),
     prisma.order.count({ where }),

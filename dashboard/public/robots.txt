@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /$
+Allow: /kayit
+Allow: /giris
+Allow: /kvkk
+Allow: /hizmet-sozlesmesi
+Disallow: /salon/
+Disallow: /magaza/
+Disallow: /sifre-sifirla
+
+Sitemap: https://isletme.mykuafor.app/sitemap.xml

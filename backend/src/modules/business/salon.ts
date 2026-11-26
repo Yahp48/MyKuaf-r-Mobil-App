@@ -593,11 +593,9 @@ salonPanelRouter.post("/staff/:id/time-off", async (req, res) => {
   const t = await prisma.staffTimeOff.create({
     data: { staffId: id, startsAt: new Date(body.startsAt), endsAt: new Date(body.endsAt), reason: body.reason },
   });
-  res
-    .status(201)
-    .json({
-      timeOff: { id: t.id, startsAt: t.startsAt.toISOString(), endsAt: t.endsAt.toISOString(), reason: t.reason },
-    });
+  res.status(201).json({
+    timeOff: { id: t.id, startsAt: t.startsAt.toISOString(), endsAt: t.endsAt.toISOString(), reason: t.reason },
+  });
 });
 
 salonPanelRouter.delete("/staff/:id/time-off/:timeOffId", async (req, res) => {

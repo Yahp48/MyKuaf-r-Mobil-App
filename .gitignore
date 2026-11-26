@@ -46,3 +46,6 @@ yarn-error.*
 # tüm yerel ortam dosyaları (.env.example hariç)
 .env.*
 !.env.example
+
+# yerel araç ayarları
+/.claude/

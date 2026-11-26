@@ -174,7 +174,7 @@ const products = [
     isFeatured: false,
     description: "Gün boyu kalıcı, yapışkanlık bırakmayan güçlü tutuşlu sprey.",
     features: ["24 saat tutuş", "Nem önleyici", "300 ml"],
-    images: [img("photo-1626015365107-12b2b1e7f8e9")],
+    images: [img("photo-1535585209827-a15fcdbc4c2d")],
   },
 ];
 
