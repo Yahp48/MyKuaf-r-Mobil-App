@@ -18,6 +18,7 @@ import {
 import { SUMMARY_SERVICE_SELECT, publicDiscount, todayIn } from "./discount.ts";
 import { toTL } from "../../lib/money.ts";
 import { DateTime } from "luxon";
+import { userUploadPrefix } from "../../lib/uploads.ts";
 
 export const salonsRouter = Router();
 
@@ -325,18 +326,23 @@ salonsRouter.get("/:id/reviews", async (req, res) => {
   const { page, pageSize } = parse(zPagination, req.query);
   const [rows, total] = await Promise.all([
     prisma.salonReview.findMany({
-      where: { salonId: salon.id },
+      where: { salonId: salon.id, isHidden: false },
       orderBy: { createdAt: "desc" },
       include: { user: { select: { name: true, deletedAt: true } } },
       ...paginate(page, pageSize),
     }),
-    prisma.salonReview.count({ where: { salonId: salon.id } }),
+    prisma.salonReview.count({ where: { salonId: salon.id, isHidden: false } }),
   ]);
-  const dist = await prisma.salonReview.groupBy({ by: ["rating"], where: { salonId: salon.id }, _count: true });
+  const dist = await prisma.salonReview.groupBy({
+    by: ["rating"],
+    where: { salonId: salon.id, isHidden: false },
+    _count: true,
+  });
   const items = rows.map((r) => ({
     id: r.id,
     rating: r.rating,
     comment: r.comment,
+    photos: r.photos,
     // Gizlilik: yalnızca ad ve soyadın baş harfi gösterilir.
     authorName: !r.user || r.user.deletedAt ? "Anonim" : shortName(r.user.name),
     createdAt: r.createdAt.toISOString(),
@@ -355,12 +361,17 @@ const reviewSchema = z.object({
   appointmentId: zId,
   rating: z.number().int().min(1, "Puan 1-5 arası olmalı").max(5, "Puan 1-5 arası olmalı"),
   comment: z.string().trim().max(1000).optional(),
+  // En fazla 4 fotoğraf (ör. önce/sonra); yalnızca kullanıcının kendi yüklediği görseller
+  photos: z.array(z.string().url().max(500)).max(4, "En fazla 4 fotoğraf").default([]),
 });
 
 salonsRouter.post("/:id/reviews", requireAuth, async (req, res) => {
   const salonId = parse(zId, req.params.id);
   const body = parse(reviewSchema, req.body);
   const uid = userId(req);
+  if (body.photos.some((p) => !p.startsWith(userUploadPrefix(uid)))) {
+    throw new AppError(400, "INVALID_PHOTO", "Fotoğraflar uygulamadan yüklenmelidir");
+  }
 
   const appointment = await prisma.appointment.findFirst({
     where: { id: body.appointmentId, userId: uid, salonId },
@@ -374,9 +385,20 @@ salonsRouter.post("/:id/reviews", requireAuth, async (req, res) => {
 
   const review = await prisma.$transaction(async (tx) => {
     const created = await tx.salonReview.create({
-      data: { salonId, userId: uid, appointmentId: appointment.id, rating: body.rating, comment: body.comment },
+      data: {
+        salonId,
+        userId: uid,
+        appointmentId: appointment.id,
+        rating: body.rating,
+        comment: body.comment,
+        photos: body.photos,
+      },
     });
-    const agg = await tx.salonReview.aggregate({ where: { salonId }, _avg: { rating: true }, _count: true });
+    const agg = await tx.salonReview.aggregate({
+      where: { salonId, isHidden: false },
+      _avg: { rating: true },
+      _count: true,
+    });
     await tx.salon.update({
       where: { id: salonId },
       data: { ratingAvg: agg._avg.rating ?? 0, ratingCount: agg._count },

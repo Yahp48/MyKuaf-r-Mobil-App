@@ -10,6 +10,8 @@ interface ReviewsData {
     id: string;
     rating: number;
     comment: string | null;
+    photos: string[];
+    isHidden: boolean;
     authorName: string;
     staffName: string;
     appointmentDate: string;
@@ -87,6 +89,18 @@ export default function Reviews() {
                   </span>
                 </div>
                 {r.comment ? <p>{r.comment}</p> : <p className="faint small">Yorum yazılmamış.</p>}
+                {r.photos.length ? (
+                  <div className="uploader" style={{ marginTop: 8 }}>
+                    {r.photos.map((u) => (
+                      <a key={u} href={u} target="_blank" rel="noreferrer">
+                        <img src={u} alt="Müşteri fotoğrafı" />
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
+                {r.isHidden ? (
+                  <p className="small faint">Bu yorum platform kurallarına aykırı bulunduğu için gizlendi.</p>
+                ) : null}
                 <span className="small faint">
                   {r.staffName} · {dateLong(r.appointmentDate)} randevusu
                 </span>

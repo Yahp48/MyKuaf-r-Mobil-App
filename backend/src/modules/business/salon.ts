@@ -1154,6 +1154,8 @@ salonPanelRouter.get("/reviews", async (req, res) => {
         id: r.id,
         rating: r.rating,
         comment: r.comment,
+        photos: r.photos,
+        isHidden: r.isHidden,
         authorName: !r.user || r.user.deletedAt ? "Anonim" : shortName(r.user.name),
         staffName: r.appointment.staff.name,
         appointmentDate: r.appointment.startsAt.toISOString(),

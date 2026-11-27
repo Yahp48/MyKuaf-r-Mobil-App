@@ -69,6 +69,15 @@ module.exports = {
         },
       ],
       [
+        "expo-image-picker",
+        {
+          photosPermission:
+            "Yorumlarınıza saçınızın önce/sonra fotoğraflarını ekleyebilmeniz için galerinize erişilir. Yalnızca seçtiğiniz fotoğraflar yüklenir.",
+          cameraPermission: false,
+          microphonePermission: false,
+        },
+      ],
+      [
         "expo-notifications",
         {
           color: "#C9184A",

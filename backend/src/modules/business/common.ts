@@ -1,15 +1,11 @@
+import { detectImage, documentUpload, imageUpload, isPdf, requireImage, savePrivate, saveUpload } from "../../lib/uploads.ts";
 import { Router } from "express";
 import { z } from "zod";
-import multer from "multer";
-import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { prisma } from "../../lib/prisma.ts";
 import { parse, zName, zPassword, zPhone } from "../../lib/validate.ts";
 import { AppError } from "../../lib/errors.ts";
 import { fromTL } from "../../lib/money.ts";
 import { hashPassword, verifyPassword } from "../../lib/password.ts";
-import { env } from "../../config/env.ts";
 import { requireAuth, userId } from "../../middleware/auth.ts";
 import { businessOf, requireBusiness } from "../../middleware/business.ts";
 import { broadcast } from "../../realtime/socket.ts";
@@ -21,7 +17,7 @@ import { serializeBusiness, serializeOwner } from "./serialize.ts";
 export const businessCommonRouter = Router();
 businessCommonRouter.use(requireAuth, requireBusiness());
 
-export const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
+export { UPLOAD_DIR } from "../../lib/uploads.ts";
 
 const profileSchema = businessInfoSchema
   .partial()
@@ -76,28 +72,19 @@ businessCommonRouter.post("/account/change-password", async (req, res) => {
   res.json({ message: "Şifreniz güncellendi. Lütfen yeni şifrenizle tekrar giriş yapın." });
 });
 
-// ───────────── Görsel yükleme ─────────────
+// ───────────── Görsel ve belge yükleme ─────────────
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
+businessCommonRouter.post("/uploads", imageUpload.single("file"), async (req, res) => {
+  const { buf, ext } = requireImage(req.file);
+  res.status(201).json({ url: await saveUpload(businessOf(req).id, buf, ext) });
+});
 
-/** Dosya uzantısına değil içeriğin ilk baytlarına bakılır (sahte uzantılı dosyalar reddedilir). */
-function detectImage(buf: Buffer): "jpg" | "png" | "webp" | null {
-  if (buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "jpg";
-  if (buf.length > 8 && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])))
-    return "png";
-  if (buf.length > 12 && buf.subarray(0, 4).toString() === "RIFF" && buf.subarray(8, 12).toString() === "WEBP")
-    return "webp";
-  return null;
-}
-
-businessCommonRouter.post("/uploads", upload.single("file"), async (req, res) => {
+/** Doğrulama belgesi (vergi levhası): PDF veya görsel. Herkese açık klasöre değil, işletme klasörüne yazılır. */
+businessCommonRouter.post("/documents", documentUpload.single("file"), async (req, res) => {
   const file = req.file;
   if (!file) throw new AppError(400, "NO_FILE", "Dosya seçilmedi");
-  const ext = detectImage(file.buffer);
-  if (!ext) throw new AppError(400, "INVALID_IMAGE", "Yalnızca JPG, PNG veya WEBP görsel yüklenebilir");
-  const dir = path.join(UPLOAD_DIR, businessOf(req).id);
-  await mkdir(dir, { recursive: true });
-  const name = `${randomUUID()}.${ext}`;
-  await writeFile(path.join(dir, name), file.buffer);
-  res.status(201).json({ url: `${env.PUBLIC_BASE_URL}/uploads/${businessOf(req).id}/${name}` });
+  const ext = isPdf(file.buffer) ? "pdf" : detectImage(file.buffer);
+  if (!ext) throw new AppError(400, "INVALID_FILE", "Yalnızca PDF, JPG, PNG veya WEBP yüklenebilir");
+  // Anahtar döner; dosya yalnızca yönetici panelinden açılabilir.
+  res.status(201).json({ key: await savePrivate(businessOf(req).id, file.buffer, ext) });
 });

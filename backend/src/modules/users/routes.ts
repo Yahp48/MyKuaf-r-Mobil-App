@@ -1,3 +1,4 @@
+import { imageUpload, requireImage, saveUpload } from "../../lib/uploads.ts";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.ts";
@@ -152,6 +153,12 @@ const serializeAddress = (a: {
   line: a.line,
   postalCode: a.postalCode,
   isDefault: a.isDefault,
+});
+
+/** Müşteri görseli (yorum fotoğrafı). Kullanıcı klasörüne yazılır. */
+usersRouter.post("/me/uploads", imageUpload.single("file"), async (req, res) => {
+  const { buf, ext } = requireImage(req.file);
+  res.status(201).json({ url: await saveUpload(`u/${userId(req)}`, buf, ext) });
 });
 
 usersRouter.get("/me/addresses", async (req, res) => {

@@ -151,7 +151,17 @@ export const authApi = {
     rawRequest("/auth/reset-password", { method: "POST", body: { email, code, newPassword } }),
 };
 
+/** Yerel görseli (expo-image-picker uri) sunucuya yükler; herkese açık adresi döner. */
+const uploadImage = (path, uri) => {
+  const ext = (uri.split(".").pop() || "jpg").toLowerCase();
+  const type = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+  const form = new FormData();
+  form.append("file", { uri, name: `foto.${ext === "jpeg" ? "jpg" : ext}`, type });
+  return request(path, { method: "POST", form });
+};
+
 export const userApi = {
+  uploadPhoto: (uri) => uploadImage("/users/me/uploads", uri),
   me: () => get("/users/me"),
   update: (data) => patch("/users/me", data),
   changePassword: async (currentPassword, newPassword) =>

@@ -121,6 +121,7 @@ const SalonSheet = forwardRef(function SalonSheet(
   const [reviews, setReviews] = useState(null);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(null);
+  const [reviewViewer, setReviewViewer] = useState(null);
   const [isFavorite, setIsFavorite] = useState(!!summary.isFavorite);
 
   const salon = detail && detail.id === summary.id ? { ...summary, ...detail } : summary;
@@ -493,7 +494,7 @@ const SalonSheet = forwardRef(function SalonSheet(
         <Section title="Değerlendirmeler" action="Tümü" onAction={() => setTab("reviews")}>
           <ReviewSummary summary={reviewSummary} />
           {reviews.items.slice(0, 2).map((r) => (
-            <ReviewItem key={r.id} review={r} />
+            <ReviewItem key={r.id} review={r} onPhoto={(list, i) => setReviewViewer({ list, i })} />
           ))}
         </Section>
       ) : null}
@@ -601,7 +602,7 @@ const SalonSheet = forwardRef(function SalonSheet(
       <ReviewSummary summary={reviews.summary} />
       <Text style={styles.hint}>Yorumlar yalnızca bu salonda randevusu tamamlanan müşterilerden gelir.</Text>
       {reviews.items.map((r) => (
-        <ReviewItem key={r.id} review={r} />
+        <ReviewItem key={r.id} review={r} onPhoto={(list, i) => setReviewViewer({ list, i })} />
       ))}
       {reviews.hasNextPage ? (
         <TouchableOpacity
@@ -674,6 +675,12 @@ const SalonSheet = forwardRef(function SalonSheet(
         {[actions, gallery, tabs, <View key="body">{body}</View>]}
       </DraggableSheet>
       <PhotoViewer photos={photos} index={viewerIndex} onClose={() => setViewerIndex(null)} title={salon.name} />
+      <PhotoViewer
+        photos={reviewViewer?.list ?? []}
+        index={reviewViewer ? reviewViewer.i : null}
+        onClose={() => setReviewViewer(null)}
+        title="Müşteri fotoğrafı"
+      />
     </>
   );
 });
@@ -787,7 +794,7 @@ function ReviewSummary({ summary }) {
   );
 }
 
-function ReviewItem({ review }) {
+function ReviewItem({ review, onPhoto }) {
   return (
     <View style={styles.review}>
       <View style={styles.reviewHead}>
@@ -803,6 +810,20 @@ function ReviewItem({ review }) {
         </View>
       </View>
       {review.comment ? <Text style={styles.reviewText}>{review.comment}</Text> : null}
+      {review.photos?.length ? (
+        <View style={styles.reviewPhotos}>
+          {review.photos.map((uri, i) => (
+            <TouchableOpacity
+              key={uri}
+              onPress={() => onPhoto?.(review.photos, i)}
+              accessibilityRole="imagebutton"
+              accessibilityLabel={`Yorum fotoğrafı ${i + 1}`}
+            >
+              <Image source={{ uri }} style={styles.reviewPhoto} accessibilityIgnoresInvertColors />
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -1026,6 +1047,8 @@ const styles = StyleSheet.create({
   },
   reviewAvatarText: { fontWeight: "700", color: colors.muted, fontSize: 13 },
   reviewName: { fontSize: 14.5, fontWeight: "600", color: colors.text },
+  reviewPhotos: { flexDirection: "row", gap: 6, marginTop: 8 },
+  reviewPhoto: { width: 72, height: 72, borderRadius: 10, backgroundColor: colors.surface },
   reviewText: { fontSize: 14.5, color: colors.text, lineHeight: 21, marginTop: 8 },
   moreBtn: {
     marginTop: 14,

@@ -121,3 +121,42 @@ describe("sadakat puanı ve davet", () => {
     expect(wallet.body.transactions.items[0]).toMatchObject({ type: "LOYALTY", amount: 10 });
   });
 });
+
+describe("fotoğraflı yorum", () => {
+  it("yalnızca kullanıcının kendi yüklediği fotoğraflar yoruma eklenebilir", async () => {
+    const salon = await createSalon();
+    const u = await registerUser();
+    const a = await prisma.appointment.create({
+      data: {
+        code: `T${Date.now()}`,
+        userId: u.user.id,
+        salonId: salon.id,
+        staffId: salon.staff[0]!.id,
+        startsAt: new Date(Date.now() - 2 * HOUR),
+        endsAt: new Date(Date.now() - HOUR),
+        status: "COMPLETED",
+        totalCents: 15_000,
+        customerName: "Test",
+      },
+    });
+    // 1×1 PNG
+    const png = Buffer.from(
+      "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6300010000000500010d0a2db40000000049454e44ae426082",
+      "hex",
+    );
+    const up = await api().post("/api/users/me/uploads").set(u.auth).attach("file", png, "a.png");
+    expect(up.status).toBe(201);
+    const fake = await api()
+      .post(`/api/salons/${salon.id}/reviews`)
+      .set(u.auth)
+      .send({ appointmentId: a.id, rating: 5, photos: ["https://example.com/x.jpg"] });
+    expect(fake.status).toBe(400);
+    const ok = await api()
+      .post(`/api/salons/${salon.id}/reviews`)
+      .set(u.auth)
+      .send({ appointmentId: a.id, rating: 5, comment: "Harika", photos: [up.body.url] });
+    expect(ok.status).toBe(201);
+    const list = await api().get(`/api/salons/${salon.id}/reviews`);
+    expect(list.body.items[0].photos).toEqual([up.body.url]);
+  });
+});
