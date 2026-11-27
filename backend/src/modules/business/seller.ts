@@ -1,3 +1,4 @@
+import { onOrderDelivered } from "../loyalty/service.ts";
 import { Router } from "express";
 import { z } from "zod";
 import { DateTime } from "luxon";
@@ -209,6 +210,7 @@ sellerPanelRouter.post("/orders/:id/status", async (req, res) => {
   if (!changed.count) throw new AppError(409, "ORDER_CHANGED", "Sipariş durumu değişti, lütfen yenileyin");
   const updated = await ownOrder(b.id, id);
   publishOrder(updated);
+  if (body.status === "DELIVERED") await onOrderDelivered(id);
   if (o.userId) {
     const msg = {
       PREPARING: {

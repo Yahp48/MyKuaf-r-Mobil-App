@@ -12,6 +12,7 @@ const GROUPS = [
     items: [
       { route: "Order", icon: "receipt-outline", label: "Siparişlerim" },
       { route: "Favorites", icon: "heart-outline", label: "Favorilerim" },
+      { route: "Loyalty", icon: "star-outline", label: "Puanlarım ve davet" },
       { route: "SavedCards", icon: "card-outline", label: "Kayıtlı kartlarım" },
       { route: "Addresses", icon: "location-outline", label: "Adreslerim" },
       { route: "Reviews", icon: "star-outline", label: "Değerlendirmelerim" },

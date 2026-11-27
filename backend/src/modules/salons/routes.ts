@@ -223,6 +223,39 @@ salonsRouter.get("/deals", optionalAuth, async (req, res) => {
   res.json({ items });
 });
 
+// ───────────── Bekleme listesi ─────────────
+
+const waitlistSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tarih YYYY-AA-GG biçiminde olmalı"),
+  serviceIds: z.array(zId).max(10).default([]),
+  staffId: zId.optional(),
+});
+
+/** "Boşalırsa haber ver": seçilen günde bir randevu iptal olunca bildirim gelir. */
+salonsRouter.post("/:id/waitlist", requireAuth, async (req, res) => {
+  const salon = await activeSalon(parse(zId, req.params.id));
+  const body = parse(waitlistSchema, req.body);
+  const today = todayIn(salon.timezone);
+  if (body.date < today) throw new AppError(400, "PAST_DATE", "Geçmiş bir gün için bekleme listesine girilemez");
+  const uid = userId(req);
+  const date = new Date(`${body.date}T00:00:00Z`);
+  const entry = await prisma.waitlistEntry.upsert({
+    where: { userId_salonId_date: { userId: uid, salonId: salon.id, date } },
+    create: { userId: uid, salonId: salon.id, date, serviceIds: body.serviceIds, staffId: body.staffId },
+    update: { serviceIds: body.serviceIds, staffId: body.staffId ?? null, notifiedAt: null },
+  });
+  res.status(201).json({ entry: { id: entry.id, salonId: salon.id, date: body.date } });
+});
+
+salonsRouter.delete("/:id/waitlist/:date", requireAuth, async (req, res) => {
+  const salonId = parse(zId, req.params.id);
+  const day = parse(z.string().regex(/^\d{4}-\d{2}-\d{2}$/), req.params.date);
+  await prisma.waitlistEntry.deleteMany({
+    where: { userId: userId(req), salonId, date: new Date(`${day}T00:00:00Z`) },
+  });
+  res.status(204).end();
+});
+
 async function activeSalon(id: string) {
   const salon = await prisma.salon.findFirst({ where: { id, ...bookableSalonWhere } });
   if (!salon) throw notFound("Salon bulunamadı");

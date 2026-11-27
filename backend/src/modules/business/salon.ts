@@ -13,6 +13,8 @@ import { broadcast, emitToBusiness, emitToUser } from "../../realtime/socket.ts"
 import { notify } from "../notifications/notify.ts";
 import { ACTIVE_APPOINTMENT_STATUSES, computeAvailability, resolveServices, salonDay } from "../salons/availability.ts";
 import { discountedCents, isoDay, todayIn } from "../salons/discount.ts";
+import { notifyWaitlist } from "../appointments/jobs.ts";
+import { onAppointmentCompleted } from "../loyalty/service.ts";
 import { serializeSalonProfile } from "./serialize.ts";
 import type { Prisma, Salon } from "../../generated/prisma/client.ts";
 
@@ -265,6 +267,8 @@ salonPanelRouter.post("/appointments/:id/status", async (req, res) => {
   });
   const out = serializeAppt(updated, salon.timezone);
   emitToBusiness(salon.businessId!, "appointment:updated", { id });
+  if (body.status === "CANCELLED") await notifyWaitlist(salon.id, a.startsAt, a.userId);
+  if (body.status === "COMPLETED") await onAppointmentCompleted(id);
   if (a.userId) {
     emitToUser(a.userId, "appointment:updated", { id });
     if (body.status === "CONFIRMED") {

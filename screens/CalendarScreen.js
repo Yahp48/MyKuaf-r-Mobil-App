@@ -52,7 +52,9 @@ export default function CalendarScreen({ navigation, route }) {
   // Paketle randevu: hizmetler paketten gelir, fiyat paket fiyatıdır
   const [packageId, setPackageId] = useState(route.params?.packageId ?? null);
   const [staffId, setStaffId] = useState(route.params?.staffId ?? null); // null = fark etmez
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(route.params?.date ?? "");
+  const [waitlisted, setWaitlisted] = useState([]);
+  const [joining, setJoining] = useState(false);
   const [time, setTime] = useState("");
   const [slots, setSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -132,6 +134,35 @@ export default function CalendarScreen({ navigation, route }) {
     () => new Set((salon?.workingHours ?? []).filter((h) => h.isClosed).map((h) => h.weekday % 7)),
     [salon],
   );
+
+  // Bekleme listesi: seçilen günde bir randevu iptal olunca bildirim gelir.
+  useEffect(() => {
+    appointmentApi
+      .waitlist()
+      .then((r) => setWaitlisted(r.items.filter((w) => w.salonId === salonId && !w.notified).map((w) => w.date)))
+      .catch(() => {});
+  }, [salonId]);
+
+  const joinWaitlist = async () => {
+    setJoining(true);
+    try {
+      await salonApi.joinWaitlist(salonId, { date, serviceIds, ...(staffId ? { staffId } : {}) });
+      setWaitlisted((w) => [...w, date]);
+      Alert.alert("Listeye eklendiniz", "Bu günde bir randevu iptal olursa size hemen bildirim göndereceğiz.");
+    } catch (e) {
+      Alert.alert("Eklenemedi", e.message);
+    } finally {
+      setJoining(false);
+    }
+  };
+  const leaveWaitlist = async () => {
+    try {
+      await salonApi.leaveWaitlist(salonId, date);
+      setWaitlisted((w) => w.filter((d) => d !== date));
+    } catch (e) {
+      Alert.alert("Kaldırılamadı", e.message);
+    }
+  };
 
   const submit = async () => {
     if (!/^(\+90|0)?5\d{9}$/.test(phone.replace(/[\s()-]/g, ""))) {
@@ -295,7 +326,23 @@ export default function CalendarScreen({ navigation, route }) {
         ) : slotsLoading ? (
           <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
         ) : slots.length === 0 ? (
-          <Text style={styles.hint}>Bu tarihte boş saat yok, lütfen başka bir gün deneyin.</Text>
+          <View style={styles.waitBox}>
+            <Text style={styles.hint}>Bu tarihte boş saat yok.</Text>
+            {waitlisted.includes(date) ? (
+              <TouchableOpacity onPress={leaveWaitlist} style={styles.waitBtnOn} accessibilityRole="button">
+                <Text style={styles.waitBtnOnText}>✓ Boşalırsa haber vereceğiz · Vazgeç</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={joinWaitlist}
+                style={styles.waitBtn}
+                disabled={joining}
+                accessibilityRole="button"
+              >
+                <Text style={styles.waitBtnText}>{joining ? "Kaydediliyor…" : "Bu gün boşalırsa haber ver"}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         ) : (
           <View style={styles.times}>
             {slots.map((t) => (
@@ -368,6 +415,17 @@ function StaffChip({ label, subtitle, image, selected, onPress }) {
 }
 
 const styles = StyleSheet.create({
+  waitBox: { gap: 8 },
+  waitBtn: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.primarySoft,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  waitBtnText: { color: colors.primary, fontWeight: "800", fontSize: 14 },
+  waitBtnOn: { alignSelf: "flex-start", paddingVertical: 6 },
+  waitBtnOnText: { color: colors.success, fontWeight: "700", fontSize: 13.5 },
   subSection: { fontSize: 13, fontWeight: "800", color: colors.muted, marginTop: 4, marginBottom: 8 },
   oldPrice: { fontSize: 12.5, color: colors.muted, textDecorationLine: "line-through" },
   dealNote: { fontSize: 12, color: colors.primary, fontWeight: "600", marginTop: 2 },

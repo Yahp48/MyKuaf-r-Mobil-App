@@ -176,6 +176,13 @@ export const salonApi = {
   cities: () => get("/salons/cities"),
   featured: (city, period) => get("/salons/featured", { city, period }),
   deals: (city) => get("/salons/deals", { city }),
+  joinWaitlist: (id, data) => post(`/salons/${id}/waitlist`, data),
+  leaveWaitlist: (id, date) => del(`/salons/${id}/waitlist/${date}`),
+};
+
+export const loyaltyApi = {
+  get: () => get("/loyalty"),
+  redeem: (points) => post("/loyalty/redeem", { points }),
 };
 
 export const appointmentApi = {
@@ -183,6 +190,7 @@ export const appointmentApi = {
   list: (scope = "all", page = 1) => get("/appointments", { scope, page }),
   detail: (id) => get(`/appointments/${id}`),
   cancel: (id, reason) => post(`/appointments/${id}/cancel`, { reason }),
+  waitlist: () => get("/appointments/waitlist"),
 };
 
 export const productApi = {

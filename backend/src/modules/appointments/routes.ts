@@ -10,6 +10,7 @@ import { toTL } from "../../lib/money.ts";
 import { requireAuth, userId } from "../../middleware/auth.ts";
 import { ACTIVE_APPOINTMENT_STATUSES, computeAvailability, salonDay } from "../salons/availability.ts";
 import { priceBooking } from "../salons/pricing.ts";
+import { notifyWaitlist } from "./jobs.ts";
 import { notify } from "../notifications/notify.ts";
 import { emitToBusiness, emitToUser } from "../../realtime/socket.ts";
 import type { Prisma } from "../../generated/prisma/client.ts";
@@ -184,6 +185,24 @@ appointmentsRouter.get("/", async (req, res) => {
   res.json(pageResult(rows.map(serialize), total, page, pageSize));
 });
 
+/** Kullanıcının bugünden sonraki bekleme listesi kayıtları. */
+appointmentsRouter.get("/waitlist", async (req, res) => {
+  const today = new Date(`${DateTime.now().setZone("Europe/Istanbul").toISODate()}T00:00:00Z`);
+  const rows = await prisma.waitlistEntry.findMany({
+    where: { userId: userId(req), date: { gte: today } },
+    include: { salon: { select: { id: true, name: true } } },
+    orderBy: { date: "asc" },
+  });
+  res.json({
+    items: rows.map((w) => ({
+      salonId: w.salon.id,
+      salonName: w.salon.name,
+      date: w.date.toISOString().slice(0, 10),
+      notified: !!w.notifiedAt,
+    })),
+  });
+});
+
 appointmentsRouter.get("/:id", async (req, res) => {
   const a = await prisma.appointment.findFirst({
     where: { id: parse(zId, req.params.id), userId: userId(req) },
@@ -217,6 +236,7 @@ appointmentsRouter.post("/:id/cancel", async (req, res) => {
   });
   const out = serialize(updated);
   emitToUser(uid, "appointment:updated", out);
+  await notifyWaitlist(a.salon.id, a.startsAt, uid);
   const owner = await prisma.salon.findUnique({ where: { id: a.salon.id }, select: { businessId: true } });
   if (owner?.businessId) emitToBusiness(owner.businessId, "appointment:updated", { id });
   await notify(uid, {

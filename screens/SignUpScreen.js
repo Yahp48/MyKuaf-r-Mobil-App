@@ -19,7 +19,7 @@ const PASSWORD_RULE = /^(?=.*[A-Za-zÇĞİÖŞÜçğıöşü])(?=.*\d).{8,128}$/
 
 export default function SignUpScreen({ navigation }) {
   const { actions } = useApp();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", referralCode: "" });
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -55,6 +55,7 @@ export default function SignUpScreen({ navigation }) {
         ...(form.phone ? { phone: form.phone } : {}),
         acceptTerms: true,
         marketingOptIn,
+        ...(form.referralCode.trim() ? { referralCode: form.referralCode.trim().toUpperCase() } : {}),
       });
     } catch (e) {
       Alert.alert("Kayıt yapılamadı", e.message);
@@ -104,6 +105,21 @@ export default function SignUpScreen({ navigation }) {
             textContentType="telephoneNumber"
             error={errors.phone}
             accessibilityLabel="Cep telefonu"
+          />
+          <Field
+            icon="card-giftcard"
+            placeholder="Davet kodu (isteğe bağlı)"
+            value={form.referralCode}
+            onChangeText={(v) =>
+              set("referralCode")(
+                v
+                  .replace(/[^A-Za-z0-9]/g, "")
+                  .slice(0, 6)
+                  .toUpperCase(),
+              )
+            }
+            autoCapitalize="characters"
+            accessibilityLabel="Davet kodu"
           />
           <Field
             icon="lock-outline"

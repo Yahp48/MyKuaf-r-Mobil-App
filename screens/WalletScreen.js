@@ -13,6 +13,7 @@ const TYPES = {
   TOPUP: { label: "Bakiye yükleme", icon: "arrow-down", tint: colors.primary, bg: colors.primarySoft },
   PAYMENT: { label: "Ödeme", icon: "bag-handle-outline", tint: colors.text, bg: "#EFEFF2" },
   REFUND: { label: "İade", icon: "arrow-undo", tint: colors.success, bg: "#E6F4EA" },
+  LOYALTY: { label: "Puan aktarımı", icon: "star", tint: colors.warning, bg: "#FFF4E0" },
 };
 const FILTERS = [
   { key: null, label: "Tümü" },

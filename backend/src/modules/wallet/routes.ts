@@ -14,7 +14,7 @@ import { serializePayment, startCheckout, zReturnUrl } from "../payments/service
 export const walletRouter = Router();
 walletRouter.use(requireAuth);
 
-const listSchema = zPagination.extend({ type: z.enum(["TOPUP", "PAYMENT", "REFUND"]).optional() });
+const listSchema = zPagination.extend({ type: z.enum(["TOPUP", "PAYMENT", "REFUND", "LOYALTY"]).optional() });
 
 walletRouter.get("/", async (req, res) => {
   const uid = userId(req);

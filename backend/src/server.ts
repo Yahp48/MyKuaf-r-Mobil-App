@@ -5,6 +5,7 @@ import { prisma } from "./lib/prisma.ts";
 import { corsOrigins, createApp } from "./app.ts";
 import { attachRealtime, closeRealtime } from "./realtime/socket.ts";
 import { expireStalePayments } from "./modules/payments/service.ts";
+import { runAppointmentJobs } from "./modules/appointments/jobs.ts";
 
 const app = createApp();
 const server = createServer(app);
@@ -18,6 +19,11 @@ const sweeper = setInterval(() => {
 }, 5 * 60_000);
 sweeper.unref();
 
+// Randevu hatırlatmaları (24 saat / 2 saat önce) ve eski bekleme listesi kayıtları.
+const reminders = setInterval(runAppointmentJobs, 5 * 60_000);
+reminders.unref();
+runAppointmentJobs();
+
 server.listen(env.PORT, () => {
   logger.info(`MyKuaför API ${env.PORT} portunda çalışıyor (${env.NODE_ENV})`);
 });
@@ -29,6 +35,7 @@ async function shutdown(signal: string) {
   shuttingDown = true;
   logger.info({ signal }, "Sunucu kapatılıyor");
   clearInterval(sweeper);
+  clearInterval(reminders);
   const force = setTimeout(() => process.exit(1), 10_000);
   force.unref();
   await closeRealtime();

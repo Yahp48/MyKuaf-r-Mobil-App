@@ -24,12 +24,23 @@ const registerSchema = z.object({
   // KVKK aydınlatma metni ve kullanım koşulları onayı zorunlu
   acceptTerms: z.literal(true, { message: "Kullanım koşullarını ve KVKK aydınlatma metnini onaylamalısınız" }),
   marketingOptIn: z.boolean().default(false),
+  // Arkadaş davet kodu (isteğe bağlı)
+  referralCode: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z0-9]{6}$/, "Davet kodu 6 karakter olmalı")
+    .optional(),
 });
 
 authRouter.post("/register", async (req, res) => {
   const body = parse(registerSchema, req.body);
   const existing = await prisma.user.findUnique({ where: { email: body.email } });
   if (existing) throw conflict("EMAIL_TAKEN", "Bu e-posta adresiyle kayıtlı bir hesap zaten var");
+  const inviter = body.referralCode
+    ? await prisma.user.findFirst({ where: { referralCode: body.referralCode, deletedAt: null, role: "CUSTOMER" } })
+    : null;
+  if (body.referralCode && !inviter) throw new AppError(400, "INVALID_REFERRAL", "Davet kodu bulunamadı");
 
   try {
     const user = await prisma.user.create({
@@ -39,6 +50,7 @@ authRouter.post("/register", async (req, res) => {
         phone: body.phone,
         passwordHash: await hashPassword(body.password),
         marketingOptIn: body.marketingOptIn,
+        referredById: inviter?.id,
       },
     });
     const tokens = await issueTokens(user, req.get("user-agent"));

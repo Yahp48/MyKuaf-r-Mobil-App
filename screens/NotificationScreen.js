@@ -44,7 +44,10 @@ export default function NotificationScreen({ navigation }) {
 
   const open = (n) => {
     markRead(n);
-    if (n.data?.appointmentId) navigation.navigate("Appointments");
+    if (n.type === "waitlist_slot" && n.data?.salonId)
+      navigation.navigate("CalendarScreen", { salonId: n.data.salonId, date: n.data.date });
+    else if (n.type === "loyalty") navigation.navigate("Loyalty");
+    else if (n.data?.appointmentId) navigation.navigate("Appointments");
     else if (n.data?.orderId) navigation.navigate("OrderDetail", { orderId: n.data.orderId });
     else if (n.type === "wallet_topup") navigation.navigate("WalletScreen");
   };
