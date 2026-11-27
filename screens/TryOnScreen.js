@@ -14,6 +14,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { WebView } from "react-native-webview";
+import { LinearGradient } from "expo-linear-gradient";
 import { useIsFocused } from "@react-navigation/native";
 import { useCameraPermissions } from "expo-camera";
 import { Asset } from "expo-asset";
@@ -286,6 +287,11 @@ export default function TryOnScreen({ navigation }) {
         ) : null}
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.flash, { opacity: flash }]} />
 
+        <LinearGradient
+          pointerEvents="none"
+          colors={["rgba(0,0,0,0.35)", "transparent"]}
+          style={[styles.shadeTop, { height: insets.top + 90 }]}
+        />
         {/* Üst çubuk */}
         <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
           <Text style={styles.screenTitle}>Stilini dene</Text>
@@ -350,6 +356,12 @@ export default function TryOnScreen({ navigation }) {
           </View>
         ) : null}
 
+        {/* Okunabilirlik için hafif gölge geçişi (görüntü tam ekran kalır) */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={["transparent", "rgba(0,0,0,0.45)"]}
+          style={[styles.shadeBottom, { height: panelHeight + 40 }]}
+        />
         {/* Alt panel: kaydırmalı seçenekler + kategoriler */}
         <View style={styles.bottom} onLayout={(e) => setPanelHeight(Math.round(e.nativeEvent.layout.height))}>
           <View style={styles.labelRow}>
@@ -579,6 +591,8 @@ const styles = StyleSheet.create({
   },
   hintText: { color: "#fff", fontWeight: "600" },
   bottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 10, paddingBottom: 12 },
+  shadeTop: { position: "absolute", top: 0, left: 0, right: 0 },
+  shadeBottom: { position: "absolute", bottom: 0, left: 0, right: 0 },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 6 },
   itemLabel: {
     color: "#fff",

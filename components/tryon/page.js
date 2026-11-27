@@ -35,7 +35,6 @@ const [over, octx] = mk();         // yerleştirilmiş saç modeli
 const [plate, pctx] = mk();        // saçın arkasını dolduran tahmini zemin
 const [rmask, rctx] = mk();        // gizlenecek kendi saç bölgesi
 const [hard, hdctx] = mk();        // güçlendirilmiş ve hafif genişletilmiş saç maskesi
-const [bg, bgctx] = mk();          // bulanık arka plan için küçük kopya
 
 const state = { hair: null, makeup: null, style: null, scanning: true, padTop: 0, padBottom: 0 };
 const scan = { samples: [], need: 36, lastPost: 0 };
@@ -119,17 +118,14 @@ async function start() {
   requestAnimationFrame(loop);
 }
 
-// Görüntü ekrana yakınlaştırılmadan sığdırılır (en fazla %30 kırpma) ve üst/alt kontrollerin arasındaki
-// görünür alana ortalanır; kalan boşluk bulanık arka planla dolar.
+// Görüntü tüm ekranı kaplar (cover); kontroller görüntünün üstünde durur.
+// Kamera dikey (9:16) istendiği için telefon ekranında kırpma azdır.
 function layout(w, h) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const cw = Math.round(window.innerWidth * dpr), ch = Math.round(window.innerHeight * dpr);
   if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
-  const top = state.padTop * dpr, availH = Math.max(ch * 0.5, ch - top - state.padBottom * dpr);
-  const coverAll = Math.max(cw / w, ch / h);
-  const cover = Math.max(cw / w, availH / h), contain = Math.min(cw / w, availH / h);
-  const s = Math.min(cover, contain * 1.3);
-  return { cw, ch, coverAll, s, dx: (cw - w * s) / 2, dy: top + (availH - h * s) / 2 };
+  const s = Math.max(cw / w, ch / h);
+  return { cw, ch, s, dx: (cw - w * s) / 2, dy: (ch - h * s) / 2 };
 }
 
 function loop() {
@@ -146,13 +142,6 @@ function loop() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = "source-over";
   ctx.globalAlpha = 1;
-  // Bulanık arka plan: küçük bir kopyayı büyütmek, her karede filtre uygulamaktan çok daha hafiftir.
-  if (bg.width !== 24) { bg.width = 24; bg.height = Math.max(1, Math.round((24 * h) / w)); }
-  bgctx.drawImage(video, 0, 0, bg.width, bg.height);
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(bg, (L.cw - w * L.coverAll) / 2, (L.ch - h * L.coverAll) / 2, w * L.coverAll, h * L.coverAll);
-  ctx.fillStyle = "rgba(0,0,0,0.35)";
-  ctx.fillRect(0, 0, L.cw, L.ch);
   ctx.setTransform(L.s, 0, 0, L.s, L.dx, L.dy);
   ctx.drawImage(video, 0, 0, w, h);
 
