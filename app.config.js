@@ -33,10 +33,7 @@ module.exports = {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff",
       },
-      permissions: [
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-      ],
+      permissions: ["android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_FINE_LOCATION"],
       // Play Store incelemesinde sorun çıkaran, uygulamanın kullanmadığı izinler.
       blockedPermissions: [
         "android.permission.SYSTEM_ALERT_WINDOW",
@@ -63,9 +60,18 @@ module.exports = {
         },
       ],
       [
+        "expo-camera",
+        {
+          cameraPermission:
+            "Saç rengi ve makyajı canlı denemek için ön kamera kullanılır. Görüntünüz yalnızca cihazınızda işlenir ve hiçbir yere gönderilmez.",
+          microphonePermission: false,
+          recordAudioAndroid: false,
+        },
+      ],
+      [
         "expo-notifications",
         {
-          color: "#FF4896",
+          color: "#C9184A",
         },
       ],
     ],

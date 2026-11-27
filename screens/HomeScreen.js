@@ -371,6 +371,7 @@ export default function HomeScreen({ navigation, route: navRoute }) {
           contentContainerStyle={styles.filters}
           keyboardShouldPersistTaps="handled"
         >
+          <FeatureChip icon="sparkles" label="Canlı dene" onPress={() => navigation.navigate("TryOn")} />
           <FeatureChip
             icon="trophy"
             label="Öne çıkanlar"

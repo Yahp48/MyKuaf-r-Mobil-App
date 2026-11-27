@@ -24,6 +24,11 @@ Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kuralları
 - Ödeme: `services/checkout.js` sağlayıcının güvenli sayfasını `expo-web-browser` ile açar, sonucu sunucudan sorgular.
   Uygulama kart bilgisi ASLA toplamaz (PCI-DSS)
 - Ortak bileşenler: `components/` (AppHeader, BottomNav, DraggableSheet, SalonSheet, PhotoViewer, ProductCard, ContactList, ui.js, theme.js, useRemote.js)
+- Canlı deneme (`screens/TryOnScreen.js`): WebView içinde MediaPipe Tasks Vision (`components/tryon/page.js`, sürüm sabit);
+  yüz şekli, saç rengi, makyaj cihazda işlenir, görüntü sunucuya gitmez. Katalog `components/tryon/catalog.js`.
+  Saç modeli canlı denemesi yok (yalnızca yüz şekline göre öneri) — gerçekçi model denemesi için üçüncü taraf AR/AI servisi gerekir
+- İndirim: hizmet başına yüzde + tarih aralığı; fiyat randevu gününe göre sunucuda hesaplanır (`backend/src/modules/salons/discount.ts`).
+  Son 30 günde fiyatı artırılan hizmette indirim yok, indirim sürerken fiyat artırılamaz
 - Tasarım: tek vurgu rengi `#C9184A` (`colors.primary`), beyaz başlık ve alt menü, gri yüzey üzerinde gruplu kartlar,
   Ionicons çizgi ikonlar. Renkleri ekranlara sabit yazma; `components/theme.js`'ten al
 
@@ -40,7 +45,7 @@ Mobil (kök dizin):
 - `npx expo-doctor` — bağımlılık/yapılandırma kontrolü
 Backend (`backend/`):
 - `docker compose up -d` (PostgreSQL), `npm run db:deploy`, `npm run db:seed`, `npm run dev`
-- `npm test` (54 test, `mykuafor_test` veritabanı), `npm run typecheck`
+- `npm test` (57 test, `mykuafor_test` veritabanı), `npm run typecheck`
 - Şema değişikliği: `prisma/schema.prisma` düzenle → `npm run db:migrate -- --name <ad>`
 - Demo hesapları (yalnızca yerel seed, şifre `Demo12345`): müşteri `demo@mykuafor.test`,
   kuaför paneli `salon@mykuafor.test`, satıcı paneli `satici@mykuafor.test`
