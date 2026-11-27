@@ -170,6 +170,11 @@ enum SalonKind {
 model Salon {
   id                      String    @id @default(uuid(7)) @db.Uuid
   businessId              String?   @unique @db.Uuid
+  // Rehber kaydı: herkese açık kaynaktan alınmış gerçek salon; işletme platforma katılmadı, online randevu yok.
+  isListing               Boolean   @default(false)
+  // Rehber kaydının kaynağı (ör. "OpenStreetMap") ve kaynaktaki kimliği (ör. "node/123")
+  dataSource              String?
+  sourceRef               String?
   slug                    String    @unique
   name                    String
   description             String?

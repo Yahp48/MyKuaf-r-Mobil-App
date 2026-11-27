@@ -42,6 +42,8 @@ export const distanceText = (km) =>
       : `${km.toLocaleString("tr-TR", { maximumFractionDigits: 1 })} km`;
 
 export function openStatusText(s) {
+  if (s.isOpenNow === null || s.isOpenNow === undefined)
+    return { label: "Çalışma saati bilinmiyor", color: colors.muted, detail: "" };
   if (s.isOpenNow)
     return { label: "Açık", color: colors.success, detail: s.todayHours ? `Kapanış ${s.todayHours.closes}` : "" };
   return { label: "Kapalı", color: colors.danger, detail: s.nextOpen ? `Açılış: ${s.nextOpen.label}` : "" };
@@ -219,6 +221,8 @@ const SalonSheet = forwardRef(function SalonSheet(
   const pickedTotal = pickedServices.reduce((sum, s) => sum + priceOn(s), 0);
 
   const statusInfo = openStatusText(salon);
+  // Rehber kaydı (bookable=false): online randevu yok, yalnızca bilgi ve iletişim
+  const bookable = salon.bookable !== false;
   const meta = [salon.kindLabel, priceRangeText(salon.priceRange), distanceText(salon.distanceKm)].filter(Boolean);
   const todayWeekday = ((new Date().getDay() + 6) % 7) + 1;
   const reviewSummary = reviews?.summary;
@@ -275,7 +279,11 @@ const SalonSheet = forwardRef(function SalonSheet(
 
   const actions = (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} key="actions">
-      <Chip icon="calendar" label="Randevu al" primary onPress={() => book()} />
+      {bookable ? (
+        <Chip icon="calendar" label="Randevu al" primary onPress={() => book()} />
+      ) : salon.phone ? (
+        <Chip icon="call" label="Ara" primary onPress={call} />
+      ) : null}
       <Chip
         icon="navigate"
         label={route ? `${route.duration}` : "Yol tarifi"}
@@ -283,7 +291,8 @@ const SalonSheet = forwardRef(function SalonSheet(
         loading={routeLoading}
         outlinePrimary
       />
-      {salon.phone ? <Chip icon="call-outline" label="Ara" onPress={call} /> : null}
+      {bookable && salon.phone ? <Chip icon="call-outline" label="Ara" onPress={call} /> : null}
+      {!bookable && salon.website ? <Chip icon="globe-outline" label="Web sitesi" onPress={website} /> : null}
       {salon.whatsapp ? <Chip icon="logo-whatsapp" label="WhatsApp" onPress={whatsapp} /> : null}
       {status === "signedIn" ? (
         <Chip
@@ -324,7 +333,7 @@ const SalonSheet = forwardRef(function SalonSheet(
   const tabs = (
     <View style={styles.tabsWrap} key="tabs">
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-        {TABS.map((t) => {
+        {TABS.filter((t) => bookable || t.key === "overview").map((t) => {
           const on = tab === t.key;
           return (
             <TouchableOpacity
@@ -362,6 +371,17 @@ const SalonSheet = forwardRef(function SalonSheet(
 
   const overview = (
     <View>
+      {!bookable ? (
+        <View style={styles.listingBox}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.listingTitle}>Online randevu henüz yok</Text>
+            <Text style={styles.mutedSmall}>
+              Bu salon MyKuaför'e henüz katılmadı. Randevu için telefonla ulaşabilir veya yol tarifi alabilirsiniz.
+            </Text>
+          </View>
+        </View>
+      ) : null}
       {route ? (
         <View style={styles.routeBox}>
           <Ionicons name="car-outline" size={20} color={colors.primary} />
@@ -449,6 +469,18 @@ const SalonSheet = forwardRef(function SalonSheet(
             <ServiceRow key={s.id} service={s} picked={picked.includes(s.id)} onPress={() => togglePick(s.id)} />
           ))}
         </Section>
+      ) : null}
+
+      {salon.source ? (
+        <Text
+          style={styles.sourceNote}
+          onPress={() =>
+            salon.source.ref && Linking.openURL(`https://www.openstreetmap.org/${salon.source.ref}`).catch(() => {})
+          }
+        >
+          Salon bilgileri © {salon.source.name} katkıda bulunanları (ODbL). Bilgiler değişmiş olabilir; hata görürseniz
+          kaynağında düzeltebilirsiniz.
+        </Text>
       ) : null}
 
       {reviewSummary?.count ? (
@@ -566,9 +598,15 @@ const SalonSheet = forwardRef(function SalonSheet(
           </>
         )}
       </View>
-      <TouchableOpacity style={styles.footerBtn} onPress={() => book()} accessibilityRole="button">
-        <Text style={styles.footerBtnText}>Randevu al</Text>
-      </TouchableOpacity>
+      {bookable ? (
+        <TouchableOpacity style={styles.footerBtn} onPress={() => book()} accessibilityRole="button">
+          <Text style={styles.footerBtnText}>Randevu al</Text>
+        </TouchableOpacity>
+      ) : salon.phone ? (
+        <TouchableOpacity style={styles.footerBtn} onPress={call} accessibilityRole="button">
+          <Text style={styles.footerBtnText}>Ara</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 
@@ -747,6 +785,17 @@ const styles = StyleSheet.create({
   muted: { fontSize: 14, color: colors.muted, marginTop: 2 },
   mutedSmall: { fontSize: 13, color: colors.muted, marginTop: 2, lineHeight: 18 },
   statusLine: { fontSize: 14, marginTop: 3 },
+  listingBox: {
+    flexDirection: "row",
+    gap: 10,
+    margin: 16,
+    marginBottom: 0,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: colors.primarySoft,
+  },
+  listingTitle: { fontSize: 14.5, fontWeight: "700", color: colors.text },
+  sourceNote: { fontSize: 11.5, color: colors.faint, marginHorizontal: 18, marginTop: 14, lineHeight: 16 },
   dealBanner: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
 import AppHeader from "../components/AppHeader";
@@ -10,6 +10,7 @@ import { colors } from "../components/theme";
 const FEATURES = [
   { icon: "map-outline", text: "Yakınınızdaki salonları haritada görün, yol tarifi alın" },
   { icon: "calendar-outline", text: "Personel ve saat seçerek anında randevu alın" },
+  { icon: "sparkles-outline", text: "Saç modeli, saç rengi ve makyajı canlı deneyin" },
   { icon: "bag-handle-outline", text: "Salonların kullandığı bakım ürünlerini güvenle satın alın" },
   { icon: "notifications-outline", text: "Randevu ve sipariş durumunuzu anlık takip edin" },
 ];
@@ -52,6 +53,23 @@ export default function AboutScreen({ navigation }) {
           <LinkRow label="Müşteri hizmetleri" onPress={() => navigation.navigate("Support")} border />
         </View>
 
+        <Text style={styles.groupLabel}>VERİ KAYNAKLARI VE LİSANSLAR</Text>
+        <View style={styles.card}>
+          <Text style={styles.creditText}>
+            Online randevu almayan salonların adres ve iletişim bilgileri © OpenStreetMap katkıda bulunanları tarafından
+            Open Database License (ODbL) ile sağlanır.
+          </Text>
+          <LinkRow
+            label="openstreetmap.org/copyright"
+            onPress={() => Linking.openURL("https://www.openstreetmap.org/copyright").catch(() => {})}
+            border
+          />
+          <Text style={[styles.creditText, { marginTop: 10 }]}>
+            Canlı denemedeki saç modeli katmanları Unsplash lisanslı fotoğraflardan üretilmiştir. Yüz ve saç analizi
+            Google MediaPipe (Apache 2.0) ile cihazınızda yapılır.
+          </Text>
+        </View>
+
         <Text style={styles.copyright}>© {new Date().getFullYear()} MyKuaför. Tüm hakları saklıdır.</Text>
       </ScrollView>
       <BottomNav active="Profile" />
@@ -79,6 +97,7 @@ function LinkRow({ label, onPress, border }) {
 }
 
 const styles = StyleSheet.create({
+  creditText: { fontSize: 13, color: colors.muted, lineHeight: 19, paddingVertical: 4 },
   container: { flex: 1, backgroundColor: colors.surface },
   scroll: { padding: 16, paddingBottom: 32 },
   hero: { alignItems: "center", paddingVertical: 24 },

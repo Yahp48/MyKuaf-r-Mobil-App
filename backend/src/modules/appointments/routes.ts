@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { visibleSalonWhere } from "../../lib/visibility.ts";
+import { bookableSalonWhere } from "../../lib/visibility.ts";
 import { z } from "zod";
 import { DateTime } from "luxon";
 import { prisma, pgErrorCode } from "../../lib/prisma.ts";
@@ -78,7 +78,7 @@ appointmentsRouter.post("/", async (req, res) => {
 
   const [user, salon] = await Promise.all([
     prisma.user.findUniqueOrThrow({ where: { id: uid } }),
-    prisma.salon.findFirst({ where: { id: body.salonId, ...visibleSalonWhere } }),
+    prisma.salon.findFirst({ where: { id: body.salonId, ...bookableSalonWhere } }),
   ]);
   if (user.deletedAt) throw unauthorized();
   if (!salon) throw notFound("Salon bulunamadı");

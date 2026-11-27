@@ -41,8 +41,8 @@ const initial = {
   iban: "",
   salonName: "",
   description: "",
-  latitude: 39.1458,
-  longitude: 34.1606,
+  latitude: 41.0082,
+  longitude: 28.9784,
 };
 
 export default function Register() {

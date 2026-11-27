@@ -15,6 +15,8 @@ const WEEKDAY_TR = ["", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma",
  */
 export function openStatus(timezone: string, hours: Hours[], now = new Date()) {
   const local = DateTime.fromJSDate(now).setZone(timezone);
+  // Çalışma saati bilinmiyorsa (rehber kaydı) açık/kapalı bilgisi verilmez.
+  if (hours.length === 0) return { isOpenNow: null, todayHours: null, nextOpen: null };
   const today = hours.find((h) => h.weekday === local.weekday);
   const minute = local.hour * 60 + local.minute;
   const isOpenNow = !!today && !today.isClosed && minute >= today.openMinute && minute < today.closeMinute;
@@ -39,7 +41,7 @@ export function openStatus(timezone: string, hours: Hours[], now = new Date()) {
 }
 
 export const SALON_KIND_LABEL = {
-  WOMEN: "Kadın kuaförü",
+  WOMEN: "Kuaför",
   BEAUTY: "Güzellik salonu",
 } as const;
 
@@ -66,6 +68,9 @@ export function serializeSalonSummary(
     latitude: number;
     longitude: number;
     timezone: string;
+    isListing?: boolean;
+    dataSource?: string | null;
+    sourceRef?: string | null;
     coverImageUrl: string | null;
     photos: string[];
     kind: keyof typeof SALON_KIND_LABEL;
@@ -94,6 +99,9 @@ export function serializeSalonSummary(
     photo: s.photos[0] ?? s.coverImageUrl,
     kind: s.kind,
     kindLabel: SALON_KIND_LABEL[s.kind],
+    // false: rehber kaydı — online randevu yok, yalnızca bilgi ve iletişim
+    bookable: !s.isListing,
+    source: s.isListing && s.dataSource ? { name: s.dataSource, ref: s.sourceRef ?? null } : null,
     priceRange: prices.length ? { min: toTL(Math.min(...prices)), max: toTL(Math.max(...prices)) } : null,
     // Bitmemiş indirimlerin en yükseği (bugün geçerli değilse activeToday=false)
     discount: discounts.length

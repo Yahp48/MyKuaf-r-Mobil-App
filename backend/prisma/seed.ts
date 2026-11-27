@@ -4,6 +4,7 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.ts";
 import { hashPassword } from "../src/lib/password.ts";
+import { ISTANBUL_LISTINGS } from "./data/istanbul-salons.ts";
 
 if (process.env.NODE_ENV === "production" && process.env.SEED_ALLOW_PRODUCTION !== "true") {
   console.error("Seed production ortamında çalıştırılamaz (SEED_ALLOW_PRODUCTION=true ile zorlanabilir).");
@@ -17,103 +18,32 @@ const H = (h: number, m = 0) => h * 60 + m;
 // Salon galerisi: yatay kırpım
 const salonImg = (id: string) => `https://images.unsplash.com/${id}?w=1000&h=700&fit=crop`;
 
-const salons = [
-  {
-    slug: "zeynep-bayan-kuafor",
-    kind: "WOMEN" as const,
-    photos: [
-      salonImg("photo-1560066984-138dadb4c035"),
-      salonImg("photo-1522337360788-8b13dee7a37e"),
-      salonImg("photo-1633681926022-84c23e8cb2d6"),
-      salonImg("photo-1599351431202-1e0f0137899a"),
-      salonImg("photo-1580618672591-eb180b1a973f"),
-    ],
-    description:
-      "Ahievran'ın 15 yıllık kadın kuaförü. Kesim, fön, boya, balyaj ve keratin bakımında uzman ekip; randevulu çalışırız.",
-    name: "Zeynep Bayan Kuaför",
-    address: "Ahievran, Aşk Paşa Blv. No:29, 40100 Kırşehir Merkez/Kırşehir",
-    district: "Merkez",
-    latitude: 39.15,
-    longitude: 34.16,
-    phone: "+903862130001",
-    website: "https://zeynep.kuafor.com.tr",
-    closes: H(20),
-  },
-  {
-    slug: "kentpark-kuafor",
-    kind: "WOMEN" as const,
-    photos: [
-      salonImg("photo-1600948836101-f9ffda59d250"),
-      salonImg("photo-1562322140-8baeececf3df"),
-      salonImg("photo-1559599101-f09722fb4948"),
-      salonImg("photo-1527799820374-dcf8d9d4a388"),
-    ],
-    description: "Kentpark AVM içinde, otopark kolaylığıyla. Saç kesimi, fön ve özel gün saç tasarımları.",
-    name: "Kentpark Kuaför",
-    address: "Kentpark AVM, Kırşehir Merkez/Kırşehir",
-    district: "Merkez",
-    latitude: 39.148,
-    longitude: 34.165,
-    phone: "+903862130002",
-    website: "https://kentpark.kuafor.com.tr",
-    closes: H(19),
-  },
-  {
-    slug: "ataturk-bulvari-kuafor",
-    kind: "WOMEN" as const,
-    photos: [
-      salonImg("photo-1585747860715-2ba37e788b70"),
-      salonImg("photo-1605497788044-5a32c7078486"),
-      salonImg("photo-1521590832167-7bcbfaa6381f"),
-      salonImg("photo-1595476108010-b4d1f102b1b1"),
-    ],
-    description: "Modern kesimler, renklendirme ve saç bakımı.",
-    name: "Atatürk Bulvarı Kuaför",
-    address: "Atatürk Bulvarı, Kırşehir Merkez/Kırşehir",
-    district: "Merkez",
-    latitude: 39.142,
-    longitude: 34.158,
-    phone: "+903862130003",
-    website: null,
-    closes: H(18),
-  },
-  {
-    slug: "masal-parki-kuafor",
-    kind: "BEAUTY" as const,
-    photos: [
-      salonImg("photo-1595476108010-b4d1f102b1b1"),
-      salonImg("photo-1634449571010-02389ed0f9b0"),
-      salonImg("photo-1580618672591-eb180b1a973f"),
-    ],
-    description: "Saç bakımı ve güzellik hizmetleri; sakin ve ferah bir salon.",
-    name: "Masal Parkı Kuaför",
-    address: "Masal Parkı yanı, Kırşehir Merkez/Kırşehir",
-    district: "Merkez",
-    latitude: 39.145,
-    longitude: 34.168,
-    phone: "+903862130004",
-    website: null,
-    closes: H(17),
-  },
-  {
-    slug: "hamidiye-kuafor",
-    kind: "WOMEN" as const,
-    photos: [
-      salonImg("photo-1599351431202-1e0f0137899a"),
-      salonImg("photo-1562322140-8baeececf3df"),
-      salonImg("photo-1600948836101-f9ffda59d250"),
-      salonImg("photo-1633681926022-84c23e8cb2d6"),
-    ],
-    description: "Mahallenin samimi kuaförü. Boya, fön ve kesimde uygun fiyat.",
-    name: "Hamidiye Kuaför",
-    address: "Hamidiye Camii karşısı, Kırşehir Merkez/Kırşehir",
-    district: "Merkez",
-    latitude: 39.14,
-    longitude: 34.155,
-    phone: "+903862130005",
-    website: null,
-    closes: H(20),
-  },
+// Yalnızca yerel geliştirme: panel ve randevu akışını denemek için tek demo salon (adı açıkça "Demo").
+// Gerçek salonlar prisma/data/istanbul-salons.ts (OpenStreetMap) içindedir ve rehber kaydı olarak eklenir.
+const demoSalon = {
+  slug: "mykuafor-demo-salon",
+  kind: "WOMEN" as const,
+  photos: [
+    salonImg("photo-1560066984-138dadb4c035"),
+    salonImg("photo-1522337360788-8b13dee7a37e"),
+    salonImg("photo-1633681926022-84c23e8cb2d6"),
+  ],
+  description: "Geliştirme ortamı demo salonu: randevu, panel ve ödeme akışlarını denemek içindir.",
+  name: "MyKuaför Demo Salon",
+  address: "Caferağa Mah. Moda Cad. No:1, 34710 Kadıköy/İstanbul",
+  district: "Kadıköy",
+  latitude: 40.9862,
+  longitude: 29.0262,
+  closes: H(20),
+};
+
+// Eski Kırşehir örnek verisinin slug'ları (temizlenir)
+const LEGACY_SALON_SLUGS = [
+  "zeynep-bayan-kuafor",
+  "kentpark-kuafor",
+  "ataturk-bulvari-kuafor",
+  "masal-parki-kuafor",
+  "hamidiye-kuafor",
 ];
 
 const staffNames = [
@@ -222,57 +152,63 @@ const products = [
   },
 ];
 
-async function main() {
-  for (const s of salons) {
+/** Eski Kırşehir örnek salonlarını ve bağlı kayıtlarını siler. */
+async function removeLegacySalons() {
+  const legacy = await prisma.salon.findMany({ where: { slug: { in: LEGACY_SALON_SLUGS } }, select: { id: true } });
+  if (!legacy.length) return;
+  const ids = legacy.map((l) => l.id);
+  await prisma.salonReview.deleteMany({ where: { salonId: { in: ids } } });
+  await prisma.appointment.deleteMany({ where: { salonId: { in: ids } } });
+  await prisma.favoriteSalon.deleteMany({ where: { salonId: { in: ids } } });
+  await prisma.salon.updateMany({ where: { id: { in: ids } }, data: { businessId: null } });
+  await prisma.salon.deleteMany({ where: { id: { in: ids } } });
+  console.log(`Eski Kırşehir örnek verisi silindi: ${ids.length} salon`);
+}
+
+/** Gerçek İstanbul salonlarını rehber kaydı olarak ekler/günceller (kaynak: OpenStreetMap, ODbL). */
+async function importListings() {
+  for (const l of ISTANBUL_LISTINGS) {
+    const data = {
+      name: l.name,
+      kind: l.kind,
+      address: l.address,
+      city: "İstanbul",
+      district: l.district,
+      latitude: l.latitude,
+      longitude: l.longitude,
+      phone: l.phone,
+      whatsapp: l.whatsapp,
+      website: l.website,
+      isListing: true,
+      dataSource: "OpenStreetMap",
+      sourceRef: l.osm,
+    };
     const salon = await prisma.salon.upsert({
-      where: { slug: s.slug },
-      create: {
-        slug: s.slug,
-        name: s.name,
-        address: s.address,
-        city: "Kırşehir",
-        district: s.district,
-        latitude: s.latitude,
-        longitude: s.longitude,
-        phone: s.phone,
-        website: s.website,
-        description: s.description,
-        kind: s.kind,
-        photos: s.photos,
-        coverImageUrl: s.photos[0],
-      },
-      update: {
-        name: s.name,
-        address: s.address,
-        latitude: s.latitude,
-        longitude: s.longitude,
-        description: s.description,
-        kind: s.kind,
-        photos: s.photos,
-        coverImageUrl: s.photos[0],
-      },
+      where: { slug: l.slug },
+      create: { slug: l.slug, ...data },
+      update: data,
     });
-
-    for (let weekday = 1; weekday <= 7; weekday++) {
-      const isClosed = weekday === 7;
-      await prisma.workingHours.upsert({
-        where: { salonId_weekday: { salonId: salon.id, weekday } },
-        create: { salonId: salon.id, weekday, openMinute: H(9), closeMinute: s.closes, isClosed },
-        update: { openMinute: H(9), closeMinute: s.closes, isClosed },
-      });
-    }
-
-    if ((await prisma.staff.count({ where: { salonId: salon.id } })) === 0) {
-      await prisma.staff.createMany({
-        data: staffNames.map((st, i) => ({ ...st, salonId: salon.id, sortOrder: i })),
-      });
-    }
-    if ((await prisma.service.count({ where: { salonId: salon.id } })) === 0) {
-      await prisma.service.createMany({
-        data: services.map((sv, i) => ({ ...sv, salonId: salon.id, sortOrder: i })),
+    // Rehber kaydı bir işletme tarafından sahiplenildiyse saatlerine dokunulmaz.
+    if (salon.businessId) continue;
+    await prisma.workingHours.deleteMany({ where: { salonId: salon.id } });
+    if (l.hours) {
+      await prisma.workingHours.createMany({
+        data: l.hours.map((h) => ({
+          salonId: salon.id,
+          weekday: h.weekday,
+          openMinute: h.open ?? 0,
+          closeMinute: h.close ?? 0,
+          isClosed: !!h.closed,
+        })),
       });
     }
   }
+  console.log(`Rehber: ${ISTANBUL_LISTINGS.length} İstanbul salonu (OpenStreetMap)`);
+}
+
+async function main() {
+  await removeLegacySalons();
+  await importListings();
 
   const categoryIds = new Map<string, string>();
   for (const c of categories) {
@@ -288,16 +224,16 @@ async function main() {
       displayName: "Woman Hair Store",
       legalName: "Woman Hair Kozmetik Ticaret Ltd. Şti.",
       taxNumber: "1234567890",
-      taxOffice: "Kırşehir",
-      address: "Ahievran Mah. Aşk Paşa Blv. No:31",
-      city: "Kırşehir",
-      district: "Merkez",
-      phone: "03862130010",
+      taxOffice: "Kadıköy",
+      address: "Caferağa Mah. Moda Cad. No:3",
+      city: "İstanbul",
+      district: "Kadıköy",
+      phone: "02160000010",
       email: "magaza@mykuafor.test",
       iban: "TR330006100519786457841326",
       returnPolicy: "Açılmamış ürünlerde 14 gün içinde ücretsiz iade.",
     },
-    update: {},
+    update: { taxOffice: "Kadıköy", address: "Caferağa Mah. Moda Cad. No:3", city: "İstanbul", district: "Kadıköy" },
   });
 
   for (const { category, ...p } of products) {
@@ -310,7 +246,7 @@ async function main() {
     await seedDemo(seller);
   }
 
-  console.log(`Seed tamam: ${salons.length} salon, ${products.length} ürün.`);
+  console.log(`Seed tamam: ${ISTANBUL_LISTINGS.length} rehber salonu, ${products.length} ürün.`);
 }
 
 async function seedDemo(seller: { id: string; shippingFeeCents: number; freeShippingThresholdCents: number }) {
@@ -321,23 +257,43 @@ async function seedDemo(seller: { id: string; shippingFeeCents: number; freeShip
     update: {},
   });
 
-  // Demo kuaför işletmesi → Zeynep Bayan Kuaför
-  const salon = await prisma.salon.findUniqueOrThrow({ where: { slug: "zeynep-bayan-kuafor" } });
+  // Demo kuaför işletmesi → MyKuaför Demo Salon (yalnızca yerel)
+  const { closes, ...demo } = demoSalon;
+  const salonData = { ...demo, city: "İstanbul", coverImageUrl: demo.photos[0], isListing: false };
+  const salon = await prisma.salon.upsert({
+    where: { slug: demo.slug },
+    create: salonData,
+    update: salonData,
+  });
+  for (let weekday = 1; weekday <= 7; weekday++) {
+    const isClosed = weekday === 7;
+    await prisma.workingHours.upsert({
+      where: { salonId_weekday: { salonId: salon.id, weekday } },
+      create: { salonId: salon.id, weekday, openMinute: H(9), closeMinute: closes, isClosed },
+      update: { openMinute: H(9), closeMinute: closes, isClosed },
+    });
+  }
+  if ((await prisma.staff.count({ where: { salonId: salon.id } })) === 0) {
+    await prisma.staff.createMany({ data: staffNames.map((st, i) => ({ ...st, salonId: salon.id, sortOrder: i })) });
+  }
+  if ((await prisma.service.count({ where: { salonId: salon.id } })) === 0) {
+    await prisma.service.createMany({ data: services.map((sv, i) => ({ ...sv, salonId: salon.id, sortOrder: i })) });
+  }
+  const bizData = {
+    type: "SALON" as const,
+    displayName: salon.name,
+    legalName: "MyKuaför Demo Kuaförlük Hizmetleri",
+    taxOffice: "Kadıköy",
+    address: salon.address,
+    city: "İstanbul",
+    district: "Kadıköy",
+    phone: "02160000001",
+    email: "demo-salon@mykuafor.test",
+  };
   const salonBiz = await prisma.business.upsert({
     where: { taxNumber: "10000000146" },
-    create: {
-      type: "SALON",
-      displayName: salon.name,
-      legalName: "Zeynep Yıldız - Kuaförlük Hizmetleri",
-      taxNumber: "10000000146",
-      taxOffice: "Kırşehir",
-      address: salon.address,
-      city: "Kırşehir",
-      district: "Merkez",
-      phone: "03862130001",
-      email: "zeynep@mykuafor.test",
-    },
-    update: {},
+    create: { ...bizData, taxNumber: "10000000146" },
+    update: bizData,
   });
   await prisma.salon.update({ where: { id: salon.id }, data: { businessId: salonBiz.id } });
 
@@ -502,10 +458,10 @@ async function seedDemo(seller: { id: string; shippingFeeCents: number; freeShip
             title: "Ev",
             fullName: "Demo Kullanıcı",
             phone: "05550000000",
-            city: "Kırşehir",
-            district: "Merkez",
-            line: "Kayabaşı Mah. Demo Sok. No:4 D:2",
-            postalCode: "40100",
+            city: "İstanbul",
+            district: "Kadıköy",
+            line: "Caferağa Mah. Demo Sok. No:4 D:2",
+            postalCode: "34710",
           },
           paidAt,
           ...(shipped ? { carrier: "Yurtiçi Kargo", trackingNumber: `YK${100000000 + i}`, shippedAt: paidAt } : {}),

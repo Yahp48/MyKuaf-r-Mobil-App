@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { visibleSalonWhere } from "../../lib/visibility.ts";
+import { bookableSalonWhere, visibleSalonWhere } from "../../lib/visibility.ts";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.ts";
 import { pageResult, paginate, parse, zId, zPagination } from "../../lib/validate.ts";
@@ -223,7 +223,7 @@ salonsRouter.get("/deals", optionalAuth, async (req, res) => {
 });
 
 async function activeSalon(id: string) {
-  const salon = await prisma.salon.findFirst({ where: { id, ...visibleSalonWhere } });
+  const salon = await prisma.salon.findFirst({ where: { id, ...bookableSalonWhere } });
   if (!salon) throw notFound("Salon bulunamadı");
   return salon;
 }

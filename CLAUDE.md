@@ -29,6 +29,11 @@ Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kuralları
   kendi saçı push-pull dolgu ile gizlenir), saç rengi, makyaj cihazda işlenir, görüntü sunucuya gitmez.
   Saç katmanları `assets/tryon/hair/` (Unsplash kaynaklı, CREDITS.md), katalog `components/tryon/catalog.js`
 - Uygulama yalnızca kadınlara yöneliktir: erkek/unisex içerik, salon türü veya seçenek eklenmez
+- Salonlar: randevu alınabilen (işletme panelden yönetir) + rehber kaydı (`isListing`, gerçek İstanbul salonları,
+  `backend/prisma/data/istanbul-salons.ts`, kaynak OpenStreetMap/ODbL — atıf zorunlu; fotoğraf/puan kopyalanmaz,
+  saat bilinmiyorsa uydurulmaz). Randevu/müsaitlik yalnızca `bookableSalonWhere`
+- Kayıtlı kart: kart ödeme kuruluşunda saklanır, bizde yalnızca anahtar + son 4 hane (`SavedCard`); kart ekleme 1 TL doğrulama + iade
+- Ürün rozetleri (`backend/src/modules/products/metrics.ts`) yalnızca gerçek satış/favori verisinden; mağaza logosunu satıcı kendisi yükler
 - İndirim: hizmet başına yüzde + tarih aralığı; fiyat randevu gününe göre sunucuda hesaplanır (`backend/src/modules/salons/discount.ts`).
   Son 30 günde fiyatı artırılan hizmette indirim yok, indirim sürerken fiyat artırılamaz
 - Tasarım: tek vurgu rengi `#C9184A` (`colors.primary`), beyaz başlık ve alt menü, gri yüzey üzerinde gruplu kartlar,
@@ -47,10 +52,10 @@ Mobil (kök dizin):
 - `npx expo-doctor` — bağımlılık/yapılandırma kontrolü
 Backend (`backend/`):
 - `docker compose up -d` (PostgreSQL), `npm run db:deploy`, `npm run db:seed`, `npm run dev`
-- `npm test` (57 test, `mykuafor_test` veritabanı), `npm run typecheck`
+- `npm test` (65 test, `mykuafor_test` veritabanı), `npm run typecheck`
 - Şema değişikliği: `prisma/schema.prisma` düzenle → `npm run db:migrate -- --name <ad>`
 - Demo hesapları (yalnızca yerel seed, şifre `Demo12345`): müşteri `demo@mykuafor.test`,
-  kuaför paneli `salon@mykuafor.test`, satıcı paneli `satici@mykuafor.test`
+  kuaför paneli `salon@mykuafor.test` ("MyKuaför Demo Salon", Kadıköy), satıcı paneli `satici@mykuafor.test`
 Panel (`dashboard/`): `npm run dev` (http://localhost:5173, /api'yi :5000'e yönlendirir), `npm run build`
 Telefonla test: backend `.env` → `PUBLIC_BASE_URL=http://<bilgisayar-IP>:5000`; `npx expo start` → Expo Go ile QR
 

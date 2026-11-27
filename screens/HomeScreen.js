@@ -30,8 +30,8 @@ import { useApp } from "../context/AppContext";
 import { useRealtimeEvent } from "../services/realtime";
 import { mapsApi, salonApi } from "../services/api";
 
-// Konum izni yoksa / alınamazsa gösterilecek bölge (Kırşehir merkezi)
-const FALLBACK_REGION = { latitude: 39.1451, longitude: 34.1605, latitudeDelta: 0.05, longitudeDelta: 0.05 };
+// Konum izni yoksa / alınamazsa gösterilecek bölge (İstanbul, iki yaka)
+const FALLBACK_REGION = { latitude: 41.025, longitude: 29.015, latitudeDelta: 0.14, longitudeDelta: 0.14 };
 // Kullanıcının çevresi: yaklaşık 2 km'lik görünüm
 const NEAR_DELTA = { latitudeDelta: 0.018, longitudeDelta: 0.018 };
 const PROMO_SEEN_KEY = "mykuafor.promoSeen.v1";
@@ -61,7 +61,14 @@ export default function HomeScreen({ navigation, route: navRoute }) {
   const [salons, setSalons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ open: false, top: false, fav: false, deal: false, kind: null });
+  const [filters, setFilters] = useState({
+    open: false,
+    top: false,
+    fav: false,
+    deal: false,
+    online: false,
+    kind: null,
+  });
   const [selected, setSelected] = useState(null);
   const [salonSnap, setSalonSnap] = useState("closed");
   const [listOpen, setListOpen] = useState(false);
@@ -165,12 +172,14 @@ export default function HomeScreen({ navigation, route: navRoute }) {
           (!filters.top || (s.ratingCount > 0 && s.rating >= 4.5)) &&
           (!filters.fav || s.isFavorite) &&
           (!filters.deal || !!s.discount) &&
+          (!filters.online || s.bookable !== false) &&
           (!filters.kind || s.kind === filters.kind),
       ),
     [salons, term, filters],
   );
   const kindsPresent = useMemo(() => new Set(salons.map((s) => s.kind)), [salons]);
-  const filtering = term || filters.open || filters.top || filters.fav || filters.deal || filters.kind;
+  const filtering =
+    term || filters.open || filters.top || filters.fav || filters.deal || filters.online || filters.kind;
   const hasDeals = salons.some((s) => s.discount);
   // Liste konuma göre sıralı gelir: en yakın salonun şehri vitrin için varsayılan şehirdir.
   const nearestCity = salons[0]?.city;
@@ -301,8 +310,19 @@ export default function HomeScreen({ navigation, route: navRoute }) {
               accessibilityLabel={salon.name}
             >
               <View style={styles.marker}>
-                <View style={[styles.pin, !salon.isOpenNow && styles.pinClosed, isSel && styles.pinSelected]}>
-                  <Ionicons name="cut" size={isSel ? 18 : 14} color="#fff" />
+                <View
+                  style={[
+                    styles.pin,
+                    salon.bookable === false && styles.pinListing,
+                    salon.isOpenNow === false && styles.pinClosed,
+                    isSel && styles.pinSelected,
+                  ]}
+                >
+                  <Ionicons
+                    name="cut"
+                    size={isSel ? 18 : 14}
+                    color={salon.bookable === false ? colors.primary : "#fff"}
+                  />
                   {salon.discount?.activeToday ? (
                     <View style={styles.pinDeal}>
                       <Text style={styles.pinDealText}>%</Text>
@@ -373,6 +393,12 @@ export default function HomeScreen({ navigation, route: navRoute }) {
             icon="trophy"
             label="Öne çıkanlar"
             onPress={() => navigation.navigate("Featured", { city: nearestCity })}
+          />
+          <FilterChip
+            icon="calendar-outline"
+            label="Online randevu"
+            on={filters.online}
+            onPress={() => toggleFilter("online")}
           />
           <FilterChip icon="time-outline" label="Şimdi açık" on={filters.open} onPress={() => toggleFilter("open")} />
           {hasDeals ? (
@@ -578,6 +604,11 @@ function SalonListItem({ salon, onPress }) {
           )}
         </View>
         {meta ? <Text style={styles.listMuted}>{meta}</Text> : null}
+        {salon.bookable !== false ? (
+          <Text style={styles.listOnline}>
+            <Ionicons name="calendar" size={12} color={colors.success} /> Online randevu
+          </Text>
+        ) : null}
         {salon.discount ? (
           <Text style={styles.listDeal}>
             {salon.discount.activeToday ? "" : "Yakında: "}
@@ -712,6 +743,9 @@ const styles = StyleSheet.create({
     borderColor: "#fff",
   },
   pinClosed: { backgroundColor: "#8E8E93" },
+  // Rehber kaydı (online randevu yok): beyaz zemin, vurgu rengi kenarlık
+  pinListing: { backgroundColor: "#fff", borderColor: colors.primary, borderWidth: 2 },
+  listOnline: { fontSize: 12.5, fontWeight: "700", color: colors.success, marginTop: 3 },
   pinSelected: { width: 38, height: 38, borderRadius: 19, borderWidth: 3 },
   pinDeal: {
     position: "absolute",
