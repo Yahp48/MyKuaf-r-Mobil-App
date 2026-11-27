@@ -14,6 +14,9 @@ import {
   serializeStaff,
   serializeWorkingHours,
 } from "./serialize.ts";
+import { SUMMARY_SERVICE_SELECT, publicDiscount, todayIn } from "./discount.ts";
+import { toTL } from "../../lib/money.ts";
+import { DateTime } from "luxon";
 
 export const salonsRouter = Router();
 
@@ -46,7 +49,7 @@ salonsRouter.get("/", optionalAuth, async (req, res) => {
     // Konuma göre sıralama. Salon sayısı on binleri bulursa PostGIS'e geçilmeli.
     const all = await prisma.salon.findMany({
       where,
-      include: { workingHours: true, services: { where: { isActive: true }, select: { priceCents: true } } },
+      include: { workingHours: true, services: { where: { isActive: true }, select: SUMMARY_SERVICE_SELECT } },
     });
     const withDistance = all
       .map((s) => ({ s, d: distanceKm(query.lat!, query.lng!, s.latitude, s.longitude) }))
@@ -63,7 +66,7 @@ salonsRouter.get("/", optionalAuth, async (req, res) => {
   const [rows, total] = await Promise.all([
     prisma.salon.findMany({
       where,
-      include: { workingHours: true, services: { where: { isActive: true }, select: { priceCents: true } } },
+      include: { workingHours: true, services: { where: { isActive: true }, select: SUMMARY_SERVICE_SELECT } },
       orderBy: [{ ratingAvg: "desc" }, { name: "asc" }],
       ...paginate(query.page, query.pageSize),
     }),
@@ -71,6 +74,152 @@ salonsRouter.get("/", optionalAuth, async (req, res) => {
   ]);
   const items = rows.map((s) => serializeSalonSummary(s, { isFavorite: favoriteIds?.has(s.id) }));
   res.json(pageResult(items, total, query.page, query.pageSize));
+});
+
+// ───────────── Vitrin: şehre göre haftanın / ayın / yılın kuaförleri ve indirimler ─────────────
+
+/** Salonu olan şehirler (vitrin şehir seçimi için). */
+salonsRouter.get("/cities", async (_req, res) => {
+  const rows = await prisma.salon.groupBy({ by: ["city"], where: visibleSalonWhere, _count: true });
+  res.json({
+    items: rows
+      .map((r) => ({ city: r.city, salonCount: r._count }))
+      .sort((a, b) => b.salonCount - a.salonCount || a.city.localeCompare(b.city, "tr")),
+  });
+});
+
+const PERIODS = { week: "week", month: "month", year: "year" } as const;
+/** Sıralamaya girmek için dönem içinde gereken en az tamamlanmış randevu (tek randevuyla "ayın kuaförü" olunmaz). */
+export const FEATURED_MIN_COMPLETED = 3;
+
+const featuredSchema = z.object({
+  city: z.string().trim().min(1).max(60),
+  period: z.enum(["week", "month", "year"]).default("month"),
+  lat: z.coerce.number().min(-90).max(90).optional(),
+  lng: z.coerce.number().min(-180).max(180).optional(),
+});
+
+/**
+ * Sıralama tamamen gerçek veriye dayanır: dönem içindeki tamamlanmış randevu sayısı ve dönem içindeki
+ * değerlendirmelerin Bayes ortalaması (az yorumlu salonun tek 5 yıldızla öne geçmesini önler).
+ * Puan = tamamlanan × (bayesOrtalama / 5). Ücretli öne çıkarma yoktur.
+ */
+salonsRouter.get("/featured", optionalAuth, async (req, res) => {
+  const q = parse(featuredSchema, req.query);
+  const tz = "Europe/Istanbul";
+  const start = DateTime.now().setZone(tz).startOf(PERIODS[q.period]);
+  const where = { ...visibleSalonWhere, city: { equals: q.city, mode: "insensitive" as const } };
+  const salons = await prisma.salon.findMany({
+    where,
+    include: { workingHours: true, services: { where: { isActive: true }, select: SUMMARY_SERVICE_SELECT } },
+  });
+  const ids = salons.map((s) => s.id);
+  const [completed, reviews] = ids.length
+    ? await Promise.all([
+        prisma.appointment.groupBy({
+          by: ["salonId"],
+          where: { salonId: { in: ids }, status: "COMPLETED", startsAt: { gte: start.toJSDate(), lte: new Date() } },
+          _count: true,
+        }),
+        prisma.salonReview.groupBy({
+          by: ["salonId"],
+          where: { salonId: { in: ids }, createdAt: { gte: start.toJSDate() } },
+          _count: true,
+          _avg: { rating: true },
+        }),
+      ])
+    : [[], []];
+
+  const PRIOR_MEAN = 4;
+  const PRIOR_WEIGHT = 3;
+  const ranked = salons
+    .map((s) => {
+      const done = completed.find((c) => c.salonId === s.id)?._count ?? 0;
+      const r = reviews.find((x) => x.salonId === s.id);
+      const n = r?._count ?? 0;
+      const avg = r?._avg.rating ?? 0;
+      const bayes = (PRIOR_MEAN * PRIOR_WEIGHT + avg * n) / (PRIOR_WEIGHT + n);
+      return { s, done, n, avg, score: done * (bayes / 5) };
+    })
+    .filter((x) => x.done >= FEATURED_MIN_COMPLETED)
+    .sort((a, b) => b.score - a.score || b.s.ratingAvg - a.s.ratingAvg)
+    .slice(0, 10);
+
+  const favoriteIds = req.user
+    ? new Set(
+        (await prisma.favoriteSalon.findMany({ where: { userId: req.user.id }, select: { salonId: true } })).map(
+          (f) => f.salonId,
+        ),
+      )
+    : undefined;
+
+  res.json({
+    city: q.city,
+    period: q.period,
+    since: start.toISODate(),
+    minCompleted: FEATURED_MIN_COMPLETED,
+    items: ranked.map((x, i) => ({
+      rank: i + 1,
+      stats: {
+        completedAppointments: x.done,
+        periodReviewCount: x.n,
+        periodRating: x.n ? Math.round(x.avg * 10) / 10 : null,
+      },
+      salon: serializeSalonSummary(x.s, {
+        isFavorite: favoriteIds?.has(x.s.id),
+        ...(q.lat !== undefined && q.lng !== undefined
+          ? { distanceKm: distanceKm(q.lat, q.lng, x.s.latitude, x.s.longitude) }
+          : {}),
+      }),
+    })),
+  });
+});
+
+const dealsSchema = z.object({
+  city: z.string().trim().min(1).max(60).optional(),
+  lat: z.coerce.number().min(-90).max(90).optional(),
+  lng: z.coerce.number().min(-180).max(180).optional(),
+});
+
+/** Süren veya yaklaşan indirimi olan salonlar ve indirimli hizmetleri. */
+salonsRouter.get("/deals", optionalAuth, async (req, res) => {
+  const q = parse(dealsSchema, req.query);
+  // Saat dilimi farkı için bir gün geriden filtrelenir; kesin kontrol publicDiscount'ta yapılır.
+  const floor = new Date(Date.now() - 86_400_000);
+  const salons = await prisma.salon.findMany({
+    where: {
+      ...visibleSalonWhere,
+      ...(q.city ? { city: { equals: q.city, mode: "insensitive" as const } } : {}),
+      services: { some: { isActive: true, discountPercent: { not: null }, discountEndsOn: { gte: floor } } },
+    },
+    include: {
+      workingHours: true,
+      services: { where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+    },
+  });
+  const items = salons
+    .map((s) => {
+      const today = todayIn(s.timezone);
+      const deals = s.services
+        .map((svc) => ({ svc, d: publicDiscount(svc, today) }))
+        .filter((x) => x.d !== null)
+        .map(({ svc, d }) => ({ serviceId: svc.id, name: svc.name, listPrice: toTL(svc.priceCents), ...d! }));
+      return {
+        salon: serializeSalonSummary(
+          s,
+          q.lat !== undefined && q.lng !== undefined
+            ? { distanceKm: distanceKm(q.lat, q.lng, s.latitude, s.longitude) }
+            : {},
+        ),
+        deals: deals.sort((a, b) => Number(b.activeToday) - Number(a.activeToday) || b.percent - a.percent),
+      };
+    })
+    .filter((x) => x.deals.length)
+    .sort(
+      (a, b) =>
+        Number(b.deals[0]!.activeToday) - Number(a.deals[0]!.activeToday) || b.deals[0]!.percent - a.deals[0]!.percent,
+    );
+  res.json({ items });
 });
 
 async function activeSalon(id: string) {
@@ -103,7 +252,7 @@ salonsRouter.get("/:id", optionalAuth, async (req, res) => {
       whatsapp: salon.whatsapp,
       workingHours: serializeWorkingHours(salon.workingHours),
       staff: salon.staff.map(serializeStaff),
-      services: salon.services.map(serializeService),
+      services: salon.services.map((x) => serializeService(x, todayIn(salon.timezone))),
       booking: {
         slotIntervalMinutes: salon.slotIntervalMinutes,
         bookingHorizonDays: salon.bookingHorizonDays,

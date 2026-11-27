@@ -107,6 +107,15 @@ export interface Service {
   price: number;
   isActive: boolean;
   sortOrder: number;
+  discount: {
+    percent: number;
+    price: number;
+    startsOn: string;
+    endsOn: string;
+    status: "ACTIVE" | "SCHEDULED" | "ENDED";
+  } | null;
+  /** Fiyat artışından sonra indirim başlatılabilecek ilk gün (YYYY-AA-GG); kısıt yoksa null */
+  discountAllowedFrom: string | null;
 }
 
 export type OrderStatus = "PENDING_PAYMENT" | "PAID" | "PREPARING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "REFUNDED";

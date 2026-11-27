@@ -1,5 +1,6 @@
 import { DateTime } from "luxon";
 import { toTL } from "../../lib/money.ts";
+import { type Discountable, publicDiscount, todayIn } from "./discount.ts";
 
 type Hours = { weekday: number; openMinute: number; closeMinute: number; isClosed: boolean };
 
@@ -73,11 +74,13 @@ export function serializeSalonSummary(
     ratingAvg: number;
     ratingCount: number;
     workingHours: Hours[];
-    services?: { priceCents: number }[];
+    services?: Discountable[];
   },
   extra: { distanceKm?: number; isFavorite?: boolean } = {},
 ) {
   const prices = (s.services ?? []).map((x) => x.priceCents);
+  const today = todayIn(s.timezone);
+  const discounts = (s.services ?? []).map((x) => publicDiscount(x, today)).filter((d) => d !== null);
   return {
     id: s.id,
     slug: s.slug,
@@ -94,6 +97,14 @@ export function serializeSalonSummary(
     kind: s.kind,
     kindLabel: SALON_KIND_LABEL[s.kind],
     priceRange: prices.length ? { min: toTL(Math.min(...prices)), max: toTL(Math.max(...prices)) } : null,
+    // Bitmemiş indirimlerin en yükseği (bugün geçerli değilse activeToday=false)
+    discount: discounts.length
+      ? {
+          maxPercent: Math.max(...discounts.map((d) => d.percent)),
+          activeToday: discounts.some((d) => d.activeToday),
+          endsOn: discounts.map((d) => d.endsOn).sort()[0],
+        }
+      : null,
     rating: Math.round(s.ratingAvg * 10) / 10,
     ratingCount: s.ratingCount,
     ...openStatus(s.timezone, s.workingHours),
@@ -112,18 +123,16 @@ export const serializeWorkingHours = (hours: Hours[]) =>
       closes: h.isClosed ? null : hhmm(h.closeMinute),
     }));
 
-export const serializeService = (s: {
-  id: string;
-  name: string;
-  description: string | null;
-  durationMinutes: number;
-  priceCents: number;
-}) => ({
+export const serializeService = (
+  s: Discountable & { id: string; name: string; description: string | null; durationMinutes: number },
+  today: string,
+) => ({
   id: s.id,
   name: s.name,
   description: s.description,
   durationMinutes: s.durationMinutes,
   price: toTL(s.priceCents),
+  discount: publicDiscount(s, today),
 });
 
 export const serializeStaff = (s: { id: string; name: string; title: string | null; avatarUrl: string | null }) => ({

@@ -1693,3 +1693,44 @@ dialog.dialog::backdrop {
   font: 500 11px var(--font-mono);
   color: var(--accent-ink);
 }
+
+/* Personel avatarı */
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--rule);
+  flex: none;
+}
+
+.avatar-empty {
+  display: inline-grid;
+  place-items: center;
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* İndirimli fiyat */
+.price-old {
+  text-decoration: line-through;
+  color: var(--ink-3);
+  margin-right: 6px;
+}
+
+.discount-box {
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  display: grid;
+  gap: 12px;
+}

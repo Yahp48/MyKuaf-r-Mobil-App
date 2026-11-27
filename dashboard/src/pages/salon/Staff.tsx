@@ -6,6 +6,7 @@ import { usePageMeta } from "../../lib/seo";
 import { dateTime, moneyShort } from "../../lib/format";
 import { Button, Dialog, Empty, ErrorBox, Input, Loading, PageHead, Stamp, Switch } from "../../components/ui";
 import { useToast } from "../../components/Toast";
+import { ImageUploader } from "../../components/ImageUploader";
 import type { Staff as StaffT } from "../../lib/types";
 import { useStaff } from "./queries";
 
@@ -70,7 +71,18 @@ export default function Staff() {
             <tbody>
               {q.data!.map((s) => (
                 <tr key={s.id}>
-                  <td style={{ fontWeight: 500 }}>{s.name}</td>
+                  <td>
+                    <span className="person">
+                      {s.avatarUrl ? (
+                        <img className="avatar" src={s.avatarUrl} alt="" />
+                      ) : (
+                        <span className="avatar avatar-empty" aria-hidden>
+                          {initials(s.name)}
+                        </span>
+                      )}
+                      <span style={{ fontWeight: 500 }}>{s.name}</span>
+                    </span>
+                  </td>
                   <td className="muted">{s.title ?? "—"}</td>
                   <td className="right mono">{s.monthCompleted}</td>
                   <td className="right mono">{moneyShort(s.monthRevenue ?? 0)}</td>
@@ -106,6 +118,14 @@ export default function Staff() {
   );
 }
 
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toLocaleUpperCase("tr-TR"))
+    .join("");
+
 function StaffDialog({ value, onClose }: { value: StaffT | "new" | null; onClose: () => void }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -113,18 +133,20 @@ function StaffDialog({ value, onClose }: { value: StaffT | "new" | null; onClose
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
   const [active, setActive] = useState(true);
+  const [photo, setPhoto] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!value) return;
     setName(isNew ? "" : value.name);
     setTitle(isNew ? "" : (value.title ?? ""));
     setActive(isNew ? true : value.isActive);
+    setPhoto(!isNew && value.avatarUrl ? [value.avatarUrl] : []);
     setErrors({});
   }, [value, isNew]);
 
   const save = useMutation({
     mutationFn: () => {
-      const body = { name: name.trim(), title: title.trim() || null, isActive: active };
+      const body = { name: name.trim(), title: title.trim() || null, isActive: active, avatarUrl: photo[0] ?? null };
       return isNew
         ? api.post("/business/salon/staff", body)
         : api.patch(`/business/salon/staff/${(value as StaffT).id}`, body);
@@ -166,6 +188,13 @@ function StaffDialog({ value, onClose }: { value: StaffT | "new" | null; onClose
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Kuaför, renk uzmanı…"
       />
+      <div className="field">
+        <span className="label">Profil fotoğrafı (isteğe bağlı)</span>
+        <ImageUploader value={photo} onChange={setPhoto} max={1} />
+        <span className="hint">
+          Müşteriler uygulamada personel seçerken bu fotoğrafı görür. Kare, yüzün net göründüğü bir fotoğraf seçin.
+        </span>
+      </div>
       {!isNew ? <Switch checked={active} onChange={setActive} label="Randevu alabilir (aktif)" /> : null}
     </Dialog>
   );

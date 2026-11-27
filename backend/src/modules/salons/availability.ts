@@ -1,3 +1,4 @@
+import { priceOn } from "./discount.ts";
 import { DateTime } from "luxon";
 import { prisma } from "../../lib/prisma.ts";
 import { AppError, notFound } from "../../lib/errors.ts";
@@ -107,7 +108,10 @@ export async function computeAvailability(params: {
 }
 
 /** Seçilen hizmetleri doğrular, toplam süre ve fiyatı hesaplar. */
-export async function resolveServices(salonId: string, serviceIds: string[]) {
+/**
+ * Seçilen hizmetleri doğrular. `day` (YYYY-MM-DD) verilirse o günün indirimli fiyatı `chargedCents` olarak döner.
+ */
+export async function resolveServices(salonId: string, serviceIds: string[], day?: string) {
   const unique = [...new Set(serviceIds)];
   const services = await prisma.service.findMany({
     where: { id: { in: unique }, salonId, isActive: true },
@@ -116,9 +120,10 @@ export async function resolveServices(salonId: string, serviceIds: string[]) {
   if (services.length !== unique.length) {
     throw new AppError(400, "INVALID_SERVICES", "Seçilen hizmetlerden biri bu salonda bulunmuyor");
   }
+  const priced = services.map((s) => ({ ...s, chargedCents: day ? priceOn(s, day) : s.priceCents }));
   return {
-    services,
-    durationMinutes: services.reduce((sum, s) => sum + s.durationMinutes, 0),
-    totalCents: services.reduce((sum, s) => sum + s.priceCents, 0),
+    services: priced,
+    durationMinutes: priced.reduce((sum, s) => sum + s.durationMinutes, 0),
+    totalCents: priced.reduce((sum, s) => sum + s.chargedCents, 0),
   };
 }

@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { DateTime } from "luxon";
 import { api, createProduct, makeVkn, registerUser, resetDb, tomorrow } from "./helpers.ts";
 import { prisma } from "../src/lib/prisma.ts";
 import { isValidTckn, isValidTrIban, isValidVkn } from "../src/lib/tax-id.ts";
@@ -413,5 +414,127 @@ describe("satıcı paneli ve çok satıcılı sepet", () => {
     const res = await api().get("/api/business/seller/overview").set(s.auth);
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe("BUSINESS_SUSPENDED");
+  });
+});
+
+describe("hizmet indirimleri ve vitrin", () => {
+  const day = (offset: number) =>
+    DateTime.now().setZone("Europe/Istanbul").plus({ days: offset }).toFormat("yyyy-MM-dd");
+
+  async function salonWithService() {
+    const b = await registerBusiness("SALON");
+    await api().post("/api/business/salon/staff").set(b.auth).send({ name: "Zeynep" });
+    const svc = await api()
+      .post("/api/business/salon/services")
+      .set(b.auth)
+      .send({ name: "Boya", durationMinutes: 60, price: 1000 });
+    const hours = Array.from({ length: 7 }, (_, i) => ({
+      weekday: i + 1,
+      isClosed: false,
+      opens: "09:00",
+      closes: "18:00",
+    }));
+    await api().put("/api/business/salon/hours").set(b.auth).send({ items: hours });
+    await prisma.salon.update({ where: { id: b.salon.id }, data: { bookingLeadMinutes: 0 } });
+    return { ...b, serviceId: svc.body.service.id as string };
+  }
+
+  it("indirim yalnızca tarih aralığındaki randevulara uygulanır ve müşteriye gösterilir", async () => {
+    const b = await salonWithService();
+    const set = await api()
+      .patch(`/api/business/salon/services/${b.serviceId}`)
+      .set(b.auth)
+      .send({ discountPercent: 20, discountStartsOn: day(1), discountEndsOn: day(2) });
+    expect(set.status).toBe(200);
+    expect(set.body.service.discount).toMatchObject({ percent: 20, price: 800, status: "SCHEDULED" });
+
+    const detail = await api().get(`/api/salons/${b.salon.id}`);
+    expect(detail.body.salon.services[0].discount).toMatchObject({ percent: 20, price: 800, activeToday: false });
+    expect(detail.body.salon.discount).toMatchObject({ maxPercent: 20 });
+
+    const customer = await registerUser();
+    const inWindow = await api()
+      .post("/api/appointments")
+      .set(customer.auth)
+      .send({ salonId: b.salon.id, serviceIds: [b.serviceId], date: day(1), time: "10:00" });
+    expect(inWindow.status).toBe(201);
+    expect(inWindow.body.appointment.total).toBe(800);
+    const outside = await api()
+      .post("/api/appointments")
+      .set(customer.auth)
+      .send({ salonId: b.salon.id, serviceIds: [b.serviceId], date: day(3), time: "10:00" });
+    expect(outside.status).toBe(201);
+    expect(outside.body.appointment.total).toBe(1000);
+
+    const deals = await api().get("/api/salons/deals").query({ city: "Kırşehir" });
+    expect(deals.body.items[0].salon.id).toBe(b.salon.id);
+    expect(deals.body.items[0].deals[0]).toMatchObject({ name: "Boya", percent: 20, listPrice: 1000, price: 800 });
+  });
+
+  it("fiyat artırılan hizmette 30 gün indirim yapılamaz; indirim sürerken fiyat artırılamaz", async () => {
+    const b = await salonWithService();
+    const raise = await api().patch(`/api/business/salon/services/${b.serviceId}`).set(b.auth).send({ price: 1200 });
+    expect(raise.status).toBe(200);
+    expect(raise.body.service.discountAllowedFrom).toBeTruthy();
+    const blocked = await api()
+      .patch(`/api/business/salon/services/${b.serviceId}`)
+      .set(b.auth)
+      .send({ discountPercent: 30, discountStartsOn: day(0), discountEndsOn: day(5) });
+    expect(blocked.status).toBe(409);
+    expect(blocked.body.error.code).toBe("PRICE_RECENTLY_RAISED");
+
+    await prisma.service.update({ where: { id: b.serviceId }, data: { priceRaisedAt: null } });
+    const ok = await api()
+      .patch(`/api/business/salon/services/${b.serviceId}`)
+      .set(b.auth)
+      .send({ discountPercent: 30, discountStartsOn: day(0), discountEndsOn: day(5) });
+    expect(ok.status).toBe(200);
+    const raiseDuring = await api()
+      .patch(`/api/business/salon/services/${b.serviceId}`)
+      .set(b.auth)
+      .send({ price: 1500 });
+    expect(raiseDuring.status).toBe(409);
+    expect(raiseDuring.body.error.code).toBe("DISCOUNT_ACTIVE");
+    const lower = await api().patch(`/api/business/salon/services/${b.serviceId}`).set(b.auth).send({ price: 900 });
+    expect(lower.status).toBe(200);
+    const removed = await api()
+      .patch(`/api/business/salon/services/${b.serviceId}`)
+      .set(b.auth)
+      .send({ discountPercent: null });
+    expect(removed.body.service.discount).toBeNull();
+  });
+
+  it("ayın kuaförleri gerçek tamamlanmış randevulara göre sıralanır; eşik altı listelenmez", async () => {
+    const b = await salonWithService();
+    const other = await salonWithService();
+    const staff = await prisma.staff.findFirstOrThrow({ where: { salonId: b.salon.id } });
+    const otherStaff = await prisma.staff.findFirstOrThrow({ where: { salonId: other.salon.id } });
+    const now = DateTime.now().setZone("Europe/Istanbul");
+    // Bu ay: b → 3 tamamlanan, other → 1 (eşik altı)
+    const mk = (salonId: string, staffId: string, minutesAgo: number) =>
+      prisma.appointment.create({
+        data: {
+          code: `T${Math.random().toString(36).slice(2, 10)}`,
+          salonId,
+          staffId,
+          startsAt: now.minus({ minutes: minutesAgo + 5 }).toJSDate(),
+          endsAt: now.minus({ minutes: minutesAgo }).toJSDate(),
+          status: "COMPLETED",
+          totalCents: 100000,
+          customerName: "Test",
+        },
+      });
+    for (const m of [1, 10, 20]) await mk(b.salon.id, staff.id, m);
+    await mk(other.salon.id, otherStaff.id, 1);
+
+    const res = await api().get("/api/salons/featured").query({ city: "Kırşehir", period: "month" });
+    expect(res.status).toBe(200);
+    const ids = res.body.items.map((x: { salon: { id: string } }) => x.salon.id);
+    expect(ids).toContain(b.salon.id);
+    expect(ids).not.toContain(other.salon.id);
+    expect(res.body.items[0]).toMatchObject({ rank: 1, stats: { completedAppointments: 3 } });
+
+    const cities = await api().get("/api/salons/cities");
+    expect(cities.body.items[0]).toMatchObject({ city: "Kırşehir" });
   });
 });

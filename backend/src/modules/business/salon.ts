@@ -12,6 +12,7 @@ import { requireBusiness, salonOf } from "../../middleware/business.ts";
 import { broadcast, emitToBusiness, emitToUser } from "../../realtime/socket.ts";
 import { notify } from "../notifications/notify.ts";
 import { ACTIVE_APPOINTMENT_STATUSES, computeAvailability, resolveServices, salonDay } from "../salons/availability.ts";
+import { discountedCents, isoDay, todayIn } from "../salons/discount.ts";
 import { serializeSalonProfile } from "./serialize.ts";
 import type { Prisma, Salon } from "../../generated/prisma/client.ts";
 
@@ -176,7 +177,7 @@ const manualSchema = z.object({
 salonPanelRouter.post("/appointments", async (req, res) => {
   const salon = salonOf(req);
   const body = parse(manualSchema, req.body);
-  const { services, durationMinutes, totalCents } = await resolveServices(salon.id, body.serviceIds);
+  const { services, durationMinutes, totalCents } = await resolveServices(salon.id, body.serviceIds, body.date);
   const avail = await computeAvailability({
     salon,
     date: body.date,
@@ -206,7 +207,8 @@ salonPanelRouter.post("/appointments", async (req, res) => {
           create: services.map((s) => ({
             serviceId: s.id,
             nameSnapshot: s.name,
-            priceCents: s.priceCents,
+            priceCents: s.chargedCents,
+            listPriceCents: s.priceCents,
             durationMinutes: s.durationMinutes,
           })),
         },
@@ -611,6 +613,8 @@ salonPanelRouter.delete("/staff/:id/time-off/:timeOffId", async (req, res) => {
 
 // ───────────── Hizmetler ─────────────
 
+const zDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tarih YYYY-AA-GG biçiminde olmalı");
+
 const serviceSchema = z.object({
   name: z.string().trim().min(2, "Hizmet adı gerekli").max(80),
   description: z.string().trim().max(300).optional().nullable(),
@@ -618,9 +622,22 @@ const serviceSchema = z.object({
   price: z.number().min(0).max(100_000).multipleOf(0.01),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0).max(999).optional(),
+  // İndirim: üçü birlikte verilir; null → indirimi kaldır
+  discountPercent: z
+    .number()
+    .int()
+    .min(5, "İndirim en az %5 olmalı")
+    .max(90, "İndirim en fazla %90 olabilir")
+    .nullable()
+    .optional(),
+  discountStartsOn: zDay.nullable().optional(),
+  discountEndsOn: zDay.nullable().optional(),
 });
 
-const serializeSvc = (s: {
+const PRICE_RAISE_COOLDOWN_DAYS = 30;
+const MAX_DISCOUNT_DAYS = 90;
+
+type ServiceRow = {
   id: string;
   name: string;
   description: string | null;
@@ -628,15 +645,97 @@ const serializeSvc = (s: {
   priceCents: number;
   isActive: boolean;
   sortOrder: number;
-}) => ({
-  id: s.id,
-  name: s.name,
-  description: s.description,
-  durationMinutes: s.durationMinutes,
-  price: toTL(s.priceCents),
-  isActive: s.isActive,
-  sortOrder: s.sortOrder,
-});
+  discountPercent: number | null;
+  discountStartsOn: Date | null;
+  discountEndsOn: Date | null;
+  priceRaisedAt: Date | null;
+};
+
+const serializeSvc = (s: ServiceRow, today: string) => {
+  const startsOn = isoDay(s.discountStartsOn);
+  const endsOn = isoDay(s.discountEndsOn);
+  const hasDiscount = !!(s.discountPercent && startsOn && endsOn);
+  return {
+    id: s.id,
+    name: s.name,
+    description: s.description,
+    durationMinutes: s.durationMinutes,
+    price: toTL(s.priceCents),
+    isActive: s.isActive,
+    sortOrder: s.sortOrder,
+    discount: hasDiscount
+      ? {
+          percent: s.discountPercent!,
+          price: toTL(discountedCents(s.priceCents, s.discountPercent!)),
+          startsOn: startsOn!,
+          endsOn: endsOn!,
+          status: endsOn! < today ? "ENDED" : startsOn! > today ? "SCHEDULED" : "ACTIVE",
+        }
+      : null,
+    // Fiyat artışından sonra indirim başlatılabilecek ilk gün
+    discountAllowedFrom:
+      s.priceRaisedAt && DateTime.fromJSDate(s.priceRaisedAt).plus({ days: PRICE_RAISE_COOLDOWN_DAYS }) > DateTime.now()
+        ? DateTime.fromJSDate(s.priceRaisedAt).plus({ days: PRICE_RAISE_COOLDOWN_DAYS }).toISODate()
+        : null,
+  };
+};
+
+/**
+ * İndirim ve fiyat kuralları (Ticari Reklam ve Haksız Ticari Uygulamalar Yönetmeliği'ne uygun, dürüst indirim):
+ *  - Son 30 günde fiyatı artırılan hizmette indirim başlatılamaz (önce fiyat şişirilip indirim gösterilemez).
+ *  - Süren veya planlanmış indirim varken fiyat artırılamaz.
+ *  - İndirim en fazla 90 gün sürer ve geçmişte bitemez.
+ */
+function applyServiceRules(
+  current: ServiceRow | null,
+  body: z.infer<typeof serviceSchema> | Partial<z.infer<typeof serviceSchema>>,
+  today: string,
+) {
+  const data: Record<string, unknown> = {};
+  const nextPriceCents = body.price !== undefined ? fromTL(body.price) : (current?.priceCents ?? 0);
+  const raised = !!current && nextPriceCents > current.priceCents;
+
+  const touchesDiscount =
+    body.discountPercent !== undefined || body.discountStartsOn !== undefined || body.discountEndsOn !== undefined;
+  let percent = current?.discountPercent ?? null;
+  let startsOn = isoDay(current?.discountStartsOn ?? null);
+  let endsOn = isoDay(current?.discountEndsOn ?? null);
+  if (touchesDiscount) {
+    if (body.discountPercent === null) {
+      percent = startsOn = endsOn = null;
+    } else {
+      percent = body.discountPercent ?? percent;
+      startsOn = body.discountStartsOn ?? startsOn;
+      endsOn = body.discountEndsOn ?? endsOn;
+      if (!percent || !startsOn || !endsOn) {
+        throw new AppError(400, "DISCOUNT_INCOMPLETE", "İndirim için oran, başlangıç ve bitiş tarihi gerekli");
+      }
+      if (endsOn < startsOn) throw new AppError(400, "DISCOUNT_DATES", "Bitiş tarihi başlangıçtan önce olamaz");
+      if (endsOn < today) throw new AppError(400, "DISCOUNT_DATES", "Bitiş tarihi geçmişte olamaz");
+      const days = DateTime.fromISO(endsOn).diff(DateTime.fromISO(startsOn), "days").days;
+      if (days > MAX_DISCOUNT_DAYS) {
+        throw new AppError(400, "DISCOUNT_TOO_LONG", `Bir indirim en fazla ${MAX_DISCOUNT_DAYS} gün sürebilir`);
+      }
+      const raisedAt = raised ? new Date() : current?.priceRaisedAt;
+      if (raisedAt && DateTime.fromJSDate(raisedAt).plus({ days: PRICE_RAISE_COOLDOWN_DAYS }) > DateTime.now()) {
+        throw conflict(
+          "PRICE_RECENTLY_RAISED",
+          `Son ${PRICE_RAISE_COOLDOWN_DAYS} gün içinde fiyatı artırılan hizmette indirim yapılamaz. İndirim, gerçek bir önceki fiyat üzerinden gösterilmelidir.`,
+        );
+      }
+    }
+    data.discountPercent = percent;
+    data.discountStartsOn = startsOn ? new Date(`${startsOn}T00:00:00Z`) : null;
+    data.discountEndsOn = endsOn ? new Date(`${endsOn}T00:00:00Z`) : null;
+  }
+  if (raised) {
+    if (percent && endsOn && endsOn >= today) {
+      throw conflict("DISCOUNT_ACTIVE", "İndirim sürerken fiyat artırılamaz. Önce indirimi kaldırın.");
+    }
+    data.priceRaisedAt = new Date();
+  }
+  return data;
+}
 
 salonPanelRouter.get("/services", async (req, res) => {
   const salon = salonOf(req);
@@ -644,29 +743,39 @@ salonPanelRouter.get("/services", async (req, res) => {
     where: { salonId: salon.id },
     orderBy: [{ isActive: "desc" }, { sortOrder: "asc" }, { name: "asc" }],
   });
-  res.json({ items: rows.map(serializeSvc) });
+  const today = todayIn(salon.timezone);
+  res.json({ items: rows.map((r) => serializeSvc(r, today)) });
 });
 
 salonPanelRouter.post("/services", async (req, res) => {
   const salon = salonOf(req);
-  const { price, ...rest } = parse(serviceSchema, req.body);
-  const svc = await prisma.service.create({ data: { ...rest, priceCents: fromTL(price), salonId: salon.id } });
+  const body = parse(serviceSchema, req.body);
+  const today = todayIn(salon.timezone);
+  const rules = applyServiceRules(null, body, today);
+  const { price, discountPercent: _p, discountStartsOn: _s, discountEndsOn: _e, ...rest } = body;
+  const svc = await prisma.service.create({
+    data: { ...rest, ...rules, priceCents: fromTL(price), salonId: salon.id },
+  });
   salonChanged(salon);
-  res.status(201).json({ service: serializeSvc(svc) });
+  res.status(201).json({ service: serializeSvc(svc, today) });
 });
 
 salonPanelRouter.patch("/services/:id", async (req, res) => {
   const salon = salonOf(req);
   const id = parse(zId, req.params.id);
-  const { price, ...rest } = parse(serviceSchema.partial(), req.body);
-  if (!(await prisma.service.findFirst({ where: { id, salonId: salon.id } }))) throw notFound("Hizmet bulunamadı");
+  const body = parse(serviceSchema.partial(), req.body);
+  const current = await prisma.service.findFirst({ where: { id, salonId: salon.id } });
+  if (!current) throw notFound("Hizmet bulunamadı");
+  const today = todayIn(salon.timezone);
+  const rules = applyServiceRules(current, body, today);
+  const { price, discountPercent: _p, discountStartsOn: _s, discountEndsOn: _e, ...rest } = body;
   // Fiyat değişikliği mevcut randevuları etkilemez (randevuda fiyat sabitlenir).
   const svc = await prisma.service.update({
     where: { id },
-    data: { ...rest, ...(price !== undefined ? { priceCents: fromTL(price) } : {}) },
+    data: { ...rest, ...rules, ...(price !== undefined ? { priceCents: fromTL(price) } : {}) },
   });
   salonChanged(salon);
-  res.json({ service: serializeSvc(svc) });
+  res.json({ service: serializeSvc(svc, today) });
 });
 
 salonPanelRouter.delete("/services/:id", async (req, res) => {

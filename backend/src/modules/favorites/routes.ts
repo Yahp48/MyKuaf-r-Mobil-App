@@ -1,3 +1,4 @@
+import { SUMMARY_SERVICE_SELECT } from "../salons/discount.ts";
 import { Router } from "express";
 import { sellableProductWhere, visibleSalonWhere } from "../../lib/visibility.ts";
 import { prisma } from "../../lib/prisma.ts";
@@ -22,7 +23,7 @@ favoritesRouter.get("/", async (req, res) => {
       where: { userId: uid, salon: visibleSalonWhere },
       include: {
         salon: {
-          include: { workingHours: true, services: { where: { isActive: true }, select: { priceCents: true } } },
+          include: { workingHours: true, services: { where: { isActive: true }, select: SUMMARY_SERVICE_SELECT } },
         },
       },
       orderBy: { createdAt: "desc" },

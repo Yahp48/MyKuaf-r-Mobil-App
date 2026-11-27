@@ -86,7 +86,7 @@ appointmentsRouter.post("/", async (req, res) => {
   const phone = body.phone ?? user.phone;
   if (!phone) throw new AppError(400, "PHONE_REQUIRED", "Randevu için telefon numarası gerekli");
 
-  const { services, durationMinutes, totalCents } = await resolveServices(salon.id, body.serviceIds);
+  const { services, durationMinutes, totalCents } = await resolveServices(salon.id, body.serviceIds, body.date);
   const availability = await computeAvailability({ salon, date: body.date, durationMinutes, staffId: body.staffId });
   const staffId = availability.find((s) => s.slots.includes(body.time))?.staffId;
   if (!staffId) throw conflict("SLOT_UNAVAILABLE", "Seçtiğiniz saat artık müsait değil, lütfen başka bir saat seçin");
@@ -114,7 +114,8 @@ appointmentsRouter.post("/", async (req, res) => {
           create: services.map((s) => ({
             serviceId: s.id,
             nameSnapshot: s.name,
-            priceCents: s.priceCents,
+            priceCents: s.chargedCents,
+            listPriceCents: s.priceCents,
             durationMinutes: s.durationMinutes,
           })),
         },
