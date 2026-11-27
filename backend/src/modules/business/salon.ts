@@ -750,6 +750,9 @@ const profileSchema = z
     latitude: z.number().min(35).max(43),
     longitude: z.number().min(25).max(45),
     coverImageUrl: z.string().url().max(500).nullable(),
+    photos: z.array(z.string().url().max(500)).max(12, "En fazla 12 fotoğraf"),
+    kind: z.enum(["WOMEN", "MEN", "UNISEX", "BEAUTY"]),
+    whatsapp: zPhone.nullable(),
     isActive: z.boolean(),
     slotIntervalMinutes: z.union([z.literal(10), z.literal(15), z.literal(20), z.literal(30), z.literal(60)]),
     bookingLeadMinutes: z
@@ -768,7 +771,9 @@ salonPanelRouter.patch("/profile", async (req, res) => {
   const salon = salonOf(req);
   const body = parse(profileSchema, req.body);
   const updated = await prisma.$transaction(async (tx) => {
-    const s = await tx.salon.update({ where: { id: salon.id }, data: body });
+    // Galerinin ilk fotoğrafı kapak görseli olarak da tutulur (eski istemciler için)
+    const data = body.photos ? { ...body, coverImageUrl: body.photos[0] ?? null } : body;
+    const s = await tx.salon.update({ where: { id: salon.id }, data });
     if (body.name) await tx.business.update({ where: { id: salon.businessId! }, data: { displayName: body.name } });
     return s;
   });

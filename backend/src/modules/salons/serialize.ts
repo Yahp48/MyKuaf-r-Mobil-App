@@ -6,17 +6,43 @@ type Hours = { weekday: number; openMinute: number; closeMinute: number; isClose
 const hhmm = (minute: number) =>
   `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
 
-/** Salonun şu an açık olup olmadığı ve bugünkü kapanış saati. */
+const WEEKDAY_TR = ["", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
+
+/**
+ * Salonun şu an açık olup olmadığı, bugünkü saatleri ve (kapalıysa) bir sonraki açılışı.
+ * nextOpen.label örnekleri: "09:00", "yarın 09:00", "Pazartesi 10:00"
+ */
 export function openStatus(timezone: string, hours: Hours[], now = new Date()) {
   const local = DateTime.fromJSDate(now).setZone(timezone);
   const today = hours.find((h) => h.weekday === local.weekday);
   const minute = local.hour * 60 + local.minute;
   const isOpenNow = !!today && !today.isClosed && minute >= today.openMinute && minute < today.closeMinute;
+
+  let nextOpen: { day: string; time: string; label: string } | null = null;
+  if (!isOpenNow) {
+    for (let offset = 0; offset < 8; offset++) {
+      const d = local.plus({ days: offset });
+      const h = hours.find((x) => x.weekday === d.weekday);
+      if (!h || h.isClosed || (offset === 0 && minute >= h.openMinute)) continue;
+      const time = hhmm(h.openMinute);
+      const day = offset === 0 ? "bugün" : offset === 1 ? "yarın" : WEEKDAY_TR[d.weekday]!;
+      nextOpen = { day, time, label: offset === 0 ? time : `${day} ${time}` };
+      break;
+    }
+  }
   return {
     isOpenNow,
     todayHours: today && !today.isClosed ? { opens: hhmm(today.openMinute), closes: hhmm(today.closeMinute) } : null,
+    nextOpen,
   };
 }
+
+export const SALON_KIND_LABEL = {
+  WOMEN: "Kadın kuaförü",
+  MEN: "Erkek kuaförü",
+  UNISEX: "Kadın ve erkek kuaförü",
+  BEAUTY: "Güzellik salonu",
+} as const;
 
 /** İki koordinat arası kuş uçuşu mesafe (km). */
 export function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -42,12 +68,16 @@ export function serializeSalonSummary(
     longitude: number;
     timezone: string;
     coverImageUrl: string | null;
+    photos: string[];
+    kind: keyof typeof SALON_KIND_LABEL;
     ratingAvg: number;
     ratingCount: number;
     workingHours: Hours[];
+    services?: { priceCents: number }[];
   },
   extra: { distanceKm?: number; isFavorite?: boolean } = {},
 ) {
+  const prices = (s.services ?? []).map((x) => x.priceCents);
   return {
     id: s.id,
     slug: s.slug,
@@ -60,6 +90,10 @@ export function serializeSalonSummary(
     latitude: s.latitude,
     longitude: s.longitude,
     coverImageUrl: s.coverImageUrl,
+    photo: s.photos[0] ?? s.coverImageUrl,
+    kind: s.kind,
+    kindLabel: SALON_KIND_LABEL[s.kind],
+    priceRange: prices.length ? { min: toTL(Math.min(...prices)), max: toTL(Math.max(...prices)) } : null,
     rating: Math.round(s.ratingAvg * 10) / 10,
     ratingCount: s.ratingCount,
     ...openStatus(s.timezone, s.workingHours),

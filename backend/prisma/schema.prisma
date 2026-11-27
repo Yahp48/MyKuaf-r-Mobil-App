@@ -158,10 +158,17 @@ model PasswordReset {
 
 // ───────────────────────────── Salon & randevu ─────────────────────────────
 
+enum SalonKind {
+  WOMEN
+  MEN
+  UNISEX
+  BEAUTY
+}
+
 model Salon {
-  id                      String   @id @default(uuid(7)) @db.Uuid
-  businessId              String?  @unique @db.Uuid
-  slug                    String   @unique
+  id                      String    @id @default(uuid(7)) @db.Uuid
+  businessId              String?   @unique @db.Uuid
+  slug                    String    @unique
   name                    String
   description             String?
   address                 String
@@ -171,21 +178,25 @@ model Salon {
   website                 String?
   latitude                Float
   longitude               Float
-  timezone                String   @default("Europe/Istanbul")
+  timezone                String    @default("Europe/Istanbul")
   coverImageUrl           String?
-  slotIntervalMinutes     Int      @default(30)
+  // Salon fotoğrafları (ilki vitrin); işletme panelinden yüklenir
+  photos                  String[] @default([])
+  kind                    SalonKind @default(WOMEN)
+  whatsapp                String?
+  slotIntervalMinutes     Int       @default(30)
   // Randevu başlangıcına en az bu kadar dakika kala alınabilir.
-  bookingLeadMinutes      Int      @default(60)
+  bookingLeadMinutes      Int       @default(60)
   // En fazla kaç gün ilerisi için randevu alınabilir.
-  bookingHorizonDays      Int      @default(60)
+  bookingHorizonDays      Int       @default(60)
   // Randevuya bu kadar saatten az kaldıysa müşteri iptal edemez.
-  cancellationWindowHours Int      @default(2)
-  autoConfirm             Boolean  @default(true)
-  ratingAvg               Float    @default(0)
-  ratingCount             Int      @default(0)
-  isActive                Boolean  @default(true)
-  createdAt               DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt               DateTime @updatedAt @db.Timestamptz(3)
+  cancellationWindowHours Int       @default(2)
+  autoConfirm             Boolean   @default(true)
+  ratingAvg               Float     @default(0)
+  ratingCount             Int       @default(0)
+  isActive                Boolean   @default(true)
+  createdAt               DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime  @updatedAt @db.Timestamptz(3)
 
   business     Business?       @relation(fields: [businessId], references: [id], onDelete: SetNull)
   workingHours WorkingHours[]

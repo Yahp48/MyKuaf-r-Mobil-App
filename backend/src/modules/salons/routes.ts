@@ -44,7 +44,10 @@ salonsRouter.get("/", optionalAuth, async (req, res) => {
   const hasLocation = query.lat !== undefined && query.lng !== undefined;
   if (hasLocation) {
     // Konuma göre sıralama. Salon sayısı on binleri bulursa PostGIS'e geçilmeli.
-    const all = await prisma.salon.findMany({ where, include: { workingHours: true } });
+    const all = await prisma.salon.findMany({
+      where,
+      include: { workingHours: true, services: { where: { isActive: true }, select: { priceCents: true } } },
+    });
     const withDistance = all
       .map((s) => ({ s, d: distanceKm(query.lat!, query.lng!, s.latitude, s.longitude) }))
       .filter((x) => query.radiusKm === undefined || x.d <= query.radiusKm)
@@ -60,7 +63,7 @@ salonsRouter.get("/", optionalAuth, async (req, res) => {
   const [rows, total] = await Promise.all([
     prisma.salon.findMany({
       where,
-      include: { workingHours: true },
+      include: { workingHours: true, services: { where: { isActive: true }, select: { priceCents: true } } },
       orderBy: [{ ratingAvg: "desc" }, { name: "asc" }],
       ...paginate(query.page, query.pageSize),
     }),
@@ -96,6 +99,8 @@ salonsRouter.get("/:id", optionalAuth, async (req, res) => {
     salon: {
       ...serializeSalonSummary(salon, { isFavorite }),
       description: salon.description,
+      photos: salon.photos.length ? salon.photos : salon.coverImageUrl ? [salon.coverImageUrl] : [],
+      whatsapp: salon.whatsapp,
       workingHours: serializeWorkingHours(salon.workingHours),
       staff: salon.staff.map(serializeStaff),
       services: salon.services.map(serializeService),
@@ -137,6 +142,7 @@ salonsRouter.get("/:id/reviews", async (req, res) => {
     }),
     prisma.salonReview.count({ where: { salonId: salon.id } }),
   ]);
+  const dist = await prisma.salonReview.groupBy({ by: ["rating"], where: { salonId: salon.id }, _count: true });
   const items = rows.map((r) => ({
     id: r.id,
     rating: r.rating,
@@ -145,7 +151,14 @@ salonsRouter.get("/:id/reviews", async (req, res) => {
     authorName: !r.user || r.user.deletedAt ? "Anonim" : shortName(r.user.name),
     createdAt: r.createdAt.toISOString(),
   }));
-  res.json(pageResult(items, total, page, pageSize));
+  res.json({
+    ...pageResult(items, total, page, pageSize),
+    summary: {
+      average: Math.round(salon.ratingAvg * 10) / 10,
+      count: salon.ratingCount,
+      distribution: [5, 4, 3, 2, 1].map((r) => ({ rating: r, count: dist.find((d) => d.rating === r)?._count ?? 0 })),
+    },
+  });
 });
 
 const reviewSchema = z.object({

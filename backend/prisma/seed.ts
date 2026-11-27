@@ -14,9 +14,22 @@ const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: proc
 
 const H = (h: number, m = 0) => h * 60 + m;
 
+// Salon galerisi: yatay kırpım
+const salonImg = (id: string) => `https://images.unsplash.com/${id}?w=1000&h=700&fit=crop`;
+
 const salons = [
   {
     slug: "zeynep-bayan-kuafor",
+    kind: "WOMEN" as const,
+    photos: [
+      salonImg("photo-1560066984-138dadb4c035"),
+      salonImg("photo-1522337360788-8b13dee7a37e"),
+      salonImg("photo-1633681926022-84c23e8cb2d6"),
+      salonImg("photo-1599351431202-1e0f0137899a"),
+      salonImg("photo-1580618672591-eb180b1a973f"),
+    ],
+    description:
+      "Ahievran'ın 15 yıllık kadın kuaförü. Kesim, fön, boya, balyaj ve keratin bakımında uzman ekip; randevulu çalışırız.",
     name: "Zeynep Bayan Kuaför",
     address: "Ahievran, Aşk Paşa Blv. No:29, 40100 Kırşehir Merkez/Kırşehir",
     district: "Merkez",
@@ -28,6 +41,14 @@ const salons = [
   },
   {
     slug: "kentpark-kuafor",
+    kind: "WOMEN" as const,
+    photos: [
+      salonImg("photo-1600948836101-f9ffda59d250"),
+      salonImg("photo-1562322140-8baeececf3df"),
+      salonImg("photo-1559599101-f09722fb4948"),
+      salonImg("photo-1527799820374-dcf8d9d4a388"),
+    ],
+    description: "Kentpark AVM içinde, otopark kolaylığıyla. Saç kesimi, fön ve özel gün saç tasarımları.",
     name: "Kentpark Kuaför",
     address: "Kentpark AVM, Kırşehir Merkez/Kırşehir",
     district: "Merkez",
@@ -39,6 +60,14 @@ const salons = [
   },
   {
     slug: "ataturk-bulvari-kuafor",
+    kind: "UNISEX" as const,
+    photos: [
+      salonImg("photo-1585747860715-2ba37e788b70"),
+      salonImg("photo-1605497788044-5a32c7078486"),
+      salonImg("photo-1521590832167-7bcbfaa6381f"),
+      salonImg("photo-1595476108010-b4d1f102b1b1"),
+    ],
+    description: "Kadın ve erkek kuaförü. Modern kesimler, sakal tasarımı ve saç bakımı.",
     name: "Atatürk Bulvarı Kuaför",
     address: "Atatürk Bulvarı, Kırşehir Merkez/Kırşehir",
     district: "Merkez",
@@ -50,6 +79,13 @@ const salons = [
   },
   {
     slug: "masal-parki-kuafor",
+    kind: "BEAUTY" as const,
+    photos: [
+      salonImg("photo-1595476108010-b4d1f102b1b1"),
+      salonImg("photo-1634449571010-02389ed0f9b0"),
+      salonImg("photo-1580618672591-eb180b1a973f"),
+    ],
+    description: "Saç bakımı ve güzellik hizmetleri; sakin ve ferah bir salon.",
     name: "Masal Parkı Kuaför",
     address: "Masal Parkı yanı, Kırşehir Merkez/Kırşehir",
     district: "Merkez",
@@ -61,6 +97,14 @@ const salons = [
   },
   {
     slug: "hamidiye-kuafor",
+    kind: "WOMEN" as const,
+    photos: [
+      salonImg("photo-1599351431202-1e0f0137899a"),
+      salonImg("photo-1562322140-8baeececf3df"),
+      salonImg("photo-1600948836101-f9ffda59d250"),
+      salonImg("photo-1633681926022-84c23e8cb2d6"),
+    ],
+    description: "Mahallenin samimi kuaförü. Boya, fön ve kesimde uygun fiyat.",
     name: "Hamidiye Kuaför",
     address: "Hamidiye Camii karşısı, Kırşehir Merkez/Kırşehir",
     district: "Merkez",
@@ -192,9 +236,21 @@ async function main() {
         longitude: s.longitude,
         phone: s.phone,
         website: s.website,
-        description: "Kadın kuaförü: kesim, fön, boya ve bakım hizmetleri.",
+        description: s.description,
+        kind: s.kind,
+        photos: s.photos,
+        coverImageUrl: s.photos[0],
       },
-      update: { name: s.name, address: s.address, latitude: s.latitude, longitude: s.longitude },
+      update: {
+        name: s.name,
+        address: s.address,
+        latitude: s.latitude,
+        longitude: s.longitude,
+        description: s.description,
+        kind: s.kind,
+        photos: s.photos,
+        coverImageUrl: s.photos[0],
+      },
     });
 
     for (let weekday = 1; weekday <= 7; weekday++) {
@@ -359,6 +415,55 @@ async function seedDemo(seller: { id: string; shippingFeeCents: number; freeShip
         { businessId: salonBiz.id, type: "EXPENSE", category: "Fatura", amountCents: 145_000, date: day },
         { businessId: salonBiz.id, type: "INCOME", category: "Ürün satışı", amountCents: 92_000, date: day },
       ],
+    });
+  }
+
+  // Demo yorumları: tamamlanmış randevulara bağlı (gerçek akıştaki kural ile aynı)
+  if ((await prisma.salonReview.count({ where: { salonId: salon.id } })) === 0) {
+    const reviews: [string, number, string | null][] = [
+      ["Elif Kaya", 5, "Zeynep Hanım'ın kesimi harika, tam istediğim gibi oldu. Salon çok temiz."],
+      ["Merve Şahin", 5, "Boyam çok güzel tuttu, fiyatlar da makul. Randevu saatine tam uydular."],
+      ["Seda Arslan", 4, "Fön güzeldi, sadece biraz beklemek zorunda kaldım."],
+      ["Büşra Çelik", 5, "Keratin bakımından sonra saçlarım ipek gibi. Kesinlikle tavsiye ederim."],
+      ["Gizem Öztürk", 4, null],
+      ["Derya Aksoy", 5, "Güler yüzlü ekip, çay ikramı ve rahat ortam. Uygulamadan randevu almak çok kolay."],
+    ];
+    const done = await prisma.appointment.findMany({
+      where: { salonId: salon.id, status: "COMPLETED", review: null },
+      orderBy: { startsAt: "desc" },
+      take: reviews.length,
+    });
+    for (let i = 0; i < done.length; i++) {
+      const [name, rating, comment] = reviews[i]!;
+      const email = `yorum${i + 1}@mykuafor.test`;
+      const reviewer = await prisma.user.upsert({
+        where: { email },
+        create: { email, name, passwordHash },
+        update: {},
+      });
+      await prisma.appointment.update({
+        where: { id: done[i]!.id },
+        data: { userId: reviewer.id, customerName: name },
+      });
+      await prisma.salonReview.create({
+        data: {
+          salonId: salon.id,
+          userId: reviewer.id,
+          appointmentId: done[i]!.id,
+          rating,
+          comment,
+          createdAt: done[i]!.startsAt,
+        },
+      });
+    }
+    const agg = await prisma.salonReview.aggregate({
+      where: { salonId: salon.id },
+      _avg: { rating: true },
+      _count: true,
+    });
+    await prisma.salon.update({
+      where: { id: salon.id },
+      data: { ratingAvg: agg._avg.rating ?? 0, ratingCount: agg._count },
     });
   }
 

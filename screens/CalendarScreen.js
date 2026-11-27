@@ -46,8 +46,8 @@ export default function CalendarScreen({ navigation, route }) {
 
   const [salon, setSalon] = useState(null);
   const [loadError, setLoadError] = useState(null);
-  const [serviceIds, setServiceIds] = useState([]);
-  const [staffId, setStaffId] = useState(null); // null = fark etmez
+  const [serviceIds, setServiceIds] = useState(route.params?.serviceIds ?? []);
+  const [staffId, setStaffId] = useState(route.params?.staffId ?? null); // null = fark etmez
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [slots, setSlots] = useState([]);

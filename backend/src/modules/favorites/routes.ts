@@ -20,7 +20,11 @@ favoritesRouter.get("/", async (req, res) => {
     }),
     prisma.favoriteSalon.findMany({
       where: { userId: uid, salon: visibleSalonWhere },
-      include: { salon: { include: { workingHours: true } } },
+      include: {
+        salon: {
+          include: { workingHours: true, services: { where: { isActive: true }, select: { priceCents: true } } },
+        },
+      },
       orderBy: { createdAt: "desc" },
     }),
   ]);

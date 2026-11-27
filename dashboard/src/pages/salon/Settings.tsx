@@ -10,6 +10,7 @@ import { AccountForm, BusinessInfoForm } from "../../components/SettingsForms";
 import { ImageUploader } from "../../components/ImageUploader";
 import { MapPicker } from "../../components/MapPicker";
 import { useToast } from "../../components/Toast";
+import { isMobile } from "../../lib/validators";
 
 const TABS = [
   ["salon", "Salon profili"],
@@ -73,6 +74,7 @@ function SalonProfileForm() {
   const { salon } = useBusiness();
   const s = salon!;
   const { save, busy, errors } = useSaveSalon();
+  const toast = useToast();
   const [f, setF] = useState({
     name: s.name,
     description: s.description ?? "",
@@ -83,18 +85,23 @@ function SalonProfileForm() {
     website: s.website ?? "",
     latitude: s.latitude,
     longitude: s.longitude,
-    coverImageUrl: s.coverImageUrl,
+    photos: s.photos?.length ? s.photos : s.coverImageUrl ? [s.coverImageUrl] : [],
+    kind: s.kind ?? "WOMEN",
+    whatsapp: s.whatsapp ?? "",
   });
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    if (f.whatsapp.trim() && !isMobile(f.whatsapp))
+      return toast("WhatsApp numarası 05XX XXX XX XX biçiminde olmalı", "bad");
     void save({
       ...f,
       description: f.description.trim() || null,
       district: f.district.trim() || null,
       phone: f.phone.trim() || null,
       website: f.website.trim() || null,
+      whatsapp: f.whatsapp.trim() || null,
     });
   };
 
@@ -122,13 +129,23 @@ function SalonProfileForm() {
       <form onSubmit={submit} noValidate>
         <Input label="Salon adı" value={f.name} onChange={set("name")} error={errors.name} />
         <Textarea label="Tanıtım" rows={3} value={f.description} onChange={set("description")} maxLength={1000} />
+        <Select
+          label="Salon türü"
+          value={f.kind}
+          onChange={(e) => setF((x) => ({ ...x, kind: e.target.value as SalonProfile["kind"] }))}
+          hint="Uygulamada salon adının altında görünür"
+        >
+          <option value="WOMEN">Kadın kuaförü</option>
+          <option value="MEN">Erkek kuaförü</option>
+          <option value="UNISEX">Kadın ve erkek kuaförü</option>
+          <option value="BEAUTY">Güzellik salonu</option>
+        </Select>
         <div className="field">
-          <span>Kapak görseli</span>
-          <ImageUploader
-            value={f.coverImageUrl ? [f.coverImageUrl] : []}
-            onChange={(v) => setF((x) => ({ ...x, coverImageUrl: v[0] ?? null }))}
-            max={1}
-          />
+          <span>Fotoğraflar</span>
+          <span className="hint">
+            İlk fotoğraf vitrin olarak kullanılır. Salonun içi, çalışmalarınız ve ekibiniz; en fazla 12 fotoğraf.
+          </span>
+          <ImageUploader value={f.photos} onChange={(photos) => setF((x) => ({ ...x, photos }))} max={12} />
         </div>
         <Textarea
           label="Adres (müşterinin gördüğü)"
@@ -143,6 +160,14 @@ function SalonProfileForm() {
         </div>
         <div className="form-row">
           <Input label="Randevu telefonu" type="tel" value={f.phone} onChange={set("phone")} />
+          <Input
+            label="WhatsApp (isteğe bağlı)"
+            type="tel"
+            value={f.whatsapp}
+            onChange={set("whatsapp")}
+            error={errors.whatsapp}
+            placeholder="05XX XXX XX XX"
+          />
           <Input
             label="Web sitesi"
             type="url"

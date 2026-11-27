@@ -254,6 +254,28 @@ describe("kuaför paneli", () => {
     expect(res.body.error.code).toBe("STAFF_HAS_APPOINTMENTS");
   });
 
+  it("galeri, salon türü ve WhatsApp müşteri kartında görünür", async () => {
+    const b = await readySalon();
+    const photos = ["https://example.com/a.jpg", "https://example.com/b.jpg"];
+    const res = await api()
+      .patch("/api/business/salon/profile")
+      .set(b.auth)
+      .send({ photos, kind: "UNISEX", whatsapp: "0555 123 45 67" });
+    expect(res.status).toBe(200);
+    expect(res.body.salon).toMatchObject({ photos, kind: "UNISEX", whatsapp: "05551234567" });
+
+    const pub = await api().get(`/api/salons/${b.salon.id}`);
+    expect(pub.body.salon).toMatchObject({
+      photos,
+      photo: photos[0],
+      kindLabel: "Kadın ve erkek kuaförü",
+      whatsapp: "05551234567",
+      priceRange: { min: 250, max: 250 },
+    });
+    const reviews = await api().get(`/api/salons/${b.salon.id}/reviews`);
+    expect(reviews.body.summary).toMatchObject({ count: 0, distribution: expect.any(Array) });
+  });
+
   it("gelir-gider kaydı aylık özete yansır", async () => {
     const b = await readySalon();
     const month = tomorrow().slice(0, 7);
