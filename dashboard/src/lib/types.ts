@@ -43,7 +43,7 @@ export interface SalonProfile {
   longitude: number;
   coverImageUrl: string | null;
   photos: string[];
-  kind: "WOMEN" | "MEN" | "UNISEX" | "BEAUTY";
+  kind: "WOMEN" | "BEAUTY";
   whatsapp: string | null;
   isActive: boolean;
   slotIntervalMinutes: number;

@@ -87,87 +87,85 @@ export const FACE_SHAPES = {
   },
 };
 
-/** Yüz şekline göre önerilen modeller (genel stil kuralları; kesin karar için kuaförünüze danışın). */
-export const HAIRSTYLES = {
-  OVAL: {
-    women: [
-      ["Uzun katlı kesim", "Dengeli hatları ön plana çıkarır"],
-      ["Lob (uzun bob)", "Omuz hizasında modern ve kolay"],
-      ["Perdeli kâkül", "Yüzü çerçeveler, gözleri öne çıkarır"],
-      ["Pixie", "Yüz hatlarınız kısa kesimi taşır"],
-    ],
-    men: [
-      ["Pompadour", "Tepe hacmi dengeli yüzde çok iyi durur"],
-      ["Quiff", "Dağınık ön hacim, yanlar kısa"],
-      ["Buzz cut", "Temiz ve bakımı kolay"],
-      ["Yandan ayrık klasik", "Her ortama uyar"],
-    ],
-  },
-  ROUND: {
-    women: [
-      ["Asimetrik bob", "Açılı hatlar yüzü inceltir"],
-      ["Uzun katlı, yüzü çerçeveleyen", "Dikey çizgi yüzü uzun gösterir"],
-      ["Yan ayrımlı uzun düz", "Yanak hattını gizler"],
-      ["Tepe hacimli uzun pixie", "Yüksekliğe vurgu yapar"],
-    ],
-    men: [
-      ["Yanlar fade, tepe quiff", "Yüzü uzun ve köşeli gösterir"],
-      ["Pompadour", "Tepe hacmi yüzü uzatır"],
-      ["Undercut", "Yanları sıkı, tepesi uzun"],
-      ["Faux hawk", "Orta hattaki hacim yüzü inceltir"],
-    ],
-  },
-  SQUARE: {
-    women: [
-      ["Yumuşak dalgalı lob", "Köşeli çene hattını yumuşatır"],
-      ["Yan kâkül", "Alın çizgisini kırar"],
-      ["Katlı shag", "Hareketli katlar hatları dengeler"],
-      ["Uzun dalgalı", "Çene çevresinde yumuşaklık verir"],
-    ],
-    men: [
-      ["Textured crop", "Dağınık doku sert hatları dengeler"],
-      ["Yandan ayrık", "Güçlü çene hattıyla uyumlu"],
-      ["Orta uzun dağınık", "Yumuşak bir görünüm verir"],
-      ["Crew cut", "Belirgin hatları öne çıkarır"],
-    ],
-  },
-  HEART: {
-    women: [
-      ["Çene hizası bob", "Dar çeneye hacim katar"],
-      ["Yan kâkül", "Geniş alnı dengeler"],
-      ["Uçları dışa dönük orta boy", "Alt yüzde dolgunluk sağlar"],
-      ["Uzun, çenede hacimli katlar", "Yüzü dengeler"],
-    ],
-    men: [
-      ["Yana taranmış orta uzunluk", "Alın genişliğini dengeler"],
-      ["Perçemli (fringe)", "Alnı kısmen örter"],
-      ["Dağınık kısa", "Tepede fazla hacimden kaçınır"],
-    ],
-  },
-  OBLONG: {
-    women: [
-      ["Perdeli kâkül", "Yüzü görsel olarak kısaltır"],
-      ["Omuz hizası dalgalı", "Yanlarda hacim yaratır"],
-      ["Hacimli bob", "Genişlik katar"],
-      ["Düz küt kâkül", "Alın boyunu kısaltır"],
-    ],
-    men: [
-      ["Yanları uzun crop", "Tepede yükseklikten kaçınır"],
-      ["Perçemli (fringe)", "Yüzü kısa gösterir"],
-      ["Az fade, yanlar dolgun", "Genişlik katar"],
-    ],
-  },
-  DIAMOND: {
-    women: [
-      ["Çene hizası bob", "Dar çeneyi dolgunlaştırır"],
-      ["Yan kâkül ve uzun saç", "Alnı genişletir"],
-      ["Dağınık pixie", "Elmacık kemiklerini öne çıkarır"],
-      ["Kulak arkası uzun", "Elmacık hattını sergiler"],
-    ],
-    men: [
-      ["Perçemli (fringe)", "Dar alnı dengeler"],
-      ["Dokulu quiff", "Tepeye hacim katar"],
-      ["Yana taranmış orta uzunluk", "Elmacık genişliğini dengeler"],
-    ],
-  },
-};
+/**
+ * Denenebilir saç modelleri. Görseller Unsplash lisanslı portrelerden yalnızca saç bölgesi ayrılarak üretildi
+ * (kaynaklar anchors.json içinde). anchors: göz merkezleri ve çene, yüze yerleştirmek için.
+ * suits: bu modelin yakıştığı yüz şekilleri.
+ */
+const ANCHORS = require("../../assets/tryon/hair/anchors.json");
+
+const style = (key, label, length, suits, image) => ({
+  key,
+  label,
+  length,
+  suits,
+  image,
+  anchors: ANCHORS[key].anchors,
+});
+
+export const HAIRSTYLES = [
+  style("pixie", "Kâküllü pixie", "Kısa", ["OVAL", "HEART", "DIAMOND"], require("../../assets/tryon/hair/pixie.webp")),
+  style(
+    "short-platinum",
+    "Kısa platin",
+    "Kısa",
+    ["OVAL", "OBLONG", "HEART"],
+    require("../../assets/tryon/hair/short-platinum.webp"),
+  ),
+  style(
+    "short-bob",
+    "Kısa bob",
+    "Kısa",
+    ["OVAL", "HEART", "DIAMOND", "SQUARE"],
+    require("../../assets/tryon/hair/short-bob.webp"),
+  ),
+  style(
+    "bangs-bob",
+    "Kâküllü küt",
+    "Orta",
+    ["OBLONG", "OVAL", "HEART", "DIAMOND"],
+    require("../../assets/tryon/hair/bangs-bob.webp"),
+  ),
+  style(
+    "shoulder",
+    "Omuz hizası",
+    "Orta",
+    ["ROUND", "SQUARE", "OVAL", "OBLONG"],
+    require("../../assets/tryon/hair/shoulder.webp"),
+  ),
+  style(
+    "long-straight",
+    "Uzun düz",
+    "Uzun",
+    ["ROUND", "OVAL", "HEART"],
+    require("../../assets/tryon/hair/long-straight.webp"),
+  ),
+  style(
+    "long-balayage",
+    "Uzun balyaj",
+    "Uzun",
+    ["ROUND", "OVAL", "SQUARE"],
+    require("../../assets/tryon/hair/long-balayage.webp"),
+  ),
+  style(
+    "long-wavy",
+    "Uzun dalgalı",
+    "Uzun",
+    ["SQUARE", "OBLONG", "HEART", "OVAL"],
+    require("../../assets/tryon/hair/long-wavy.webp"),
+  ),
+  style(
+    "long-curly",
+    "Uzun kıvırcık",
+    "Uzun",
+    ["SQUARE", "OBLONG", "OVAL", "DIAMOND"],
+    require("../../assets/tryon/hair/long-curly.webp"),
+  ),
+  style(
+    "long-bangs",
+    "Kâküllü uzun",
+    "Uzun",
+    ["OBLONG", "OVAL", "DIAMOND", "HEART"],
+    require("../../assets/tryon/hair/long-bangs.webp"),
+  ),
+];

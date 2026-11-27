@@ -261,15 +261,15 @@ describe("kuaför paneli", () => {
     const res = await api()
       .patch("/api/business/salon/profile")
       .set(b.auth)
-      .send({ photos, kind: "UNISEX", whatsapp: "0555 123 45 67" });
+      .send({ photos, kind: "BEAUTY", whatsapp: "0555 123 45 67" });
     expect(res.status).toBe(200);
-    expect(res.body.salon).toMatchObject({ photos, kind: "UNISEX", whatsapp: "05551234567" });
+    expect(res.body.salon).toMatchObject({ photos, kind: "BEAUTY", whatsapp: "05551234567" });
 
     const pub = await api().get(`/api/salons/${b.salon.id}`);
     expect(pub.body.salon).toMatchObject({
       photos,
       photo: photos[0],
-      kindLabel: "Kadın ve erkek kuaförü",
+      kindLabel: "Güzellik salonu",
       whatsapp: "05551234567",
       priceRange: { min: 250, max: 250 },
     });

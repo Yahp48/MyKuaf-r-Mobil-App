@@ -1,0 +1,192 @@
+{
+  "pixie": {
+    "unsplashId": "photo-1598771326492-f523d7bd3e89",
+    "width": 676,
+    "height": 700,
+    "anchors": {
+      "eyeA": [
+        257.7,
+        471.2
+      ],
+      "eyeB": [
+        469.5,
+        475.7
+      ],
+      "chin": [
+        359.3,
+        847.5
+      ]
+    }
+  },
+  "short-platinum": {
+    "unsplashId": "photo-1553867745-6e038d085e86",
+    "width": 417,
+    "height": 700,
+    "anchors": {
+      "eyeA": [
+        152.4,
+        343
+      ],
+      "eyeB": [
+        300.6,
+        327.3
+      ],
+      "chin": [
+        264.8,
+        621.4
+      ]
+    }
+  },
+  "bangs-bob": {
+    "unsplashId": "photo-1672794444732-e007954a177c",
+    "width": 474,
+    "height": 700,
+    "anchors": {
+      "eyeA": [
+        148.7,
+        281
+      ],
+      "eyeB": [
+        284.7,
+        288.6
+      ],
+      "chin": [
+        206.6,
+        521.2
+      ]
+    }
+  },
+  "short-bob": {
+    "unsplashId": "photo-1612203304476-2ed23c55b5b9",
+    "width": 632,
+    "height": 561,
+    "anchors": {
+      "eyeA": [
+        281.5,
+        347.4
+      ],
+      "eyeB": [
+        430,
+        334.5
+      ],
+      "chin": [
+        372,
+        592.1
+      ]
+    }
+  },
+  "shoulder": {
+    "unsplashId": "photo-1581182830442-e8bc7babbf15",
+    "width": 405,
+    "height": 523,
+    "anchors": {
+      "eyeA": [
+        181.3,
+        296.1
+      ],
+      "eyeB": [
+        299.4,
+        306.9
+      ],
+      "chin": [
+        220,
+        511
+      ]
+    }
+  },
+  "long-straight": {
+    "unsplashId": "photo-1533933269825-da140ad3132f",
+    "width": 665,
+    "height": 700,
+    "anchors": {
+      "eyeA": [
+        214.2,
+        255.7
+      ],
+      "eyeB": [
+        350.2,
+        256.9
+      ],
+      "chin": [
+        290.3,
+        506.9
+      ]
+    }
+  },
+  "long-balayage": {
+    "unsplashId": "photo-1734521992144-5a4d0ea55952",
+    "width": 439,
+    "height": 700,
+    "anchors": {
+      "eyeA": [
+        210.9,
+        193.8
+      ],
+      "eyeB": [
+        286.5,
+        184.6
+      ],
+      "chin": [
+        264.1,
+        334.5
+      ]
+    }
+  },
+  "long-curly": {
+    "unsplashId": "photo-1758600434473-b8694347de49",
+    "width": 422,
+    "height": 462,
+    "anchors": {
+      "eyeA": [
+        182.5,
+        135.6
+      ],
+      "eyeB": [
+        245.2,
+        138.3
+      ],
+      "chin": [
+        212.1,
+        252.9
+      ]
+    }
+  },
+  "long-wavy": {
+    "unsplashId": "photo-1589729482945-ca6f3a235f7a",
+    "width": 367,
+    "height": 568,
+    "anchors": {
+      "eyeA": [
+        181.2,
+        171.5
+      ],
+      "eyeB": [
+        241,
+        163.1
+      ],
+      "chin": [
+        227.5,
+        280.1
+      ]
+    }
+  },
+  "long-bangs": {
+    "unsplashId": "photo-1731911360686-0fac827fdb5d",
+    "width": 700,
+    "height": 603,
+    "anchors": {
+      "eyeA": [
+        234.7,
+        214.9
+      ],
+      "eyeB": [
+        372.7,
+        212.6
+      ],
+      "chin": [
+        307.4,
+        476.9
+      ]
+    }
+  }
+}

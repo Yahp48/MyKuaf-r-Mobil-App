@@ -40,8 +40,6 @@ export function openStatus(timezone: string, hours: Hours[], now = new Date()) {
 
 export const SALON_KIND_LABEL = {
   WOMEN: "Kadın kuaförü",
-  MEN: "Erkek kuaförü",
-  UNISEX: "Kadın ve erkek kuaförü",
   BEAUTY: "Güzellik salonu",
 } as const;
 

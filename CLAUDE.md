@@ -24,9 +24,11 @@ Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kuralları
 - Ödeme: `services/checkout.js` sağlayıcının güvenli sayfasını `expo-web-browser` ile açar, sonucu sunucudan sorgular.
   Uygulama kart bilgisi ASLA toplamaz (PCI-DSS)
 - Ortak bileşenler: `components/` (AppHeader, BottomNav, DraggableSheet, SalonSheet, PhotoViewer, ProductCard, ContactList, ui.js, theme.js, useRemote.js)
-- Canlı deneme (`screens/TryOnScreen.js`): WebView içinde MediaPipe Tasks Vision (`components/tryon/page.js`, sürüm sabit);
-  yüz şekli, saç rengi, makyaj cihazda işlenir, görüntü sunucuya gitmez. Katalog `components/tryon/catalog.js`.
-  Saç modeli canlı denemesi yok (yalnızca yüz şekline göre öneri) — gerçekçi model denemesi için üçüncü taraf AR/AI servisi gerekir
+- Canlı deneme (alt menüde "Dene", `screens/TryOnScreen.js`): WebView içinde MediaPipe Tasks Vision
+  (`components/tryon/page.js`, sürüm sabit); yüz şekli, saç modeli (2B saç katmanı, 3 noktalı afin yerleşim,
+  kendi saçı push-pull dolgu ile gizlenir), saç rengi, makyaj cihazda işlenir, görüntü sunucuya gitmez.
+  Saç katmanları `assets/tryon/hair/` (Unsplash kaynaklı, CREDITS.md), katalog `components/tryon/catalog.js`
+- Uygulama yalnızca kadınlara yöneliktir: erkek/unisex içerik, salon türü veya seçenek eklenmez
 - İndirim: hizmet başına yüzde + tarih aralığı; fiyat randevu gününe göre sunucuda hesaplanır (`backend/src/modules/salons/discount.ts`).
   Son 30 günde fiyatı artırılan hizmette indirim yok, indirim sürerken fiyat artırılamaz
 - Tasarım: tek vurgu rengi `#C9184A` (`colors.primary`), beyaz başlık ve alt menü, gri yüzey üzerinde gruplu kartlar,

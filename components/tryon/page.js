@@ -1,6 +1,6 @@
 // Canlı deneme sayfası (WebView içinde çalışır). Kamera görüntüsü cihazda işlenir; hiçbir sunucuya gönderilmez.
-// MediaPipe Tasks Vision: yüz noktaları (makyaj, yüz şekli) + saç segmentasyonu (saç rengi).
-// Not: Bu dosyadaki sayfa kodunda ters tırnak ve dolar-süslü parantez kullanılmaz (JS şablon dizesi içinde durur).
+// MediaPipe Tasks Vision: yüz noktaları (makyaj, yüz şekli, saç modeli yerleşimi) + saç segmentasyonu (renk, saç gizleme).
+// Not: Sayfa kodunda ters tırnak ve dolar-süslü parantez kullanılmaz (JS şablon dizesi içinde durur).
 
 const MP_VERSION = "0.10.35";
 
@@ -12,7 +12,7 @@ export const TRYON_PAGE = `<!doctype html>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   video { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-  canvas { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); }
 </style>
 </head>
 <body>
@@ -27,27 +27,48 @@ const post = (m) => window.ReactNativeWebView && window.ReactNativeWebView.postM
 const video = document.getElementById("v");
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-const maskCanvas = document.createElement("canvas");
-const mctx = maskCanvas.getContext("2d");
-// Yalnızca saç pikselleri (doku korunarak açma/koyulaştırma için)
-const hairLayer = document.createElement("canvas");
-const hctx = hairLayer.getContext("2d");
+const mk = () => { const c = document.createElement("canvas"); return [c, c.getContext("2d")]; };
+const [maskCanvas, mctx] = mk();   // kullanıcının saç maskesi (beyaz + alfa)
+const [tint, tctx] = mk();         // renkli saç maskesi
+const [hairLayer, hctx] = mk();    // yalnızca saç pikselleri (doku koruyarak açma/koyulaştırma)
+const [over, octx] = mk();         // yerleştirilmiş saç modeli
+const [plate, pctx] = mk();        // saçın arkasını dolduran tahmini zemin
+const [rmask, rctx] = mk();        // gizlenecek kendi saç bölgesi
+const [hard, hdctx] = mk();        // güçlendirilmiş ve hafif genişletilmiş saç maskesi
+const [bg, bgctx] = mk();          // bulanık arka plan için küçük kopya
 
-const state = { hair: null, makeup: null, scanning: true };
+const state = { hair: null, makeup: null, style: null, scanning: true, padTop: 0, padBottom: 0 };
 const scan = { samples: [], need: 36, lastPost: 0 };
+const styleCache = {};
 let face = null, seg = null, lastMask = null, maskW = 0, maskH = 0, maskImg = null;
-let frame = 0, lastTs = -1, facePresent = null, lastFacePost = 0;
+let frame = 0, lastTs = -1, facePresent = null, lastFacePost = 0, smooth = null;
 
 window.__tryon = {
   set(cmd) {
     if ("hair" in cmd) state.hair = cmd.hair;
     if ("makeup" in cmd) state.makeup = cmd.makeup;
+    if ("style" in cmd) setStyle(cmd.style);
+    if (cmd.viewport) { state.padTop = cmd.viewport.top || 0; state.padBottom = cmd.viewport.bottom || 0; }
     if (cmd.scan) { scan.samples = []; state.scanning = true; }
+    if (cmd.scanDone) state.scanning = false;
     if (cmd.capture) capture();
   },
 };
 
-// Yüz noktaları (MediaPipe Face Mesh dizinleri)
+function setStyle(s) {
+  if (!s) { state.style = null; return; }
+  const cached = styleCache[s.key];
+  if (cached) { state.style = cached; return; }
+  const img = new Image();
+  img.onload = () => {
+    styleCache[s.key] = { key: s.key, img, anchors: s.anchors };
+    if (!state.style || state.style.key !== s.key) state.style = styleCache[s.key];
+    post({ type: "styleReady", key: s.key });
+  };
+  img.src = s.src;
+  state.style = null;
+}
+
 const LIPS_OUT = [61,146,91,181,84,17,314,405,321,375,291,409,270,269,267,0,37,39,40,185];
 const LIPS_IN = [78,95,88,178,87,14,317,402,318,324,308,415,310,311,312,13,82,81,80,191];
 const EYE_A = [33,246,161,160,159,158,157,173,133];
@@ -98,19 +119,41 @@ async function start() {
   requestAnimationFrame(loop);
 }
 
+// Görüntü ekrana yakınlaştırılmadan sığdırılır (en fazla %30 kırpma) ve üst/alt kontrollerin arasındaki
+// görünür alana ortalanır; kalan boşluk bulanık arka planla dolar.
+function layout(w, h) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const cw = Math.round(window.innerWidth * dpr), ch = Math.round(window.innerHeight * dpr);
+  if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
+  const top = state.padTop * dpr, availH = Math.max(ch * 0.5, ch - top - state.padBottom * dpr);
+  const coverAll = Math.max(cw / w, ch / h);
+  const cover = Math.max(cw / w, availH / h), contain = Math.min(cw / w, availH / h);
+  const s = Math.min(cover, contain * 1.3);
+  return { cw, ch, coverAll, s, dx: (cw - w * s) / 2, dy: top + (availH - h * s) / 2 };
+}
+
 function loop() {
   requestAnimationFrame(loop);
   if (video.readyState < 2) return;
   const w = video.videoWidth, h = video.videoHeight;
   if (!w || !h) return;
-  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
   const ts = performance.now();
   if (ts <= lastTs) return;
   lastTs = ts;
   frame++;
+  const L = layout(w, h);
 
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = "source-over";
   ctx.globalAlpha = 1;
+  // Bulanık arka plan: küçük bir kopyayı büyütmek, her karede filtre uygulamaktan çok daha hafiftir.
+  if (bg.width !== 24) { bg.width = 24; bg.height = Math.max(1, Math.round((24 * h) / w)); }
+  bgctx.drawImage(video, 0, 0, bg.width, bg.height);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bg, (L.cw - w * L.coverAll) / 2, (L.ch - h * L.coverAll) / 2, w * L.coverAll, h * L.coverAll);
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.fillRect(0, 0, L.cw, L.ch);
+  ctx.setTransform(L.s, 0, 0, L.s, L.dx, L.dy);
   ctx.drawImage(video, 0, 0, w, h);
 
   let lm = null;
@@ -120,10 +163,12 @@ function loop() {
   } catch (e) {}
   reportFace(!!lm);
 
-  if (state.hair) {
-    if (frame % 2 === 0 || !lastMask) updateMask(ts);
-    if (lastMask) drawHair(w, h);
-  }
+  const needMask = !!state.hair || !!state.style;
+  if (needMask && (frame % 2 === 0 || !lastMask)) updateMask(ts);
+
+  if (state.style && lm) drawStyle(lm, w, h);
+  else if (state.hair && lastMask) drawHairColor(w, h);
+
   if (lm) {
     if (state.scanning) scanStep(lm, w, h);
     if (state.makeup) drawMakeup(lm, w, h);
@@ -139,7 +184,7 @@ function reportFace(present) {
   }
 }
 
-// ── Saç rengi ──
+// ── Saç maskesi ──
 function updateMask(ts) {
   try {
     const res = seg.segmentForVideo(video, ts);
@@ -151,14 +196,13 @@ function updateMask(ts) {
       maskH = m.height;
       if (!lastMask || lastMask.length !== data.length) lastMask = new Float32Array(data.length);
       lastMask.set(data);
+      buildMask();
     }
     if (res.close) res.close();
   } catch (e) {}
 }
 
-function drawHair(w, h) {
-  const c = state.hair;
-  const col = hex(c.color);
+function buildMask() {
   if (maskCanvas.width !== maskW || maskCanvas.height !== maskH || !maskImg) {
     maskCanvas.width = maskW;
     maskCanvas.height = maskH;
@@ -168,38 +212,177 @@ function drawHair(w, h) {
   for (let i = 0, j = 0; i < lastMask.length; i++, j += 4) {
     let v = lastMask[i];
     v = v < 0.3 ? 0 : (v - 0.3) / 0.7;
-    d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; d[j + 3] = v * 255;
+    d[j] = 255; d[j + 1] = 255; d[j + 2] = 255; d[j + 3] = v * 255;
   }
   mctx.putImageData(maskImg, 0, 0);
+  if (state.style) {
+    // Kendi saçını gizlemek için maske sertleştirilir ve kenarları biraz genişletilir.
+    if (hard.width !== maskW || hard.height !== maskH) { hard.width = maskW; hard.height = maskH; }
+    hdctx.clearRect(0, 0, maskW, maskH);
+    hdctx.filter = "blur(" + Math.max(2, Math.round(maskW / 120)) + "px)";
+    for (let i = 0; i < 4; i++) hdctx.drawImage(maskCanvas, 0, 0);
+    hdctx.filter = "none";
+    for (let i = 0; i < 2; i++) hdctx.drawImage(hard, 0, 0);
+  }
+}
+
+function tinted(source, color) {
+  if (tint.width !== source.width || tint.height !== source.height) { tint.width = source.width; tint.height = source.height; }
+  tctx.globalCompositeOperation = "source-over";
+  tctx.clearRect(0, 0, tint.width, tint.height);
+  tctx.drawImage(source, 0, 0);
+  tctx.globalCompositeOperation = "source-in";
+  tctx.fillStyle = color;
+  tctx.fillRect(0, 0, tint.width, tint.height);
+  return tint;
+}
+
+// ── Saç rengi (kendi saçına) ──
+function drawHairColor(w, h) {
+  const c = state.hair;
   if (c.lift || c.dark) {
-    // Saçın kendisini kendisiyle "screen"/"multiply" karıştırmak, tellerin dokusunu koruyarak açar/koyulaştırır.
     if (hairLayer.width !== w || hairLayer.height !== h) { hairLayer.width = w; hairLayer.height = h; }
     hctx.globalCompositeOperation = "source-over";
     hctx.clearRect(0, 0, w, h);
     hctx.drawImage(video, 0, 0, w, h);
     hctx.globalCompositeOperation = "destination-in";
     hctx.drawImage(maskCanvas, 0, 0, w, h);
-    if (c.lift) {
-      ctx.globalCompositeOperation = "screen";
-      ctx.globalAlpha = Math.min(1, c.lift * 1.6);
-      ctx.drawImage(hairLayer, 0, 0, w, h);
-      if (c.lift > 0.4) ctx.drawImage(hairLayer, 0, 0, w, h);
-    }
-    if (c.dark) {
-      ctx.globalCompositeOperation = "multiply";
-      ctx.globalAlpha = Math.min(1, c.dark * 1.6);
-      ctx.drawImage(hairLayer, 0, 0, w, h);
-    }
+    shade(hairLayer, c, w, h);
   }
   ctx.globalCompositeOperation = "color";
   ctx.globalAlpha = c.alpha;
-  ctx.drawImage(maskCanvas, 0, 0, w, h);
+  ctx.drawImage(tinted(maskCanvas, c.color), 0, 0, w, h);
   ctx.globalCompositeOperation = "source-over";
   ctx.globalAlpha = 1;
 }
 
-// ── Makyaj ──
+/** Saç katmanını kendisiyle karıştırarak dokuyu koruyup açar ("screen") veya koyulaştırır ("multiply"). */
+function shade(layer, c, w, h) {
+  if (c.lift) {
+    ctx.globalCompositeOperation = "screen";
+    ctx.globalAlpha = Math.min(1, c.lift * 1.6);
+    ctx.drawImage(layer, 0, 0, w, h);
+    if (c.lift > 0.4) ctx.drawImage(layer, 0, 0, w, h);
+  }
+  if (c.dark) {
+    ctx.globalCompositeOperation = "multiply";
+    ctx.globalAlpha = Math.min(1, c.dark * 1.6);
+    ctx.drawImage(layer, 0, 0, w, h);
+  }
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 1;
+}
+
+// ── Saç modeli ──
 const pt = (lm, i, w, h) => [lm[i].x * w, lm[i].y * h];
+const midPt = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+
+/** 3 nokta çiftinden afin dönüşüm: kaynak (src) → hedef (dst). [a, b, c, d, e, f] */
+function affine(src, dst) {
+  const [x1, y1] = src[0], [x2, y2] = src[1], [x3, y3] = src[2];
+  const det = x1 * (y2 - y3) - x2 * (y1 - y3) + x3 * (y1 - y2);
+  if (Math.abs(det) < 1e-6) return null;
+  const solve = (v1, v2, v3) => [
+    (v1 * (y2 - y3) - v2 * (y1 - y3) + v3 * (y1 - y2)) / det,
+    (x1 * (v2 - v3) - x2 * (v1 - v3) + x3 * (v1 - v2)) / det,
+    (x1 * (y2 * v3 - y3 * v2) - x2 * (y1 * v3 - y3 * v1) + x3 * (y1 * v2 - y2 * v1)) / det,
+  ];
+  const [a, c, e] = solve(dst[0][0], dst[1][0], dst[2][0]);
+  const [b, d, f] = solve(dst[0][1], dst[1][1], dst[2][1]);
+  return [a, b, c, d, e, f];
+}
+
+/**
+ * Saç arkasındaki zemini tahmin eder (push-pull doldurma): saç pikselleri silinir, görüntü küçültülerek
+ * çevredeki renklerle boşluklar doldurulur. Kendi saçını gizlemek için kullanılır.
+ */
+const pyramid = [];
+function buildPlate(w, h) {
+  const bw = Math.max(32, Math.round(w / 4)), bh = Math.max(32, Math.round(h / 4));
+  if (plate.width !== bw || plate.height !== bh) { plate.width = bw; plate.height = bh; }
+  pctx.globalCompositeOperation = "source-over";
+  pctx.clearRect(0, 0, bw, bh);
+  pctx.drawImage(video, 0, 0, bw, bh);
+  pctx.globalCompositeOperation = "destination-out";
+  pctx.drawImage(hard, 0, 0, bw, bh);
+  let lw = bw, lh = bh, prev = plate, k = 0;
+  while (lw > 1 || lh > 1) {
+    lw = Math.max(1, lw >> 1);
+    lh = Math.max(1, lh >> 1);
+    if (!pyramid[k]) pyramid[k] = mk();
+    const [cv, cx] = pyramid[k];
+    cv.width = lw;
+    cv.height = lh;
+    cx.drawImage(prev, 0, 0, lw, lh);
+    prev = cv;
+    k++;
+  }
+  // En alt seviye (1×1, saç dışı ortalama renk) opak yapılır; böylece üst seviyelerde boşluk kalmaz.
+  const lastCx = pyramid[k - 1][1];
+  const px = lastCx.getImageData(0, 0, 1, 1);
+  px.data[3] = 255;
+  lastCx.putImageData(px, 0, 0);
+  for (let i = k - 1; i >= 0; i--) {
+    const [cv, cx] = pyramid[i];
+    const lower = i === k - 1 ? null : pyramid[i + 1][0];
+    if (lower) {
+      cx.globalCompositeOperation = "destination-over";
+      cx.drawImage(lower, 0, 0, cv.width, cv.height);
+      cx.globalCompositeOperation = "source-over";
+    }
+  }
+  pctx.globalCompositeOperation = "destination-over";
+  pctx.drawImage(pyramid[0][0], 0, 0, bw, bh);
+  pctx.globalCompositeOperation = "source-over";
+}
+
+function drawStyle(lm, w, h) {
+  const st = state.style;
+  const user = [midPt(pt(lm, 33, w, h), pt(lm, 133, w, h)), midPt(pt(lm, 263, w, h), pt(lm, 362, w, h)), pt(lm, 152, w, h)];
+  // Titremeyi azaltmak için yumuşatma
+  if (!smooth) smooth = user.map((p) => p.slice());
+  else for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) smooth[i][j] += (user[i][j] - smooth[i][j]) * 0.55;
+  const A = affine([st.anchors.eyeA, st.anchors.eyeB, st.anchors.chin], smooth);
+  if (!A) return;
+
+  // Seçilen model (renk seçildiyse boyanır)
+  if (over.width !== w || over.height !== h) { over.width = w; over.height = h; }
+  octx.setTransform(1, 0, 0, 1, 0, 0);
+  octx.clearRect(0, 0, w, h);
+  octx.setTransform(A[0], A[1], A[2], A[3], A[4], A[5]);
+  octx.drawImage(st.img, 0, 0);
+  octx.setTransform(1, 0, 0, 1, 0, 0);
+
+  // Kendi saçını gizle: kendi saç maskesi − yeni model
+  if (lastMask) {
+    buildPlate(w, h);
+    if (rmask.width !== maskW || rmask.height !== maskH) { rmask.width = maskW; rmask.height = maskH; }
+    rctx.globalCompositeOperation = "source-over";
+    rctx.clearRect(0, 0, maskW, maskH);
+    rctx.drawImage(hard, 0, 0);
+    rctx.globalCompositeOperation = "destination-out";
+    rctx.drawImage(over, 0, 0, maskW, maskH);
+    pctx.globalCompositeOperation = "destination-in";
+    pctx.drawImage(rmask, 0, 0, plate.width, plate.height);
+    pctx.globalCompositeOperation = "source-over";
+    ctx.filter = "blur(2px)";
+    ctx.drawImage(plate, 0, 0, w, h);
+    ctx.filter = "none";
+  }
+
+  ctx.drawImage(over, 0, 0, w, h);
+  const c = state.hair;
+  if (c) {
+    shade(over, c, w, h);
+    ctx.globalCompositeOperation = "color";
+    ctx.globalAlpha = c.alpha;
+    ctx.drawImage(tinted(over, c.color), 0, 0, w, h);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ── Makyaj ──
 function poly(points) {
   ctx.moveTo(points[0][0], points[0][1]);
   for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);

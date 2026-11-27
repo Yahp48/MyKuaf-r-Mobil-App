@@ -9,6 +9,7 @@ import { colors } from "./theme";
 const TABS = [
   { route: "Appointments", label: "Randevular", icon: "calendar" },
   { route: "Home", label: "Harita", icon: "map" },
+  { route: "TryOn", label: "Dene", icon: "sparkles" },
   { route: "Shop", label: "Mağaza", icon: "bag-handle", cart: true },
   { route: "Profile", label: "Profil", icon: "person" },
 ];

@@ -37,8 +37,6 @@ const NEAR_DELTA = { latitudeDelta: 0.018, longitudeDelta: 0.018 };
 const PROMO_SEEN_KEY = "mykuafor.promoSeen.v1";
 const KIND_CHIPS = [
   { kind: "WOMEN", label: "Kadın" },
-  { kind: "MEN", label: "Erkek" },
-  { kind: "UNISEX", label: "Unisex" },
   { kind: "BEAUTY", label: "Güzellik" },
 ];
 
@@ -371,7 +369,6 @@ export default function HomeScreen({ navigation, route: navRoute }) {
           contentContainerStyle={styles.filters}
           keyboardShouldPersistTaps="handled"
         >
-          <FeatureChip icon="sparkles" label="Canlı dene" onPress={() => navigation.navigate("TryOn")} />
           <FeatureChip
             icon="trophy"
             label="Öne çıkanlar"

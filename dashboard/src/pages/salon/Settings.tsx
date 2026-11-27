@@ -136,8 +136,6 @@ function SalonProfileForm() {
           hint="Uygulamada salon adının altında görünür"
         >
           <option value="WOMEN">Kadın kuaförü</option>
-          <option value="MEN">Erkek kuaförü</option>
-          <option value="UNISEX">Kadın ve erkek kuaförü</option>
           <option value="BEAUTY">Güzellik salonu</option>
         </Select>
         <div className="field">

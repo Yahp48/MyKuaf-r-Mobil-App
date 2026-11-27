@@ -60,14 +60,14 @@ const salons = [
   },
   {
     slug: "ataturk-bulvari-kuafor",
-    kind: "UNISEX" as const,
+    kind: "WOMEN" as const,
     photos: [
       salonImg("photo-1585747860715-2ba37e788b70"),
       salonImg("photo-1605497788044-5a32c7078486"),
       salonImg("photo-1521590832167-7bcbfaa6381f"),
       salonImg("photo-1595476108010-b4d1f102b1b1"),
     ],
-    description: "Kadın ve erkek kuaförü. Modern kesimler, sakal tasarımı ve saç bakımı.",
+    description: "Modern kesimler, renklendirme ve saç bakımı.",
     name: "Atatürk Bulvarı Kuaför",
     address: "Atatürk Bulvarı, Kırşehir Merkez/Kırşehir",
     district: "Merkez",

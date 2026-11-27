@@ -1,12 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Animated,
   FlatList,
+  Image,
   Linking,
   Modal,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,12 +14,15 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { WebView } from "react-native-webview";
+import { useIsFocused } from "@react-navigation/native";
 import { useCameraPermissions } from "expo-camera";
+import { Asset } from "expo-asset";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import BottomNav from "../components/BottomNav";
 import { colors } from "../components/theme";
 import { TRYON_PAGE } from "../components/tryon/page";
 import { FACE_SHAPES, HAIR_COLORS, HAIRSTYLES, MAKEUP_LOOKS } from "../components/tryon/catalog";
@@ -27,50 +30,116 @@ import { FACE_SHAPES, HAIR_COLORS, HAIRSTYLES, MAKEUP_LOOKS } from "../component
 const ITEM = 62;
 const GAP = 14;
 const CATEGORIES = [
+  { key: "styles", label: "Saç modeli" },
   { key: "hair", label: "Saç rengi" },
   { key: "makeup", label: "Makyaj" },
-  { key: "styles", label: "Saç modeli" },
 ];
+const NO_STYLE = { key: "none", label: "Kendi saçım", length: null, suits: [] };
 
 /**
- * Canlı deneme: ön kamera görüntüsünde yüz şekli tespiti, saç rengi ve makyaj (cihaz üzerinde, MediaPipe).
- * Görüntü hiçbir sunucuya gönderilmez. Alttaki halkada kaydırarak seçenekler anında denenir.
+ * Canlı deneme (alt menüde "Dene"): ön kamerada saç modeli, saç rengi ve makyaj denemesi; önce yüz şekli ölçülür,
+ * yüz şekline uygun modeller öne alınır. Her şey cihazda işlenir, görüntü hiçbir yere gönderilmez.
  */
 export default function TryOnScreen({ navigation }) {
+  const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [permission, requestPermission] = useCameraPermissions();
   const webRef = useRef(null);
+  const styleData = useRef({});
   const [status, setStatus] = useState("idle"); // camera | loading | ready | error
   const [error, setError] = useState(null);
   const [facePresent, setFacePresent] = useState(true);
   const [scan, setScan] = useState({ progress: 0, frontal: true, done: false });
   const [shape, setShape] = useState(null);
   const [shapeSheet, setShapeSheet] = useState(false);
-  const [category, setCategory] = useState("hair");
+  const [category, setCategory] = useState("styles");
+  const [styleKey, setStyleKey] = useState("none");
   const [hairIndex, setHairIndex] = useState(0);
   const [makeupIndex, setMakeupIndex] = useState(0);
-  const [gender, setGender] = useState("women");
+  const [styleLoading, setStyleLoading] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  const [panelHeight, setPanelHeight] = useState(220);
   const flash = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) requestPermission();
   }, [permission, requestPermission]);
 
+  // Sekmeden çıkınca kamera kapanır (WebView kaldırılır); dönünce seçimler yeniden uygulanır.
+  useEffect(() => {
+    if (!isFocused) {
+      setStatus("idle");
+      setScan((s) => (s.done ? s : { progress: 0, frontal: true, done: false }));
+    }
+  }, [isFocused]);
+
   const send = useCallback((cmd) => {
     webRef.current?.injectJavaScript(`window.__tryon && window.__tryon.set(${JSON.stringify(cmd)}); true;`);
   }, []);
 
+  // Yüz şekline uygun modeller önce
+  const styles_ = useMemo(() => {
+    const list = [...HAIRSTYLES].sort((a, b) => Number(b.suits.includes(shape)) - Number(a.suits.includes(shape)));
+    return [NO_STYLE, ...list];
+  }, [shape]);
+
+  const loadStyle = async (s) => {
+    if (styleData.current[s.key]) return styleData.current[s.key];
+    const asset = Asset.fromModule(s.image);
+    await asset.downloadAsync();
+    const base64 = await new File(asset.localUri ?? asset.uri).base64();
+    const payload = { key: s.key, src: `data:image/webp;base64,${base64}`, anchors: s.anchors };
+    styleData.current[s.key] = payload;
+    return payload;
+  };
+
+  const applyStyle = async (i) => {
+    const s = styles_[i];
+    setStyleKey(s.key);
+    if (s.key === "none") return send({ style: null });
+    try {
+      setStyleLoading(true);
+      send({ style: await loadStyle(s) });
+    } catch (e) {
+      Alert.alert("Model yüklenemedi", e.message);
+    } finally {
+      setStyleLoading(false);
+    }
+  };
+
+  const hairCommand = (i) => {
+    const c = HAIR_COLORS[i];
+    return c.color ? { color: c.color, alpha: c.alpha, lift: c.lift ?? 0, dark: c.dark ?? 0 } : null;
+  };
+  const makeupCommand = (i) => {
+    const { key, label, swatch, ...look } = MAKEUP_LOOKS[i];
+    return key === "none" ? null : look;
+  };
   const applyHair = (i) => {
     setHairIndex(i);
-    const c = HAIR_COLORS[i];
-    send({ hair: c.color ? { color: c.color, alpha: c.alpha, lift: c.lift ?? 0, dark: c.dark ?? 0 } : null });
+    send({ hair: hairCommand(i) });
   };
   const applyMakeup = (i) => {
     setMakeupIndex(i);
-    const { key, label, swatch, ...look } = MAKEUP_LOOKS[i];
-    send({ makeup: key === "none" ? null : look });
+    send({ makeup: makeupCommand(i) });
+  };
+
+  const sendViewport = useCallback(
+    () => send({ viewport: { top: insets.top + 60, bottom: panelHeight } }),
+    [send, insets.top, panelHeight],
+  );
+  useEffect(() => {
+    if (status === "ready") sendViewport();
+  }, [status, sendViewport]);
+
+  /** Sayfa yeniden açıldığında (sekmeye dönüş) seçimleri geri uygular. */
+  const restore = async () => {
+    sendViewport();
+    send({ hair: hairCommand(hairIndex), makeup: makeupCommand(makeupIndex), ...(scan.done ? {} : { scan: true }) });
+    if (scan.done) send({ scanDone: true });
+    const s = HAIRSTYLES.find((x) => x.key === styleKey);
+    if (s) send({ style: await loadStyle(s) });
   };
 
   const rescan = () => {
@@ -113,6 +182,7 @@ export default function TryOnScreen({ navigation }) {
     switch (msg.type) {
       case "status":
         setStatus(msg.status);
+        if (msg.status === "ready") restore();
         break;
       case "error":
         if (msg.code === "capture") {
@@ -144,123 +214,128 @@ export default function TryOnScreen({ navigation }) {
   const reload = () => {
     setError(null);
     setStatus("idle");
-    setScan({ progress: 0, frontal: true, done: false });
-    setHairIndex(0);
-    setMakeupIndex(0);
     webRef.current?.reload();
   };
 
   if (!permission) return <View style={styles.black} />;
   if (!permission.granted) {
     return (
-      <View style={[styles.black, styles.centered, { padding: 32 }]}>
+      <View style={styles.black}>
         <StatusBar style="light" />
-        <Ionicons name="camera-outline" size={44} color="#fff" />
-        <Text style={styles.permTitle}>Kamera izni gerekli</Text>
-        <Text style={styles.permText}>
-          Saç rengi ve makyajı canlı denemek için ön kamerayı kullanırız. Görüntünüz yalnızca telefonunuzda işlenir,
-          kaydedilmez ve hiçbir yere gönderilmez.
-        </Text>
-        <TouchableOpacity
-          style={styles.permButton}
-          onPress={() => (permission.canAskAgain ? requestPermission() : Linking.openSettings())}
-        >
-          <Text style={styles.permButtonText}>{permission.canAskAgain ? "İzin ver" : "Ayarları aç"}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 18 }}>
-          <Text style={styles.permBack}>Vazgeç</Text>
-        </TouchableOpacity>
+        <View style={[styles.centered, { flex: 1, padding: 32 }]}>
+          <Ionicons name="camera-outline" size={44} color="#fff" />
+          <Text style={styles.permTitle}>Kamera izni gerekli</Text>
+          <Text style={styles.permText}>
+            Saç modeli, saç rengi ve makyajı canlı denemek için ön kamerayı kullanırız. Görüntünüz yalnızca
+            telefonunuzda işlenir, kaydedilmez ve hiçbir yere gönderilmez.
+          </Text>
+          <TouchableOpacity
+            style={styles.permButton}
+            onPress={() => (permission.canAskAgain ? requestPermission() : Linking.openSettings())}
+          >
+            <Text style={styles.permButtonText}>{permission.canAskAgain ? "İzin ver" : "Ayarları aç"}</Text>
+          </TouchableOpacity>
+        </View>
+        <BottomNav active="TryOn" />
       </View>
     );
   }
 
-  const items = category === "hair" ? HAIR_COLORS : MAKEUP_LOOKS;
-  const selected = category === "hair" ? hairIndex : makeupIndex;
   const scanning = status === "ready" && !scan.done;
+  const carousel =
+    category === "styles"
+      ? {
+          items: styles_,
+          selected: Math.max(
+            0,
+            styles_.findIndex((s) => s.key === styleKey),
+          ),
+          onChange: applyStyle,
+        }
+      : category === "hair"
+        ? { items: HAIR_COLORS, selected: hairIndex, onChange: applyHair }
+        : { items: MAKEUP_LOOKS, selected: makeupIndex, onChange: applyMakeup };
+  const current = carousel.items[carousel.selected];
+  const fits = category === "styles" && shape && current?.suits?.includes(shape);
 
   return (
     <View style={styles.black}>
       <StatusBar style="light" />
-      <WebView
-        ref={webRef}
-        source={{ html: TRYON_PAGE, baseUrl: "https://localhost/" }}
-        style={styles.web}
-        originWhitelist={["*"]}
-        javaScriptEnabled
-        allowsInlineMediaPlayback
-        mediaPlaybackRequiresUserAction={false}
-        mediaCapturePermissionGrantType="grant"
-        androidLayerType="hardware"
-        onMessage={onMessage}
-        scrollEnabled={false}
-        bounces={false}
-        overScrollMode="never"
-        setSupportMultipleWindows={false}
-        onError={() => {
-          setStatus("error");
-          setError("load");
-        }}
-      />
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.flash, { opacity: flash }]} />
+      <View style={{ flex: 1 }}>
+        {isFocused ? (
+          <WebView
+            ref={webRef}
+            source={{ html: TRYON_PAGE, baseUrl: "https://localhost/" }}
+            style={styles.web}
+            originWhitelist={["*"]}
+            javaScriptEnabled
+            allowsInlineMediaPlayback
+            mediaPlaybackRequiresUserAction={false}
+            mediaCapturePermissionGrantType="grant"
+            androidLayerType="hardware"
+            onMessage={onMessage}
+            scrollEnabled={false}
+            bounces={false}
+            overScrollMode="never"
+            setSupportMultipleWindows={false}
+            onError={() => {
+              setStatus("error");
+              setError("load");
+            }}
+          />
+        ) : null}
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.flash, { opacity: flash }]} />
 
-      {/* Üst çubuk */}
-      <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.round} accessibilityLabel="Kapat">
-          <Ionicons name="close" size={24} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.shapeChip}
-          onPress={() => (shape ? setShapeSheet(true) : null)}
-          disabled={!shape}
-          accessibilityRole="button"
-          accessibilityLabel={shape ? `Yüz şekli ${FACE_SHAPES[shape].label}. Ayrıntılar` : "Yüz şekli belirleniyor"}
-        >
-          <Ionicons name="happy-outline" size={16} color="#fff" />
-          <Text style={styles.shapeChipText}>
-            {shape ? `Yüz şekli: ${FACE_SHAPES[shape].label}` : "Yüz şekli belirleniyor"}
-          </Text>
-          {shape ? <Ionicons name="chevron-down" size={14} color="#fff" /> : null}
-        </TouchableOpacity>
-        <TouchableOpacity onPress={rescan} style={styles.round} accessibilityLabel="Yüz şeklini yeniden belirle">
-          <Ionicons name="scan-outline" size={22} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Durumlar */}
-      {status !== "ready" && status !== "error" ? (
-        <View style={styles.centerOverlay} pointerEvents="none">
-          <ActivityIndicator color="#fff" size="large" />
-          <Text style={styles.overlayText}>
-            {status === "loading" ? "Stil motoru hazırlanıyor…" : "Kamera açılıyor…"}
-          </Text>
-          {status === "loading" ? <Text style={styles.overlaySub}>İlk açılışta birkaç saniye sürebilir</Text> : null}
-        </View>
-      ) : null}
-
-      {status === "error" ? (
-        <View style={[styles.centerOverlay, styles.errorBox]}>
-          <Ionicons name="alert-circle-outline" size={40} color="#fff" />
-          <Text style={styles.overlayText}>
-            {error === "camera" ? "Kameraya erişilemedi" : "Stil motoru yüklenemedi"}
-          </Text>
-          <Text style={styles.overlaySub}>
-            {error === "camera"
-              ? "Kamera başka bir uygulama tarafından kullanılıyor olabilir."
-              : "İnternet bağlantınızı kontrol edip tekrar deneyin."}
-          </Text>
-          <TouchableOpacity style={styles.permButton} onPress={reload}>
-            <Text style={styles.permButtonText}>Tekrar dene</Text>
+        {/* Üst çubuk */}
+        <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
+          <Text style={styles.screenTitle}>Stilini dene</Text>
+          <TouchableOpacity
+            style={styles.shapeChip}
+            onPress={() => (shape ? setShapeSheet(true) : null)}
+            disabled={!shape}
+            accessibilityRole="button"
+            accessibilityLabel={shape ? `Yüz şekli ${FACE_SHAPES[shape].label}. Ayrıntılar` : "Yüz şekli belirleniyor"}
+          >
+            <Ionicons name="happy-outline" size={16} color="#fff" />
+            <Text style={styles.shapeChipText}>{shape ? FACE_SHAPES[shape].label : "Ölçülüyor"}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={rescan} style={styles.round} accessibilityLabel="Yüz şeklini yeniden ölç">
+            <Ionicons name="scan-outline" size={21} color="#fff" />
           </TouchableOpacity>
         </View>
-      ) : null}
 
-      {scanning ? (
-        <View style={styles.scanWrap} pointerEvents="none">
-          <View style={[styles.oval, { width: width * 0.62, height: width * 0.62 * 1.32 }]} />
-          <View style={styles.scanCard}>
+        {status !== "ready" && status !== "error" ? (
+          <View style={styles.centerOverlay} pointerEvents="none">
+            <ActivityIndicator color="#fff" size="large" />
+            <Text style={styles.overlayText}>
+              {status === "loading" ? "Stil motoru hazırlanıyor…" : "Kamera açılıyor…"}
+            </Text>
+            {status === "loading" ? <Text style={styles.overlaySub}>İlk açılışta birkaç saniye sürebilir</Text> : null}
+          </View>
+        ) : null}
+
+        {status === "error" ? (
+          <View style={[styles.centerOverlay, styles.errorBox]}>
+            <Ionicons name="alert-circle-outline" size={40} color="#fff" />
+            <Text style={styles.overlayText}>
+              {error === "camera" ? "Kameraya erişilemedi" : "Stil motoru yüklenemedi"}
+            </Text>
+            <Text style={styles.overlaySub}>
+              {error === "camera"
+                ? "Kamera başka bir uygulama tarafından kullanılıyor olabilir."
+                : "İnternet bağlantınızı kontrol edip tekrar deneyin."}
+            </Text>
+            <TouchableOpacity style={styles.permButton} onPress={reload}>
+              <Text style={styles.permButtonText}>Tekrar dene</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {scanning ? (
+          <View style={[styles.scanCard, { top: insets.top + 64 }]} pointerEvents="none">
             <Text style={styles.scanTitle}>
               {!facePresent
-                ? "Yüzünüzü çerçeveye yerleştirin"
+                ? "Yüzünüzü ekrana ortalayın"
                 : scan.frontal
                   ? "Yüz şekliniz ölçülüyor…"
                   : "Kameraya düz bakın"}
@@ -268,53 +343,56 @@ export default function TryOnScreen({ navigation }) {
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${Math.round(scan.progress * 100)}%` }]} />
             </View>
-            <Text style={styles.scanSub}>Saçınızı yüzünüzden çekin, iyi ışıkta durun</Text>
           </View>
-        </View>
-      ) : status === "ready" && !facePresent ? (
-        <View style={styles.hintPill} pointerEvents="none">
-          <Text style={styles.hintText}>Yüzünüz görünmüyor</Text>
-        </View>
-      ) : null}
+        ) : status === "ready" && !facePresent ? (
+          <View style={styles.hintPill} pointerEvents="none">
+            <Text style={styles.hintText}>Yüzünüz görünmüyor</Text>
+          </View>
+        ) : null}
 
-      {/* Alt: kategori + kaydırmalı seçenekler */}
-      <View style={[styles.bottom, { paddingBottom: insets.bottom + 12 }]}>
-        {category === "styles" ? (
-          <StylesPanel
-            shape={shape}
-            gender={gender}
-            setGender={setGender}
-            onFindSalon={() => navigation.navigate("Home")}
-          />
-        ) : (
+        {/* Alt panel: kaydırmalı seçenekler + kategoriler */}
+        <View style={styles.bottom} onLayout={(e) => setPanelHeight(Math.round(e.nativeEvent.layout.height))}>
+          <View style={styles.labelRow}>
+            <Text style={styles.itemLabel}>{current?.label}</Text>
+            {category === "styles" && current?.length ? <Text style={styles.itemMeta}>{current.length}</Text> : null}
+            {fits ? (
+              <View style={styles.fitBadge}>
+                <Ionicons name="checkmark" size={12} color="#fff" />
+                <Text style={styles.fitText}>Yüzünüze uygun</Text>
+              </View>
+            ) : null}
+            {styleLoading ? <ActivityIndicator color="#fff" size="small" /> : null}
+          </View>
           <Carousel
-            key={category}
-            items={items}
-            selected={selected}
+            key={category === "styles" ? `styles-${shape}` : category}
+            items={carousel.items}
+            selected={carousel.selected}
             width={width}
-            onChange={category === "hair" ? applyHair : applyMakeup}
+            shape={shape}
+            onChange={carousel.onChange}
             onCapture={capture}
             capturing={capturing}
           />
-        )}
-        <View style={styles.cats}>
-          {CATEGORIES.map((c) => {
-            const on = c.key === category;
-            return (
-              <TouchableOpacity
-                key={c.key}
-                onPress={() => setCategory(c.key)}
-                style={[styles.cat, on && styles.catOn]}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: on }}
-              >
-                <Text style={[styles.catText, on && styles.catTextOn]}>{c.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
+          <View style={styles.cats}>
+            {CATEGORIES.map((c) => {
+              const on = c.key === category;
+              return (
+                <TouchableOpacity
+                  key={c.key}
+                  onPress={() => setCategory(c.key)}
+                  style={[styles.cat, on && styles.catOn]}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: on }}
+                >
+                  <Text style={[styles.catText, on && styles.catTextOn]}>{c.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
-        <Text style={styles.privacy}>Görüntünüz telefonunuzda işlenir, hiçbir yere gönderilmez.</Text>
       </View>
+
+      <BottomNav active="TryOn" />
 
       <Modal
         visible={shapeSheet && !!shape}
@@ -354,7 +432,7 @@ export default function TryOnScreen({ navigation }) {
                       setCategory("styles");
                     }}
                   >
-                    <Text style={styles.primaryText}>Uygun modeller</Text>
+                    <Text style={styles.primaryText}>Modelleri dene</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -367,7 +445,7 @@ export default function TryOnScreen({ navigation }) {
 }
 
 /** Snapchat tarzı halka: ortadaki seçenek uygulanır, ortadaki halkaya dokununca fotoğraf çekilir. */
-function Carousel({ items, selected, width, onChange, onCapture, capturing }) {
+function Carousel({ items, selected, width, shape, onChange, onCapture, capturing }) {
   const listRef = useRef(null);
   const side = (width - ITEM) / 2;
   const step = ITEM + GAP;
@@ -387,94 +465,46 @@ function Carousel({ items, selected, width, onChange, onCapture, capturing }) {
   };
 
   return (
-    <View>
-      <Text style={styles.itemLabel}>{items[selected]?.label}</Text>
-      <View style={{ height: ITEM + 16, justifyContent: "center" }}>
-        <FlatList
-          ref={listRef}
-          data={items}
-          horizontal
-          keyExtractor={(x) => x.key}
-          showsHorizontalScrollIndicator={false}
-          snapToInterval={step}
-          decelerationRate="fast"
-          contentContainerStyle={{ paddingHorizontal: side }}
-          ItemSeparatorComponent={() => <View style={{ width: GAP }} />}
-          getItemLayout={(_d, i) => ({ length: step, offset: step * i, index: i })}
-          onScroll={(e) => settle(e.nativeEvent.contentOffset.x)}
-          scrollEventThrottle={32}
-          renderItem={({ item, index }) => (
-            <TouchableOpacity
-              onPress={() =>
-                index === selected
-                  ? onCapture()
-                  : listRef.current?.scrollToOffset({ offset: index * step, animated: true })
-              }
-              style={[styles.item, index === selected && styles.itemOn]}
-              accessibilityRole="button"
-              accessibilityLabel={index === selected ? `${item.label}. Fotoğraf çek` : item.label}
-            >
-              {item.swatch ? (
-                <View style={[styles.swatch, { backgroundColor: item.swatch }]} />
-              ) : (
-                <Ionicons name="ban-outline" size={24} color="#fff" />
-              )}
-            </TouchableOpacity>
-          )}
-        />
-        {/* Ortadaki çekim halkası */}
-        <View pointerEvents="none" style={[styles.ring, { left: (width - ITEM - 16) / 2 }]}>
-          {capturing ? <ActivityIndicator color="#fff" /> : null}
-        </View>
-      </View>
-      <Text style={styles.captureHint}>Kaydırarak dene · ortadakine dokununca fotoğraf çek</Text>
-    </View>
-  );
-}
-
-function StylesPanel({ shape, gender, setGender, onFindSalon }) {
-  if (!shape) {
-    return (
-      <View style={styles.stylesEmpty}>
-        <Text style={styles.stylesEmptyText}>Öneriler için önce yüz şekliniz belirlenmeli.</Text>
-      </View>
-    );
-  }
-  const list = HAIRSTYLES[shape][gender];
-  return (
-    <View>
-      <View style={styles.genderRow}>
-        <Text style={styles.stylesTitle}>{FACE_SHAPES[shape].label} yüze yakışan modeller</Text>
-        <View style={styles.genderToggle}>
-          {[
-            ["women", "Kadın"],
-            ["men", "Erkek"],
-          ].map(([k, l]) => (
-            <TouchableOpacity key={k} onPress={() => setGender(k)} style={[styles.gBtn, gender === k && styles.gBtnOn]}>
-              <Text style={[styles.gText, gender === k && styles.gTextOn]}>{l}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-      <ScrollView
+    <View style={{ height: ITEM + 16, justifyContent: "center" }}>
+      <FlatList
+        ref={listRef}
+        data={items}
         horizontal
+        keyExtractor={(x) => x.key}
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 10, paddingHorizontal: 16 }}
-      >
-        {list.map(([name, why]) => (
-          <View key={name} style={styles.styleCard}>
-            <Ionicons name="cut-outline" size={18} color={colors.primary} />
-            <Text style={styles.styleName}>{name}</Text>
-            <Text style={styles.styleWhy}>{why}</Text>
-            <TouchableOpacity onPress={onFindSalon} style={styles.styleBtn}>
-              <Text style={styles.styleBtnText}>Salon bul</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
-      <Text style={styles.captureHint}>
-        Öneriler genel stil kurallarına dayanır; kesin karar için kuaförünüze danışın.
-      </Text>
+        snapToInterval={step}
+        decelerationRate="fast"
+        contentContainerStyle={{ paddingHorizontal: side }}
+        ItemSeparatorComponent={() => <View style={{ width: GAP }} />}
+        getItemLayout={(_d, i) => ({ length: step, offset: step * i, index: i })}
+        onScroll={(e) => settle(e.nativeEvent.contentOffset.x)}
+        onMomentumScrollEnd={(e) => settle(e.nativeEvent.contentOffset.x)}
+        scrollEventThrottle={32}
+        renderItem={({ item, index }) => (
+          <TouchableOpacity
+            onPress={() =>
+              index === selected
+                ? onCapture()
+                : listRef.current?.scrollToOffset({ offset: index * step, animated: true })
+            }
+            style={[styles.item, item.image && styles.itemImage, index === selected && styles.itemOn]}
+            accessibilityRole="button"
+            accessibilityLabel={index === selected ? `${item.label}. Fotoğraf çek` : item.label}
+          >
+            {item.image ? (
+              <Image source={item.image} style={styles.hairThumb} resizeMode="contain" />
+            ) : item.swatch ? (
+              <View style={[styles.swatch, { backgroundColor: item.swatch }]} />
+            ) : (
+              <Ionicons name="ban-outline" size={24} color="#fff" />
+            )}
+            {shape && item.suits?.includes(shape) ? <View style={styles.fitDot} /> : null}
+          </TouchableOpacity>
+        )}
+      />
+      <View pointerEvents="none" style={[styles.ring, { left: (width - ITEM - 16) / 2 }]}>
+        {capturing ? <ActivityIndicator color="#fff" /> : null}
+      </View>
     </View>
   );
 }
@@ -493,13 +523,14 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
+    gap: 8,
+    paddingHorizontal: 16,
   },
+  screenTitle: { flex: 1, color: "#fff", fontSize: 20, fontWeight: "800", letterSpacing: -0.3 },
   round: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: glass,
     alignItems: "center",
     justifyContent: "center",
@@ -509,7 +540,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     height: 36,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     borderRadius: 18,
     backgroundColor: glass,
   },
@@ -518,11 +549,9 @@ const styles = StyleSheet.create({
   errorBox: { backgroundColor: "rgba(0,0,0,0.7)" },
   overlayText: { color: "#fff", fontSize: 17, fontWeight: "700", marginTop: 14, textAlign: "center" },
   overlaySub: { color: "rgba(255,255,255,0.75)", fontSize: 14, marginTop: 6, textAlign: "center" },
-  scanWrap: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
-  oval: { borderRadius: 999, borderWidth: 3, borderColor: "rgba(255,255,255,0.85)", borderStyle: "dashed" },
   scanCard: {
     position: "absolute",
-    top: "16%",
+    alignSelf: "center",
     alignItems: "center",
     backgroundColor: glass,
     paddingHorizontal: 18,
@@ -539,7 +568,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   progressFill: { height: 6, borderRadius: 3, backgroundColor: colors.primary },
-  scanSub: { color: "rgba(255,255,255,0.75)", fontSize: 12.5, marginTop: 8 },
   hintPill: {
     position: "absolute",
     top: "40%",
@@ -550,8 +578,26 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   hintText: { color: "#fff", fontWeight: "600" },
-  bottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 12, backgroundColor: "rgba(0,0,0,0.28)" },
-  itemLabel: { color: "#fff", textAlign: "center", fontWeight: "800", fontSize: 15, marginBottom: 6 },
+  bottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 10, paddingBottom: 12 },
+  labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 6 },
+  itemLabel: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 15,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowRadius: 4,
+  },
+  itemMeta: { color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: "600" },
+  fitBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  fitText: { color: "#fff", fontSize: 11.5, fontWeight: "800" },
   item: {
     width: ITEM,
     height: ITEM,
@@ -562,7 +608,20 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "rgba(255,255,255,0.65)",
   },
+  itemImage: { backgroundColor: "#F3E9EC", overflow: "hidden" },
   itemOn: { borderColor: "transparent" },
+  hairThumb: { width: ITEM - 8, height: ITEM - 8 },
+  fitDot: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
   swatch: { width: ITEM - 12, height: ITEM - 12, borderRadius: (ITEM - 12) / 2 },
   ring: {
     position: "absolute",
@@ -575,39 +634,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  captureHint: { color: "rgba(255,255,255,0.7)", fontSize: 12, textAlign: "center", marginTop: 6 },
-  cats: { flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 12 },
-  cat: { paddingHorizontal: 14, height: 32, borderRadius: 16, justifyContent: "center" },
+  cats: { flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 10 },
+  cat: { paddingHorizontal: 14, height: 32, borderRadius: 16, justifyContent: "center", backgroundColor: glass },
   catOn: { backgroundColor: "#fff" },
   catText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   catTextOn: { color: colors.text },
-  privacy: { color: "rgba(255,255,255,0.55)", fontSize: 11, textAlign: "center", marginTop: 10 },
-  stylesEmpty: { height: 120, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 },
-  stylesEmptyText: { color: "#fff", textAlign: "center", fontSize: 14 },
-  genderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    marginBottom: 10,
-  },
-  stylesTitle: { color: "#fff", fontWeight: "800", fontSize: 15, flex: 1, marginRight: 8 },
-  genderToggle: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 14, padding: 3 },
-  gBtn: { paddingHorizontal: 10, height: 26, borderRadius: 11, justifyContent: "center" },
-  gBtnOn: { backgroundColor: "#fff" },
-  gText: { color: "#fff", fontWeight: "700", fontSize: 12.5 },
-  gTextOn: { color: colors.text },
-  styleCard: { width: 170, backgroundColor: "#fff", borderRadius: 16, padding: 12 },
-  styleName: { fontSize: 14.5, fontWeight: "800", color: colors.text, marginTop: 6 },
-  styleWhy: { fontSize: 12.5, color: colors.muted, marginTop: 3, lineHeight: 17, minHeight: 34 },
-  styleBtn: {
-    marginTop: 8,
-    backgroundColor: colors.primarySoft,
-    borderRadius: 12,
-    paddingVertical: 6,
-    alignItems: "center",
-  },
-  styleBtnText: { color: colors.primary, fontWeight: "800", fontSize: 12.5 },
   permTitle: { color: "#fff", fontSize: 20, fontWeight: "800", marginTop: 14 },
   permText: { color: "rgba(255,255,255,0.8)", fontSize: 14.5, textAlign: "center", lineHeight: 21, marginTop: 8 },
   permButton: {
@@ -619,7 +650,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   permButtonText: { color: "#fff", fontWeight: "800", fontSize: 16 },
-  permBack: { color: "rgba(255,255,255,0.8)", fontWeight: "600" },
   modalBg: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.35)" },
   sheet: { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 22 },
   sheetKicker: { fontSize: 11, fontWeight: "800", letterSpacing: 1.4, color: colors.primary },

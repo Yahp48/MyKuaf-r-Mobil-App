@@ -860,7 +860,7 @@ const profileSchema = z
     longitude: z.number().min(25).max(45),
     coverImageUrl: z.string().url().max(500).nullable(),
     photos: z.array(z.string().url().max(500)).max(12, "En fazla 12 fotoğraf"),
-    kind: z.enum(["WOMEN", "MEN", "UNISEX", "BEAUTY"]),
+    kind: z.enum(["WOMEN", "BEAUTY"]),
     whatsapp: zPhone.nullable(),
     isActive: z.boolean(),
     slotIntervalMinutes: z.union([z.literal(10), z.literal(15), z.literal(20), z.literal(30), z.literal(60)]),
