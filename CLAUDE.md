@@ -28,6 +28,8 @@ Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kuralları
   (`components/tryon/page.js`, sürüm sabit); yüz şekli, saç modeli (2B saç katmanı, 3 noktalı afin yerleşim,
   kendi saçı push-pull dolgu ile gizlenir), saç rengi, makyaj cihazda işlenir, görüntü sunucuya gitmez.
   Saç katmanları `assets/tryon/hair/` (Unsplash kaynaklı, CREDITS.md), katalog `components/tryon/catalog.js`
+- Yapay zekâ ile gerçekçi deneme (`screens/AiTryOnScreen.js`, API `/api/tryon/ai`): fotoğraf açık rızayla
+  AILabTools'a gider (TRYON_AI_PROVIDER + AILABTOOLS_API_KEY; boşsa özellik gizli), günlük sınır TRYON_AI_DAILY_LIMIT
 - Uygulama yalnızca kadınlara yöneliktir: erkek/unisex içerik, salon türü veya seçenek eklenmez
 - Salonlar: randevu alınabilen (işletme panelden yönetir) + rehber kaydı (`isListing`, gerçek İstanbul salonları,
   `backend/prisma/data/istanbul-salons.ts`, kaynak OpenStreetMap/ODbL — atıf zorunlu; fotoğraf/puan kopyalanmaz,
@@ -55,7 +57,7 @@ Mobil (kök dizin):
 - `npx expo-doctor` — bağımlılık/yapılandırma kontrolü
 Backend (`backend/`):
 - `docker compose up -d` (PostgreSQL), `npm run db:deploy`, `npm run db:seed`, `npm run dev`
-- `npm test` (75 test, `mykuafor_test` veritabanı), `npm run typecheck`
+- `npm test` (76 test, `mykuafor_test` veritabanı), `npm run typecheck`
 - Şema değişikliği: `prisma/schema.prisma` düzenle → `npm run db:migrate -- --name <ad>`
 - Demo hesapları (yalnızca yerel seed, şifre `Demo12345`): müşteri `demo@mykuafor.test`,
   kuaför paneli `salon@mykuafor.test` ("MyKuaför Demo Salon", Kadıköy), satıcı paneli `satici@mykuafor.test`,
