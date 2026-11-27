@@ -9,6 +9,7 @@ import { Button, Checkbox } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { colors, formatTL } from "../components/theme";
 import { LoadError, FormSkeleton } from "../components/Skeleton";
+import CardPicker from "../components/CardPicker";
 
 export default function CheckoutScreen({ navigation }) {
   const { cart, user, actions } = useApp();
@@ -16,6 +17,7 @@ export default function CheckoutScreen({ navigation }) {
   const { data: addresses, error, loading, reload } = useRemote(loader);
   const [addressId, setAddressId] = useState(null);
   const [method, setMethod] = useState("CARD");
+  const [card, setCard] = useState({});
   const [accepted, setAccepted] = useState(false);
   const [placing, setPlacing] = useState(false);
 
@@ -43,7 +45,12 @@ export default function CheckoutScreen({ navigation }) {
       return Alert.alert("Onay gerekli", "Ön bilgilendirme formunu ve mesafeli satış sözleşmesini onaylayın.");
     setPlacing(true);
     try {
-      const { orders, payment, checkoutUrl } = await orderApi.create(selectedId, method, paymentReturnUrl());
+      const { orders, payment, checkoutUrl } = await orderApi.create(
+        selectedId,
+        method,
+        paymentReturnUrl(),
+        method === "CARD" ? card : {},
+      );
       const label =
         orders.length > 1
           ? `${orders.length} satıcıdan siparişleriniz`
@@ -125,6 +132,7 @@ export default function CheckoutScreen({ navigation }) {
           title="Kredi / banka kartı"
           text="3D Secure ile güvenli ödeme sayfasında"
         />
+        {method === "CARD" ? <CardPicker onChange={setCard} /> : null}
         <PayOption
           selected={method === "WALLET"}
           onPress={() => (walletEnough ? setMethod("WALLET") : null)}

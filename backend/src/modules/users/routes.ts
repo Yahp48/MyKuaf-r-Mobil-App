@@ -193,7 +193,15 @@ usersRouter.patch("/me/addresses/:id", async (req, res) => {
 usersRouter.delete("/me/addresses/:id", async (req, res) => {
   const id = parse(zId, req.params.id);
   const uid = userId(req);
-  const deleted = await prisma.address.deleteMany({ where: { id, userId: uid } });
-  if (deleted.count === 0) throw notFound("Adres bulunamadı");
+  const existing = await prisma.address.findFirst({ where: { id, userId: uid } });
+  if (!existing) throw notFound("Adres bulunamadı");
+  await prisma.$transaction(async (tx) => {
+    await tx.address.delete({ where: { id } });
+    // Varsayılan adres silinince en eski adres varsayılan olur.
+    if (existing.isDefault) {
+      const next = await tx.address.findFirst({ where: { userId: uid }, orderBy: { createdAt: "asc" } });
+      if (next) await tx.address.update({ where: { id: next.id }, data: { isDefault: true } });
+    }
+  });
   res.status(204).end();
 });

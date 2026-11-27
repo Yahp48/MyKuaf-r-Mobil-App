@@ -8,6 +8,7 @@ import { formatTL, fromTL, toTL } from "../../lib/money.ts";
 import { env } from "../../config/env.ts";
 import { requireAuth, userId } from "../../middleware/auth.ts";
 import { paymentProvider } from "../payments/providers.ts";
+import { resolveCardOptions, zCardOptions } from "../cards/routes.ts";
 import { serializePayment, startCheckout, zReturnUrl } from "../payments/service.ts";
 
 export const walletRouter = Router();
@@ -57,10 +58,11 @@ const topupSchema = z.object({
   // TL cinsinden, en fazla 2 ondalık
   amount: z.number().positive("Tutar sıfırdan büyük olmalı").multipleOf(0.01, "En fazla 2 ondalık basamak"),
   returnUrl: zReturnUrl.optional(),
+  ...zCardOptions,
 });
 
 walletRouter.post("/topups", async (req, res) => {
-  const { amount, returnUrl } = parse(topupSchema, req.body);
+  const { amount, returnUrl, ...card } = parse(topupSchema, req.body);
   const cents = fromTL(amount);
   if (cents < env.WALLET_MIN_TOPUP_CENTS || cents > env.WALLET_MAX_TOPUP_CENTS) {
     throw new AppError(
@@ -76,6 +78,7 @@ walletRouter.post("/topups", async (req, res) => {
       amountCents: cents,
       provider: paymentProvider().name,
       returnUrl,
+      ...(await resolveCardOptions(userId(req), card)),
     },
   });
   const checkout = await startCheckout(payment.id);

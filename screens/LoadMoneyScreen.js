@@ -16,6 +16,7 @@ import { useApp } from "../context/AppContext";
 import AppHeader from "../components/AppHeader";
 import { Button, Field } from "../components/ui";
 import { colors, formatTL } from "../components/theme";
+import CardPicker from "../components/CardPicker";
 
 const QUICK = [100, 250, 500, 1000];
 
@@ -24,6 +25,7 @@ export default function LoadMoneyScreen({ navigation, route }) {
   const { actions } = useApp();
   const [amount, setAmount] = useState(route.params?.amount ? String(route.params.amount) : "");
   const [loading, setLoading] = useState(false);
+  const [card, setCard] = useState({});
 
   const value = Number(amount.replace(",", "."));
   const valid = Number.isFinite(value) && value >= limits.minTopup && value <= limits.maxTopup;
@@ -31,7 +33,7 @@ export default function LoadMoneyScreen({ navigation, route }) {
   const submit = async () => {
     setLoading(true);
     try {
-      const { payment, checkoutUrl } = await walletApi.topup(Math.round(value * 100) / 100, paymentReturnUrl());
+      const { payment, checkoutUrl } = await walletApi.topup(Math.round(value * 100) / 100, paymentReturnUrl(), card);
       const status = await openCheckout(checkoutUrl, payment.id);
       if (status === "SUCCEEDED") {
         actions.refreshUnread().catch(() => {});
@@ -79,6 +81,8 @@ export default function LoadMoneyScreen({ navigation, route }) {
               : null
           }
         />
+        <Text style={styles.cardTitle}>Ödeme kartı</Text>
+        <CardPicker onChange={setCard} />
         <View style={styles.secure}>
           <MaterialIcons name="lock" size={18} color={colors.success} />
           <Text style={styles.secureText}>
@@ -98,6 +102,7 @@ export default function LoadMoneyScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
+  cardTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: 20 },
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: 20 },
   quick: { flexDirection: "row", flexWrap: "wrap", marginBottom: 16 },

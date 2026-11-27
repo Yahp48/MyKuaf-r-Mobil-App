@@ -6,17 +6,19 @@ import AppHeader from "../components/AppHeader";
 import { Button, Checkbox, Field } from "../components/ui";
 import { colors } from "../components/theme";
 
-export default function AddressFormScreen({ navigation }) {
+export default function AddressFormScreen({ navigation, route }) {
   const { user } = useApp();
+  // Düzenleme: route.params.address ile gelir
+  const editing = route?.params?.address ?? null;
   const [form, setForm] = useState({
-    title: "Ev",
-    fullName: user?.name ?? "",
-    phone: user?.phone ?? "",
-    city: "",
-    district: "",
-    line: "",
-    postalCode: "",
-    isDefault: true,
+    title: editing?.title ?? "Ev",
+    fullName: editing?.fullName ?? user?.name ?? "",
+    phone: editing?.phone ?? user?.phone ?? "",
+    city: editing?.city ?? "",
+    district: editing?.district ?? "",
+    line: editing?.line ?? "",
+    postalCode: editing?.postalCode ?? "",
+    isDefault: editing ? editing.isDefault : true,
   });
   const [saving, setSaving] = useState(false);
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
@@ -25,7 +27,9 @@ export default function AddressFormScreen({ navigation }) {
     setSaving(true);
     try {
       const { postalCode, ...rest } = form;
-      await userApi.addAddress({ ...rest, ...(postalCode.trim() ? { postalCode: postalCode.trim() } : {}) });
+      const body = { ...rest, ...(postalCode.trim() ? { postalCode: postalCode.trim() } : {}) };
+      if (editing) await userApi.updateAddress(editing.id, body);
+      else await userApi.addAddress(body);
       navigation.goBack();
     } catch (e) {
       Alert.alert("Adres kaydedilemedi", e.message);
@@ -36,7 +40,7 @@ export default function AddressFormScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.container}>
-      <AppHeader title="Yeni Adres" back />
+      <AppHeader title={editing ? "Adresi düzenle" : "Yeni adres"} back />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Field label="Adres başlığı" value={form.title} onChangeText={set("title")} placeholder="Ev, İş..." />
         <Field label="Ad Soyad" value={form.fullName} onChangeText={set("fullName")} autoComplete="name" />

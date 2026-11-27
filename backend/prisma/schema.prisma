@@ -50,6 +50,7 @@ model User {
   pushTokens         PushToken[]
   supportTickets     SupportTicket[]
   business           Business?           @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  savedCards         SavedCard[]
 
   @@index([businessId])
 }
@@ -179,7 +180,7 @@ model Salon {
   timezone                String    @default("Europe/Istanbul")
   coverImageUrl           String?
   // Salon fotoğrafları (ilki vitrin); işletme panelinden yüklenir
-  photos                  String[] @default([])
+  photos                  String[]  @default([])
   kind                    SalonKind @default(WOMEN)
   whatsapp                String?
   slotIntervalMinutes     Int       @default(30)
@@ -569,6 +570,8 @@ model WalletTransaction {
 enum PaymentPurpose {
   ORDER
   WALLET_TOPUP
+  // Kart kaydetmek için 1 TL'lik doğrulama; başarılı olunca hemen iade edilir.
+  CARD_VERIFY
 }
 
 enum PaymentProvider {
@@ -598,14 +601,42 @@ model Payment {
   failureReason String?
   // Ödeme sayfası bitince yönlendirilecek uygulama adresi (doğrulanmış)
   returnUrl     String?
+  // Kullanıcı bu ödemede kullandığı kartın sağlayıcıda saklanmasını istedi
+  saveCard      Boolean         @default(false)
+  // Kayıtlı kartla ödeme (sağlayıcının kart anahtarıyla; kart numarası bizde yok)
+  savedCardId   String?         @db.Uuid
   completedAt   DateTime?       @db.Timestamptz(3)
   createdAt     DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt     DateTime        @updatedAt @db.Timestamptz(3)
 
-  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-  orders Order[]
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  savedCard SavedCard? @relation(fields: [savedCardId], references: [id], onDelete: SetNull)
+  orders    Order[]
 
   @@index([userId, createdAt])
+}
+
+/**
+ * Kayıtlı kart: kart numarası, son kullanma tarihi ve CVV HİÇBİR ZAMAN saklanmaz (PCI-DSS).
+ * Kart ödeme kuruluşunda saklanır; biz yalnızca onun verdiği anahtarları ve gösterim için son 4 haneyi tutarız.
+ */
+model SavedCard {
+  id          String          @id @default(uuid(7)) @db.Uuid
+  userId      String          @db.Uuid
+  provider    PaymentProvider
+  cardUserKey String
+  cardToken   String          @unique
+  alias       String
+  association String?
+  bankName    String?
+  last4       String
+  isDefault   Boolean         @default(false)
+  createdAt   DateTime        @default(now()) @db.Timestamptz(3)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([userId])
 }
 
 // ───────────────────────────── Bildirim & destek ─────────────────────────────

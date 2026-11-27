@@ -12,6 +12,8 @@ const GROUPS = [
     items: [
       { route: "Order", icon: "receipt-outline", label: "Siparişlerim" },
       { route: "Favorites", icon: "heart-outline", label: "Favorilerim" },
+      { route: "SavedCards", icon: "card-outline", label: "Kayıtlı kartlarım" },
+      { route: "Addresses", icon: "location-outline", label: "Adreslerim" },
       { route: "Reviews", icon: "star-outline", label: "Değerlendirmelerim" },
       { route: "AccountSettings", icon: "person-circle-outline", label: "Hesap ayarları" },
     ],

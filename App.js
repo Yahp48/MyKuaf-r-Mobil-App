@@ -34,6 +34,8 @@ import PrivacyScreen from "./screens/PrivacyScreen";
 import AboutScreen from "./screens/AboutScreen";
 import FeaturedScreen from "./screens/FeaturedScreen";
 import TryOnScreen from "./screens/TryOnScreen";
+import SavedCardsScreen from "./screens/SavedCardsScreen";
+import AddressesScreen from "./screens/AddressesScreen";
 
 const Stack = createStackNavigator();
 
@@ -61,6 +63,8 @@ function MainStack() {
       <Stack.Screen name="Appointments" component={AppointmentsScreen} />
       <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
       <Stack.Screen name="Featured" component={FeaturedScreen} />
+      <Stack.Screen name="SavedCards" component={SavedCardsScreen} />
+      <Stack.Screen name="Addresses" component={AddressesScreen} />
       <Stack.Screen name="TryOn" component={TryOnScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="Shop" component={ShopScreen} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />

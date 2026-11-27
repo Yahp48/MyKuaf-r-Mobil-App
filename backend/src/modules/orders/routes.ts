@@ -9,6 +9,7 @@ import { requireAuth, userId } from "../../middleware/auth.ts";
 import { loadCart, summarizeCart } from "../cart/service.ts";
 import { paymentProvider } from "../payments/providers.ts";
 import { serializePayment, startCheckout, zReturnUrl } from "../payments/service.ts";
+import { resolveCardOptions, zCardOptions } from "../cards/routes.ts";
 import { notify } from "../notifications/notify.ts";
 import { emitToBusiness } from "../../realtime/socket.ts";
 import { CUSTOMER_CANCELLABLE, cancelOrder, orderInclude, serializeOrder } from "./service.ts";
@@ -21,6 +22,7 @@ const createSchema = z.object({
   addressId: zId,
   paymentMethod: z.enum(["CARD", "WALLET"]),
   returnUrl: zReturnUrl.optional(),
+  ...zCardOptions,
 });
 
 /**
@@ -31,6 +33,7 @@ const createSchema = z.object({
 ordersRouter.post("/", async (req, res) => {
   const body = parse(createSchema, req.body);
   const uid = userId(req);
+  const cardOptions = body.paymentMethod === "CARD" ? await resolveCardOptions(uid, body) : {};
 
   const result = await prisma.$transaction(async (tx) => {
     const user = await tx.user.findUniqueOrThrow({ where: { id: uid } });
@@ -67,6 +70,7 @@ ordersRouter.post("/", async (req, res) => {
               userId: uid,
               purpose: "ORDER",
               amountCents: totalCents,
+              ...cardOptions,
               provider: paymentProvider().name,
               returnUrl: body.returnUrl,
             },

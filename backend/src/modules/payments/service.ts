@@ -6,7 +6,7 @@ import { notify } from "../notifications/notify.ts";
 import { z } from "zod";
 import { emitToBusiness, emitToUser } from "../../realtime/socket.ts";
 import { env, isProd } from "../../config/env.ts";
-import { paymentProvider } from "./providers.ts";
+import { paymentProvider, type StoredCardInfo } from "./providers.ts";
 import type { Payment } from "../../generated/prisma/client.ts";
 
 /**
@@ -24,6 +24,15 @@ export const zReturnUrl = z
 // Ödeme sayfasında bu süreden uzun bekleyen işlemler iptal edilir, ayrılan stok serbest bırakılır.
 export const PAYMENT_TIMEOUT_MS = 30 * 60_000;
 
+export const PURPOSE_LABEL = {
+  ORDER: "MyKuaför sipariş ödemesi",
+  WALLET_TOPUP: "MyKuaför cüzdan yükleme",
+  CARD_VERIFY: "Kart doğrulama (hemen iade edilir)",
+} as const;
+
+/** Kart doğrulama tutarı: başarılı olunca anında iade edilir. */
+export const CARD_VERIFY_CENTS = 100;
+
 export function serializePayment(p: Payment) {
   return {
     id: p.id,
@@ -39,14 +48,21 @@ export function serializePayment(p: Payment) {
 
 /** Ödeme kaydını sağlayıcıda başlatır ve kullanıcıya açılacak güvenli ödeme sayfası adresini döner. */
 export async function startCheckout(paymentId: string) {
-  const payment = await prisma.payment.findUniqueOrThrow({ where: { id: paymentId }, include: { user: true } });
+  const payment = await prisma.payment.findUniqueOrThrow({
+    where: { id: paymentId },
+    include: { user: true, savedCard: true },
+  });
   if (!payment.user) throw notFound("Kullanıcı bulunamadı");
   try {
     const session = await paymentProvider().createCheckout({
       paymentId: payment.id,
       amountCents: payment.amountCents,
-      description: payment.purpose === "ORDER" ? "MyKuaför sipariş ödemesi" : "MyKuaför cüzdan yükleme",
+      description: PURPOSE_LABEL[payment.purpose],
       buyer: { id: payment.user.id, name: payment.user.name, email: payment.user.email, phone: payment.user.phone },
+      savedCard: payment.savedCard
+        ? { cardUserKey: payment.savedCard.cardUserKey, cardToken: payment.savedCard.cardToken }
+        : undefined,
+      registerCard: payment.saveCard && !payment.savedCard,
     });
     await prisma.payment.update({ where: { id: payment.id }, data: { providerRef: session.providerRef } });
     return session;
@@ -64,7 +80,29 @@ export async function restoreStock(tx: Tx, orderId: string) {
   }
 }
 
-type Outcome = { ok: true } | { ok: false; reason: string };
+type Outcome = { ok: true; card?: StoredCardInfo } | { ok: false; reason: string };
+
+/** Ödeme sağlayıcısının sakladığı kartı kullanıcının kartlarına ekler (aynı kart tekrar eklenmez). */
+async function storeCard(tx: Tx, payment: Payment, card: StoredCardInfo) {
+  if (!payment.userId) return;
+  const count = await tx.savedCard.count({ where: { userId: payment.userId } });
+  const brand = card.association ? card.association.replace("_", " ").toLowerCase() : "kart";
+  await tx.savedCard.upsert({
+    where: { cardToken: card.cardToken },
+    update: {},
+    create: {
+      userId: payment.userId,
+      provider: payment.provider,
+      cardUserKey: card.cardUserKey,
+      cardToken: card.cardToken,
+      alias: `${brand.charAt(0).toLocaleUpperCase("tr-TR")}${brand.slice(1)} •••• ${card.last4}`,
+      association: card.association,
+      bankName: card.bankName,
+      last4: card.last4,
+      isDefault: count === 0,
+    },
+  });
+}
 
 /**
  * Ödemeyi sonuçlandırır. Aynı ödeme için birden çok kez çağrılabilir (sağlayıcı geri çağrısı tekrar edebilir);
@@ -107,6 +145,8 @@ export async function finalizePayment(paymentId: string, outcome: Outcome) {
       }
     }
 
+    if (outcome.ok && outcome.card && payment.saveCard) await storeCard(tx, payment, outcome.card);
+
     if (payment.purpose === "WALLET_TOPUP" && outcome.ok && payment.userId) {
       const user = await tx.user.update({
         where: { id: payment.userId },
@@ -136,9 +176,26 @@ export async function finalizePayment(paymentId: string, outcome: Outcome) {
       publishOrder(o);
     }
   }
+  // Kart doğrulama ödemesi: kart kaydedildikten sonra tutar hemen iade edilir.
+  if (result.changed && outcome.ok && payment.purpose === "CARD_VERIFY" && payment.providerRef) {
+    try {
+      await paymentProvider().refund({ providerRef: payment.providerRef, amountCents: payment.amountCents });
+      await prisma.payment.update({ where: { id: payment.id }, data: { refundedCents: payment.amountCents } });
+    } catch (err) {
+      logger.error({ err, paymentId: payment.id }, "kart doğrulama iadesi başarısız");
+    }
+  }
+
   if (result.changed && payment.userId) {
     emitToUser(payment.userId, "payment:updated", serializePayment(payment));
-    if (outcome.ok) {
+    if (outcome.ok && payment.purpose === "CARD_VERIFY") {
+      await notify(payment.userId, {
+        type: "card_saved",
+        title: "Kartınız kaydedildi",
+        body: `Doğrulama için çekilen ${formatTL(payment.amountCents)} kartınıza iade edildi.`,
+        data: { paymentId: payment.id },
+      });
+    } else if (outcome.ok) {
       await notify(payment.userId, {
         type: payment.purpose === "ORDER" ? "order_paid" : "wallet_topup",
         title: payment.purpose === "ORDER" ? "Siparişiniz alındı" : "Bakiye yüklendi",

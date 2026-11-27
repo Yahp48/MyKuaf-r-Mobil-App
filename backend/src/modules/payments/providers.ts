@@ -11,6 +11,15 @@ export interface CheckoutSession {
   checkoutUrl: string;
 }
 
+/** Sağlayıcının sakladığı kartın bize dönen bilgileri (numara yok; yalnızca anahtarlar ve son 4 hane). */
+export interface StoredCardInfo {
+  cardUserKey: string;
+  cardToken: string;
+  last4: string;
+  association: string | null;
+  bankName: string | null;
+}
+
 export interface PaymentProviderAdapter {
   readonly name: "MOCK" | "IYZICO";
   createCheckout(input: {
@@ -18,8 +27,13 @@ export interface PaymentProviderAdapter {
     amountCents: number;
     description: string;
     buyer: { id: string; name: string; email: string; phone: string | null };
+    /** Kayıtlı kartla ödeme: sağlayıcı sayfası bu kartla açılır (3D Secure yine yapılır). */
+    savedCard?: { cardUserKey: string; cardToken: string };
+    /** Kullanıcı kartını kaydetmek istedi: sağlayıcı kartı saklar ve anahtarını döner. */
+    registerCard: boolean;
   }): Promise<CheckoutSession>;
   refund(input: { providerRef: string; amountCents: number }): Promise<void>;
+  deleteCard(input: { cardUserKey: string; cardToken: string }): Promise<void>;
 }
 
 /** Yalnızca geliştirme/test: gerçek para hareketi olmadan ödeme akışını uçtan uca çalıştırır. */
@@ -32,6 +46,8 @@ class MockProvider implements PaymentProviderAdapter {
   }
 
   async refund(): Promise<void> {}
+
+  async deleteCard(): Promise<void> {}
 }
 
 /**
@@ -47,6 +63,10 @@ class IyzicoProvider implements PaymentProviderAdapter {
 
   async refund(): Promise<void> {
     throw new AppError(503, "PAYMENT_PROVIDER_NOT_CONFIGURED", "İade işlemi şu anda yapılamıyor");
+  }
+
+  async deleteCard(): Promise<void> {
+    throw new AppError(503, "PAYMENT_PROVIDER_NOT_CONFIGURED", "Kart işlemi şu anda yapılamıyor");
   }
 }
 
