@@ -47,6 +47,7 @@ export interface SalonProfile {
   photos: string[];
   kind: "WOMEN" | "BEAUTY";
   whatsapp: string | null;
+  firstVisitDiscountPercent: number | null;
   isActive: boolean;
   slotIntervalMinutes: number;
   bookingLeadMinutes: number;
@@ -94,6 +95,8 @@ export interface Staff {
   name: string;
   title: string | null;
   avatarUrl: string | null;
+  specialties: string[];
+  bio: string | null;
   isActive: boolean;
   sortOrder: number;
   monthCompleted?: number;
@@ -118,6 +121,17 @@ export interface Service {
   } | null;
   /** Fiyat artışından sonra indirim başlatılabilecek ilk gün (YYYY-AA-GG); kısıt yoksa null */
   discountAllowedFrom: string | null;
+}
+
+export interface ServicePackage {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  listPrice: number;
+  isActive: boolean;
+  sortOrder: number;
+  services: { id: string; name: string; price: number }[];
 }
 
 export type OrderStatus = "PENDING_PAYMENT" | "PAID" | "PREPARING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "REFUNDED";

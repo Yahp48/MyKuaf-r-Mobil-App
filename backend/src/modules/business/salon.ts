@@ -434,6 +434,8 @@ const staffSchema = z.object({
   name: zName,
   title: z.string().trim().max(60).optional().nullable(),
   avatarUrl: z.string().url().max(500).optional().nullable(),
+  specialties: z.array(z.string().trim().min(2).max(30)).max(8, "En fazla 8 uzmanlık").optional(),
+  bio: z.string().trim().max(300).optional().nullable(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0).max(999).optional(),
 });
@@ -443,6 +445,8 @@ const serializeStaff = (s: {
   name: string;
   title: string | null;
   avatarUrl: string | null;
+  specialties: string[];
+  bio: string | null;
   isActive: boolean;
   sortOrder: number;
 }) => ({
@@ -450,6 +454,8 @@ const serializeStaff = (s: {
   name: s.name,
   title: s.title,
   avatarUrl: s.avatarUrl,
+  specialties: s.specialties,
+  bio: s.bio,
   isActive: s.isActive,
   sortOrder: s.sortOrder,
 });
@@ -789,6 +795,108 @@ salonPanelRouter.delete("/services/:id", async (req, res) => {
   res.json({ deleted: !used, deactivated: !!used });
 });
 
+// ───────────── Paketler ─────────────
+
+const packageSchema = z.object({
+  name: z.string().trim().min(2, "Paket adı gerekli").max(80),
+  description: z.string().trim().max(300).optional().nullable(),
+  price: z.number().min(0).max(100_000).multipleOf(0.01),
+  serviceIds: z.array(zId).min(2, "Paket en az 2 hizmetten oluşmalı").max(10),
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).max(999).optional(),
+});
+
+const packageInclude = { items: { include: { service: true } } } as const;
+
+const serializePanelPackage = (p: Prisma.ServicePackageGetPayload<{ include: typeof packageInclude }>) => {
+  const list = p.items.reduce((sum, i) => sum + i.service.priceCents, 0);
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    price: toTL(p.priceCents),
+    listPrice: toTL(list),
+    isActive: p.isActive,
+    sortOrder: p.sortOrder,
+    services: p.items.map((i) => ({ id: i.service.id, name: i.service.name, price: toTL(i.service.priceCents) })),
+  };
+};
+
+/** Paket fiyatı hizmetlerin toplamından yüksek olamaz (tasarruf gerçek liste fiyatına göre gösterilir). */
+async function validatePackage(salonId: string, serviceIds: string[], priceCents: number) {
+  const unique = [...new Set(serviceIds)];
+  const services = await prisma.service.findMany({ where: { id: { in: unique }, salonId, isActive: true } });
+  if (services.length !== unique.length) {
+    throw new AppError(400, "INVALID_SERVICES", "Pakete yalnızca salonunuzun aktif hizmetleri eklenebilir");
+  }
+  const list = services.reduce((sum, s) => sum + s.priceCents, 0);
+  if (priceCents > list) {
+    throw new AppError(400, "PACKAGE_PRICE", "Paket fiyatı, içindeki hizmetlerin toplam fiyatından yüksek olamaz");
+  }
+  return unique;
+}
+
+salonPanelRouter.get("/packages", async (req, res) => {
+  const salon = salonOf(req);
+  const rows = await prisma.servicePackage.findMany({
+    where: { salonId: salon.id },
+    include: packageInclude,
+    orderBy: [{ isActive: "desc" }, { sortOrder: "asc" }, { name: "asc" }],
+  });
+  res.json({ items: rows.map(serializePanelPackage) });
+});
+
+salonPanelRouter.post("/packages", async (req, res) => {
+  const salon = salonOf(req);
+  const { price, serviceIds, ...rest } = parse(packageSchema, req.body);
+  const ids = await validatePackage(salon.id, serviceIds, fromTL(price));
+  const pkg = await prisma.servicePackage.create({
+    data: {
+      ...rest,
+      salonId: salon.id,
+      priceCents: fromTL(price),
+      items: { create: ids.map((serviceId) => ({ serviceId })) },
+    },
+    include: packageInclude,
+  });
+  salonChanged(salon);
+  res.status(201).json({ package: serializePanelPackage(pkg) });
+});
+
+salonPanelRouter.patch("/packages/:id", async (req, res) => {
+  const salon = salonOf(req);
+  const id = parse(zId, req.params.id);
+  const body = parse(packageSchema.partial(), req.body);
+  const current = await prisma.servicePackage.findFirst({ where: { id, salonId: salon.id }, include: { items: true } });
+  if (!current) throw notFound("Paket bulunamadı");
+  const serviceIds = body.serviceIds ?? current.items.map((i) => i.serviceId);
+  const priceCents = body.price !== undefined ? fromTL(body.price) : current.priceCents;
+  const ids = await validatePackage(salon.id, serviceIds, priceCents);
+  const { price: _p, serviceIds: _s, ...rest } = body;
+  const pkg = await prisma.$transaction(async (tx) => {
+    if (body.serviceIds) {
+      await tx.servicePackageItem.deleteMany({ where: { packageId: id } });
+      await tx.servicePackageItem.createMany({ data: ids.map((serviceId) => ({ packageId: id, serviceId })) });
+    }
+    return tx.servicePackage.update({
+      where: { id },
+      data: { ...rest, priceCents },
+      include: packageInclude,
+    });
+  });
+  salonChanged(salon);
+  res.json({ package: serializePanelPackage(pkg) });
+});
+
+salonPanelRouter.delete("/packages/:id", async (req, res) => {
+  const salon = salonOf(req);
+  const id = parse(zId, req.params.id);
+  const deleted = await prisma.servicePackage.deleteMany({ where: { id, salonId: salon.id } });
+  if (!deleted.count) throw notFound("Paket bulunamadı");
+  salonChanged(salon);
+  res.status(204).end();
+});
+
 // ───────────── Çalışma saatleri ─────────────
 
 salonPanelRouter.get("/hours", async (req, res) => {
@@ -862,6 +970,7 @@ const profileSchema = z
     photos: z.array(z.string().url().max(500)).max(12, "En fazla 12 fotoğraf"),
     kind: z.enum(["WOMEN", "BEAUTY"]),
     whatsapp: zPhone.nullable(),
+    firstVisitDiscountPercent: z.number().int().min(5, "En az %5").max(50, "En fazla %50").nullable(),
     isActive: z.boolean(),
     slotIntervalMinutes: z.union([z.literal(10), z.literal(15), z.literal(20), z.literal(30), z.literal(60)]),
     bookingLeadMinutes: z

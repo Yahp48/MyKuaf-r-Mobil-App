@@ -8,7 +8,8 @@ import { AppError, conflict, notFound, unauthorized } from "../../lib/errors.ts"
 import { humanCode } from "../../lib/codes.ts";
 import { toTL } from "../../lib/money.ts";
 import { requireAuth, userId } from "../../middleware/auth.ts";
-import { ACTIVE_APPOINTMENT_STATUSES, computeAvailability, resolveServices, salonDay } from "../salons/availability.ts";
+import { ACTIVE_APPOINTMENT_STATUSES, computeAvailability, salonDay } from "../salons/availability.ts";
+import { priceBooking } from "../salons/pricing.ts";
 import { notify } from "../notifications/notify.ts";
 import { emitToBusiness, emitToUser } from "../../realtime/socket.ts";
 import type { Prisma } from "../../generated/prisma/client.ts";
@@ -43,6 +44,8 @@ function serialize(a: AppointmentRow) {
     date: local.toFormat("yyyy-MM-dd"),
     time: local.toFormat("HH:mm"),
     total: toTL(a.totalCents),
+    discount: toTL(a.discountCents),
+    isPackage: !!a.packageId,
     customerPhone: a.customerPhone,
     customerNote: a.customerNote,
     salon: { id: a.salon.id, name: a.salon.name, address: a.salon.address, phone: a.salon.phone },
@@ -65,7 +68,9 @@ const createSchema = z.object({
   salonId: zId,
   // Boş bırakılırsa o saatte müsait ilk personel atanır.
   staffId: zId.optional(),
-  serviceIds: z.array(zId).min(1, "En az bir hizmet seçin").max(10),
+  serviceIds: z.array(zId).max(10).default([]),
+  // Paketle randevu: hizmetler paketten gelir, fiyat paket fiyatıdır
+  packageId: zId.optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tarih YYYY-AA-GG biçiminde olmalı"),
   time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Saat SS:DD biçiminde olmalı"),
   phone: zPhone.optional(),
@@ -86,7 +91,18 @@ appointmentsRouter.post("/", async (req, res) => {
   const phone = body.phone ?? user.phone;
   if (!phone) throw new AppError(400, "PHONE_REQUIRED", "Randevu için telefon numarası gerekli");
 
-  const { services, durationMinutes, totalCents } = await resolveServices(salon.id, body.serviceIds, body.date);
+  if (!body.packageId && body.serviceIds.length === 0) {
+    throw new AppError(400, "VALIDATION_ERROR", "En az bir hizmet seçin");
+  }
+  const priced = await priceBooking({
+    salonId: salon.id,
+    serviceIds: body.serviceIds,
+    packageId: body.packageId,
+    day: body.date,
+    userId: uid,
+    firstVisitDiscountPercent: salon.firstVisitDiscountPercent,
+  });
+  const { services, durationMinutes, totalCents } = priced;
   const availability = await computeAvailability({ salon, date: body.date, durationMinutes, staffId: body.staffId });
   const staffId = availability.find((s) => s.slots.includes(body.time))?.staffId;
   if (!staffId) throw conflict("SLOT_UNAVAILABLE", "Seçtiğiniz saat artık müsait değil, lütfen başka bir saat seçin");
@@ -107,6 +123,8 @@ appointmentsRouter.post("/", async (req, res) => {
         endsAt: endsAt.toJSDate(),
         status: salon.autoConfirm ? "CONFIRMED" : "PENDING",
         totalCents,
+        discountCents: priced.discountCents,
+        packageId: priced.packageId,
         customerName: user.name,
         customerPhone: phone,
         customerNote: body.note,

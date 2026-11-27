@@ -13,6 +13,7 @@ import {
   serializeService,
   serializeStaff,
   serializeWorkingHours,
+  serializePackage,
 } from "./serialize.ts";
 import { SUMMARY_SERVICE_SELECT, publicDiscount, todayIn } from "./discount.ts";
 import { toTL } from "../../lib/money.ts";
@@ -236,6 +237,11 @@ salonsRouter.get("/:id", optionalAuth, async (req, res) => {
       workingHours: true,
       staff: { where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
       services: { where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+      packages: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        include: { items: { include: { service: true } } },
+      },
     },
   });
   if (!salon) throw notFound("Salon bulunamadı");
@@ -250,6 +256,8 @@ salonsRouter.get("/:id", optionalAuth, async (req, res) => {
       description: salon.description,
       photos: salon.photos.length ? salon.photos : salon.coverImageUrl ? [salon.coverImageUrl] : [],
       whatsapp: salon.whatsapp,
+      firstVisitDiscountPercent: salon.isListing ? null : salon.firstVisitDiscountPercent,
+      packages: salon.packages.map(serializePackage).filter((p) => p.services.length >= 2),
       workingHours: serializeWorkingHours(salon.workingHours),
       staff: salon.staff.map(serializeStaff),
       services: salon.services.map((x) => serializeService(x, todayIn(salon.timezone))),

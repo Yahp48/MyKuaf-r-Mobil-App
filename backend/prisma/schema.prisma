@@ -28,29 +28,36 @@ model User {
   role               Role      @default(CUSTOMER)
   walletBalanceCents Int       @default(0)
   marketingOptIn     Boolean   @default(false)
+  // Sadakat puanı ve arkadaş daveti
+  loyaltyPoints      Int       @default(0)
+  referralCode       String?   @unique
+  referredById       String?   @db.Uuid
+  referralRewardedAt DateTime? @db.Timestamptz(3)
   // İşletme hesabı ise bağlı olduğu işletme (panel girişi)
   businessId         String?   @db.Uuid
   deletedAt          DateTime? @db.Timestamptz(3)
   createdAt          DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt          DateTime  @updatedAt @db.Timestamptz(3)
 
-  refreshTokens      RefreshToken[]
-  passwordResets     PasswordReset[]
-  appointments       Appointment[]
-  salonReviews       SalonReview[]
-  productReviews     ProductReview[]
-  cartItems          CartItem[]
-  favoriteProducts   FavoriteProduct[]
-  favoriteSalons     FavoriteSalon[]
-  addresses          Address[]
-  orders             Order[]
-  walletTransactions WalletTransaction[]
-  payments           Payment[]
-  notifications      Notification[]
-  pushTokens         PushToken[]
-  supportTickets     SupportTicket[]
-  business           Business?           @relation(fields: [businessId], references: [id], onDelete: SetNull)
-  savedCards         SavedCard[]
+  refreshTokens       RefreshToken[]
+  passwordResets      PasswordReset[]
+  appointments        Appointment[]
+  salonReviews        SalonReview[]
+  productReviews      ProductReview[]
+  cartItems           CartItem[]
+  favoriteProducts    FavoriteProduct[]
+  favoriteSalons      FavoriteSalon[]
+  addresses           Address[]
+  orders              Order[]
+  walletTransactions  WalletTransaction[]
+  payments            Payment[]
+  notifications       Notification[]
+  pushTokens          PushToken[]
+  supportTickets      SupportTicket[]
+  business            Business?            @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  savedCards          SavedCard[]
+  loyaltyTransactions LoyaltyTransaction[]
+  waitlistEntries     WaitlistEntry[]
 
   @@index([businessId])
 }
@@ -65,6 +72,14 @@ enum BusinessType {
 enum BusinessStatus {
   ACTIVE
   SUSPENDED
+}
+
+/// İşletme doğrulaması: vergi levhası yönetici tarafından kontrol edilir.
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
 }
 
 model Business {
@@ -96,6 +111,12 @@ model Business {
   logoUrl                    String?
   storeDescription           String?
 
+  // Doğrulama (vergi levhası yönetici tarafından kontrol edilir; doğrulanınca uygulamada rozet görünür)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  taxCertificateUrl  String?
+  verificationNote   String?
+  verifiedAt         DateTime?          @db.Timestamptz(3)
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -104,6 +125,7 @@ model Business {
   products      Product[]
   orders        Order[]
   ledgerEntries LedgerEntry[]
+  salonClaims   SalonClaim[]
 }
 
 enum LedgerType {
@@ -168,42 +190,44 @@ enum SalonKind {
 }
 
 model Salon {
-  id                      String    @id @default(uuid(7)) @db.Uuid
-  businessId              String?   @unique @db.Uuid
+  id                        String    @id @default(uuid(7)) @db.Uuid
+  businessId                String?   @unique @db.Uuid
   // Rehber kaydı: herkese açık kaynaktan alınmış gerçek salon; işletme platforma katılmadı, online randevu yok.
-  isListing               Boolean   @default(false)
+  isListing                 Boolean   @default(false)
+  // İlk kez gelen müşteriye salonun kendi verdiği indirim (yüzde); null = yok
+  firstVisitDiscountPercent Int?
   // Rehber kaydının kaynağı (ör. "OpenStreetMap") ve kaynaktaki kimliği (ör. "node/123")
-  dataSource              String?
-  sourceRef               String?
-  slug                    String    @unique
-  name                    String
-  description             String?
-  address                 String
-  city                    String
-  district                String?
-  phone                   String?
-  website                 String?
-  latitude                Float
-  longitude               Float
-  timezone                String    @default("Europe/Istanbul")
-  coverImageUrl           String?
+  dataSource                String?
+  sourceRef                 String?
+  slug                      String    @unique
+  name                      String
+  description               String?
+  address                   String
+  city                      String
+  district                  String?
+  phone                     String?
+  website                   String?
+  latitude                  Float
+  longitude                 Float
+  timezone                  String    @default("Europe/Istanbul")
+  coverImageUrl             String?
   // Salon fotoğrafları (ilki vitrin); işletme panelinden yüklenir
-  photos                  String[]  @default([])
-  kind                    SalonKind @default(WOMEN)
-  whatsapp                String?
-  slotIntervalMinutes     Int       @default(30)
+  photos                    String[]  @default([])
+  kind                      SalonKind @default(WOMEN)
+  whatsapp                  String?
+  slotIntervalMinutes       Int       @default(30)
   // Randevu başlangıcına en az bu kadar dakika kala alınabilir.
-  bookingLeadMinutes      Int       @default(60)
+  bookingLeadMinutes        Int       @default(60)
   // En fazla kaç gün ilerisi için randevu alınabilir.
-  bookingHorizonDays      Int       @default(60)
+  bookingHorizonDays        Int       @default(60)
   // Randevuya bu kadar saatten az kaldıysa müşteri iptal edemez.
-  cancellationWindowHours Int       @default(2)
-  autoConfirm             Boolean   @default(true)
-  ratingAvg               Float     @default(0)
-  ratingCount             Int       @default(0)
-  isActive                Boolean   @default(true)
-  createdAt               DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt               DateTime  @updatedAt @db.Timestamptz(3)
+  cancellationWindowHours   Int       @default(2)
+  autoConfirm               Boolean   @default(true)
+  ratingAvg                 Float     @default(0)
+  ratingCount               Int       @default(0)
+  isActive                  Boolean   @default(true)
+  createdAt                 DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime  @updatedAt @db.Timestamptz(3)
 
   business     Business?       @relation(fields: [businessId], references: [id], onDelete: SetNull)
   workingHours WorkingHours[]
@@ -212,6 +236,10 @@ model Salon {
   appointments Appointment[]
   reviews      SalonReview[]
   favoritedBy  FavoriteSalon[]
+
+  packages ServicePackage[]
+  waitlist WaitlistEntry[]
+  claims   SalonClaim[]
 
   @@index([city])
 }
@@ -232,14 +260,17 @@ model WorkingHours {
 }
 
 model Staff {
-  id        String   @id @default(uuid(7)) @db.Uuid
-  salonId   String   @db.Uuid
-  name      String
-  title     String?
-  avatarUrl String?
-  isActive  Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  id          String   @id @default(uuid(7)) @db.Uuid
+  salonId     String   @db.Uuid
+  name        String
+  title       String?
+  avatarUrl   String?
+  // Uzmanlık etiketleri (ör. "Balyaj", "Gelin saçı") ve kısa tanıtım
+  specialties String[] @default([])
+  bio         String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
 
   salon        Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
   timeOff      StaffTimeOff[]
@@ -280,6 +311,7 @@ model Service {
 
   salon               Salon                @relation(fields: [salonId], references: [id], onDelete: Cascade)
   appointmentServices AppointmentService[]
+  packageItems        ServicePackageItem[]
 
   @@index([salonId])
 }
@@ -298,27 +330,34 @@ enum AppointmentStatus {
 }
 
 model Appointment {
-  id            String            @id @default(uuid(7)) @db.Uuid
-  code          String            @unique
-  userId        String?           @db.Uuid
-  salonId       String            @db.Uuid
-  staffId       String            @db.Uuid
-  startsAt      DateTime          @db.Timestamptz(3)
-  endsAt        DateTime          @db.Timestamptz(3)
-  status        AppointmentStatus @default(PENDING)
+  id               String            @id @default(uuid(7)) @db.Uuid
+  code             String            @unique
+  userId           String?           @db.Uuid
+  salonId          String            @db.Uuid
+  staffId          String            @db.Uuid
+  startsAt         DateTime          @db.Timestamptz(3)
+  endsAt           DateTime          @db.Timestamptz(3)
+  status           AppointmentStatus @default(PENDING)
   // APP: müşteri uygulamadan aldı, MANUAL: salon telefonla/kapıda girdi
-  source        AppointmentSource @default(APP)
-  totalCents    Int
-  customerName  String
-  customerPhone String?
-  customerNote  String?
+  source           AppointmentSource @default(APP)
+  totalCents       Int
+  // Paketle alınan randevu
+  packageId        String?           @db.Uuid
+  // İlk ziyaret indirimi gibi randevu düzeyindeki indirim (kuruş)
+  discountCents    Int               @default(0)
+  // Hatırlatma bildirimleri gönderildi mi
+  reminder24SentAt DateTime?         @db.Timestamptz(3)
+  reminder2SentAt  DateTime?         @db.Timestamptz(3)
+  customerName     String
+  customerPhone    String?
+  customerNote     String?
   // Yalnızca salonun gördüğü not
-  businessNote  String?
-  completedAt   DateTime?         @db.Timestamptz(3)
-  cancelledAt   DateTime?         @db.Timestamptz(3)
-  cancelReason  String?
-  createdAt     DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime          @updatedAt @db.Timestamptz(3)
+  businessNote     String?
+  completedAt      DateTime?         @db.Timestamptz(3)
+  cancelledAt      DateTime?         @db.Timestamptz(3)
+  cancelReason     String?
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
 
   // Hesap silinse de randevu kaydı (anonimleştirilmiş) korunur.
   user     User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -357,6 +396,11 @@ model SalonReview {
   appointmentId String   @unique @db.Uuid
   rating        Int
   comment       String?
+  // Müşterinin eklediği fotoğraflar (en fazla 4; ör. önce/sonra)
+  photos        String[] @default([])
+  // Yönetici moderasyonu: gizlenen yorum listelerde ve puanda yer almaz
+  isHidden      Boolean  @default(false)
+  hiddenReason  String?
   createdAt     DateTime @default(now()) @db.Timestamptz(3)
 
   salon       Salon       @relation(fields: [salonId], references: [id], onDelete: Cascade)
@@ -418,6 +462,8 @@ model ProductReview {
   userId    String?  @db.Uuid
   rating    Int
   comment   String?
+  // Yönetici moderasyonu
+  isHidden  Boolean  @default(false)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -556,6 +602,8 @@ enum WalletTransactionType {
   TOPUP
   PAYMENT
   REFUND
+  // Sadakat puanının bakiyeye dönüştürülmesi
+  LOYALTY
 }
 
 model WalletTransaction {
@@ -697,10 +745,104 @@ model SupportTicket {
   message   String
   rating    Int?
   status    TicketStatus @default(OPEN)
+  reply     String?
+  repliedAt DateTime?    @db.Timestamptz(3)
   createdAt DateTime     @default(now()) @db.Timestamptz(3)
   updatedAt DateTime     @updatedAt @db.Timestamptz(3)
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
+}
+
+// ───────────────────────────── Paketler, bekleme listesi, puan, sahiplenme ─────────────────────────────
+
+/// Birden çok hizmeti tek fiyatla sunan paket (ör. "Gelin paketi").
+model ServicePackage {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  salonId     String   @db.Uuid
+  name        String
+  description String?
+  priceCents  Int
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  salon Salon                @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  items ServicePackageItem[]
+
+  @@index([salonId])
+}
+
+model ServicePackageItem {
+  packageId String @db.Uuid
+  serviceId String @db.Uuid
+
+  package ServicePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  service Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([packageId, serviceId])
+}
+
+/// "Boşalırsa haber ver": seçilen günde randevu iptal olunca kullanıcıya bildirim gider.
+model WaitlistEntry {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  userId     String    @db.Uuid
+  salonId    String    @db.Uuid
+  date       DateTime  @db.Date
+  serviceIds String[]
+  staffId    String?   @db.Uuid
+  notifiedAt DateTime? @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  salon Salon @relation(fields: [salonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, salonId, date])
+  @@index([salonId, date])
+}
+
+enum LoyaltyReason {
+  APPOINTMENT
+  ORDER
+  REFERRAL
+  REDEEM
+  ADJUST
+}
+
+model LoyaltyTransaction {
+  id          String        @id @default(uuid(7)) @db.Uuid
+  userId      String        @db.Uuid
+  points      Int
+  reason      LoyaltyReason
+  description String
+  // Aynı randevu/sipariş için iki kez puan verilmez
+  refKey      String?       @unique
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Rehberdeki gerçek salonun sahibi tarafından sahiplenilmesi (yönetici onaylar).
+model SalonClaim {
+  id         String      @id @default(uuid(7)) @db.Uuid
+  listingId  String      @db.Uuid
+  businessId String      @db.Uuid
+  status     ClaimStatus @default(PENDING)
+  note       String?
+  decidedAt  DateTime?   @db.Timestamptz(3)
+  createdAt  DateTime    @default(now()) @db.Timestamptz(3)
+
+  listing  Salon    @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
 }

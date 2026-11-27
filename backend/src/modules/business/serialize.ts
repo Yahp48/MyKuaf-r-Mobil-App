@@ -48,6 +48,7 @@ export function serializeSalonProfile(s: Salon) {
     photos: s.photos,
     kind: s.kind,
     whatsapp: s.whatsapp,
+    firstVisitDiscountPercent: s.firstVisitDiscountPercent,
     isActive: s.isActive,
     slotIntervalMinutes: s.slotIntervalMinutes,
     bookingLeadMinutes: s.bookingLeadMinutes,

@@ -49,6 +49,8 @@ export default function CalendarScreen({ navigation, route }) {
   const [salon, setSalon] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [serviceIds, setServiceIds] = useState(route.params?.serviceIds ?? []);
+  // Paketle randevu: hizmetler paketten gelir, fiyat paket fiyatıdır
+  const [packageId, setPackageId] = useState(route.params?.packageId ?? null);
   const [staffId, setStaffId] = useState(route.params?.staffId ?? null); // null = fark etmez
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -99,10 +101,25 @@ export default function CalendarScreen({ navigation, route }) {
   );
   // İndirim randevu gününe göre uygulanır; gün seçilmediyse bugünün fiyatı gösterilir.
   const priceDay = date || undefined;
-  const total = selectedServices.reduce((sum, s) => sum + priceOn(s, priceDay), 0);
+  const selectedPackage = (salon?.packages ?? []).find((p) => p.id === packageId) ?? null;
+  const total = selectedPackage
+    ? selectedPackage.price
+    : selectedServices.reduce((sum, s) => sum + priceOn(s, priceDay), 0);
   const duration = selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
 
-  const toggleService = (id) => setServiceIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  const toggleService = (id) => {
+    setPackageId(null);
+    setServiceIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  };
+  const choosePackage = (p) => {
+    if (packageId === p.id) {
+      setPackageId(null);
+      setServiceIds([]);
+    } else {
+      setPackageId(p.id);
+      setServiceIds(p.services.map((s) => s.id));
+    }
+  };
 
   const { minDate, maxDate } = useMemo(() => {
     const now = new Date();
@@ -127,6 +144,7 @@ export default function CalendarScreen({ navigation, route }) {
         salonId,
         ...(staffId ? { staffId } : {}),
         serviceIds,
+        ...(packageId ? { packageId } : {}),
         date,
         time,
         phone,
@@ -134,7 +152,7 @@ export default function CalendarScreen({ navigation, route }) {
       });
       Alert.alert(
         appointment.status === "CONFIRMED" ? "Randevunuz onaylandı 🎉" : "Randevu talebiniz alındı",
-        `${appointment.salon.name}\n${appointment.date} · ${appointment.time}\nPersonel: ${appointment.staff.name}\nRandevu kodu: ${appointment.code}`,
+        `${appointment.salon.name}\n${appointment.date} · ${appointment.time}\nPersonel: ${appointment.staff.name}\nTutar: ${formatTL(appointment.total)}${appointment.discount > 0 ? ` (ilk ziyaret indirimi ${formatTL(appointment.discount)})` : ""}\nRandevu kodu: ${appointment.code}`,
         [{ text: "Randevularım", onPress: () => navigation.reset({ index: 0, routes: [{ name: "Appointments" }] }) }],
       );
     } catch (e) {
@@ -169,6 +187,37 @@ export default function CalendarScreen({ navigation, route }) {
       <AppHeader title={salon.name} back />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.section}>1. Hizmet seçin</Text>
+        {salon.packages?.length ? (
+          <>
+            <Text style={styles.subSection}>Paketler</Text>
+            {salon.packages.map((p) => {
+              const on = packageId === p.id;
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  style={[styles.service, on && styles.serviceOn]}
+                  onPress={() => choosePackage(p)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.serviceName, on && { color: "#fff" }]}>{p.name}</Text>
+                    <Text style={[styles.serviceMeta, on && { color: "#FBD5DF" }]}>
+                      {p.services.map((x) => x.name).join(" + ")} · {p.durationMinutes} dk
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    {p.saving > 0 ? (
+                      <Text style={[styles.oldPrice, on && { color: "#FBD5DF" }]}>{formatTL(p.listPrice)}</Text>
+                    ) : null}
+                    <Text style={[styles.servicePrice, on && { color: "#fff" }]}>{formatTL(p.price)}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+            <Text style={styles.subSection}>Tek tek hizmetler</Text>
+          </>
+        ) : null}
         {salon.services.map((s) => {
           const on = serviceIds.includes(s.id);
           const deal = discountOn(s, priceDay);
@@ -279,7 +328,14 @@ export default function CalendarScreen({ navigation, route }) {
           </Text>
           <Text style={styles.summaryRow}>
             Toplam tutar: <Text style={styles.bold}>{formatTL(total)}</Text>
+            {selectedPackage ? " (paket)" : ""}
           </Text>
+          {salon.firstVisitDiscountPercent ? (
+            <Text style={[styles.hint, { color: colors.primary, fontWeight: "700" }]}>
+              Bu salondaki ilk randevunuzsa %{salon.firstVisitDiscountPercent} ilk ziyaret indirimi uygulanır; kesin
+              tutar onayda gösterilir.
+            </Text>
+          ) : null}
           <Text style={styles.hint}>
             Ödeme salonda yapılır. Randevunuzu başlangıcından {salon.booking.cancellationWindowHours} saat öncesine
             kadar uygulamadan iptal edebilirsiniz.
@@ -312,6 +368,7 @@ function StaffChip({ label, subtitle, image, selected, onPress }) {
 }
 
 const styles = StyleSheet.create({
+  subSection: { fontSize: 13, fontWeight: "800", color: colors.muted, marginTop: 4, marginBottom: 8 },
   oldPrice: { fontSize: 12.5, color: colors.muted, textDecorationLine: "line-through" },
   dealNote: { fontSize: 12, color: colors.primary, fontWeight: "600", marginTop: 2 },
   dealBadge: {

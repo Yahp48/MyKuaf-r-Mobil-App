@@ -4,7 +4,18 @@ import { Plus, Trash } from "@phosphor-icons/react";
 import { api, ApiError, fieldErrors } from "../../lib/api";
 import { usePageMeta } from "../../lib/seo";
 import { dateTime, moneyShort } from "../../lib/format";
-import { Button, Dialog, Empty, ErrorBox, Input, Loading, PageHead, Stamp, Switch } from "../../components/ui";
+import {
+  Button,
+  Dialog,
+  Empty,
+  ErrorBox,
+  Input,
+  Loading,
+  PageHead,
+  Stamp,
+  Switch,
+  Textarea,
+} from "../../components/ui";
 import { useToast } from "../../components/Toast";
 import { ImageUploader } from "../../components/ImageUploader";
 import type { Staff as StaffT } from "../../lib/types";
@@ -134,6 +145,8 @@ function StaffDialog({ value, onClose }: { value: StaffT | "new" | null; onClose
   const [title, setTitle] = useState("");
   const [active, setActive] = useState(true);
   const [photo, setPhoto] = useState<string[]>([]);
+  const [tags, setTags] = useState("");
+  const [bio, setBio] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!value) return;
@@ -141,12 +154,29 @@ function StaffDialog({ value, onClose }: { value: StaffT | "new" | null; onClose
     setTitle(isNew ? "" : (value.title ?? ""));
     setActive(isNew ? true : value.isActive);
     setPhoto(!isNew && value.avatarUrl ? [value.avatarUrl] : []);
+    setTags(isNew ? "" : value.specialties.join(", "));
+    setBio(isNew ? "" : (value.bio ?? ""));
     setErrors({});
   }, [value, isNew]);
 
   const save = useMutation({
     mutationFn: () => {
-      const body = { name: name.trim(), title: title.trim() || null, isActive: active, avatarUrl: photo[0] ?? null };
+      const specialties = [
+        ...new Set(
+          tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter((t) => t.length >= 2),
+        ),
+      ].slice(0, 8);
+      const body = {
+        name: name.trim(),
+        title: title.trim() || null,
+        isActive: active,
+        avatarUrl: photo[0] ?? null,
+        specialties,
+        bio: bio.trim() || null,
+      };
       return isNew
         ? api.post("/business/salon/staff", body)
         : api.patch(`/business/salon/staff/${(value as StaffT).id}`, body);
@@ -187,6 +217,20 @@ function StaffDialog({ value, onClose }: { value: StaffT | "new" | null; onClose
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Kuaför, renk uzmanı…"
+      />
+      <Input
+        label="Uzmanlıklar (isteğe bağlı)"
+        value={tags}
+        onChange={(e) => setTags(e.target.value)}
+        placeholder="Balyaj, Gelin saçı, Keratin"
+        hint="Virgülle ayırın, en fazla 8. Uygulamada personel kartında etiket olarak görünür."
+      />
+      <Textarea
+        label="Kısa tanıtım (isteğe bağlı)"
+        rows={2}
+        value={bio}
+        onChange={(e) => setBio(e.target.value)}
+        maxLength={300}
       />
       <div className="field">
         <span className="label">Profil fotoğrafı (isteğe bağlı)</span>

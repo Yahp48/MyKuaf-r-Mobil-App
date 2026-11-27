@@ -17,8 +17,8 @@ import {
   Textarea,
 } from "../../components/ui";
 import { useToast } from "../../components/Toast";
-import type { Service } from "../../lib/types";
-import { useServices } from "./queries";
+import type { Service, ServicePackage } from "../../lib/types";
+import { usePackages, useServices } from "./queries";
 
 const DURATIONS = [15, 20, 30, 45, 60, 75, 90, 120, 150, 180, 240];
 const PERCENTS = [10, 15, 20, 25, 30, 40, 50];
@@ -158,6 +158,7 @@ export default function Services() {
         randevulara uygulanır. Tüketiciyi yanıltmamak için son 30 günde fiyatı artırılan hizmette indirim başlatılamaz;
         indirim sürerken fiyat artırılamaz.
       </p>
+      <PackagesSection services={q.data ?? []} />
       <ServiceDialog value={edit} onClose={() => setEdit(null)} />
       <CampaignDialog open={campaign} services={q.data ?? []} onClose={() => setCampaign(false)} />
     </>
@@ -455,6 +456,202 @@ function CampaignDialog({ open, services, onClose }: { open: boolean; services: 
         to={to}
         setTo={setTo}
       />
+    </Dialog>
+  );
+}
+
+/** Paketler: birden çok hizmet tek fiyatla (ör. "Gelin paketi"). Fiyat, hizmetlerin toplamını aşamaz. */
+function PackagesSection({ services }: { services: Service[] }) {
+  const q = usePackages();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [edit, setEdit] = useState<ServicePackage | "new" | null>(null);
+  const remove = useMutation({
+    mutationFn: (p: ServicePackage) => api.del(`/business/salon/packages/${p.id}`),
+    onSuccess: () => {
+      toast("Paket silindi");
+      void qc.invalidateQueries({ queryKey: ["salon"] });
+    },
+    onError: (e) => toast(e instanceof ApiError ? e.message : "Silinemedi", "bad"),
+  });
+
+  return (
+    <section style={{ marginTop: 40 }}>
+      <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 21 }}>
+            Paketler
+          </h2>
+          <p className="small muted" style={{ margin: "4px 0 0" }}>
+            Birden çok hizmeti avantajlı tek fiyatla sunun. Müşteri, liste fiyatı ve tasarrufu birlikte görür.
+          </p>
+        </div>
+        <Button onClick={() => setEdit("new")} disabled={services.filter((s) => s.isActive).length < 2}>
+          <Plus size={16} /> Paket ekle
+        </Button>
+      </div>
+      {q.data?.length ? (
+        <div className="table-wrap" style={{ marginTop: 16 }}>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Paket</th>
+                <th>Hizmetler</th>
+                <th className="right">Fiyat</th>
+                <th>Durum</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {q.data.map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    <div style={{ fontWeight: 500 }}>{p.name}</div>
+                    {p.description ? <div className="small faint">{p.description}</div> : null}
+                  </td>
+                  <td className="small">{p.services.map((s) => s.name).join(" + ")}</td>
+                  <td className="right mono" style={{ whiteSpace: "nowrap" }}>
+                    {p.price < p.listPrice ? <span className="price-old">{money(p.listPrice)}</span> : null}
+                    {money(p.price)}
+                  </td>
+                  <td>{p.isActive ? <Stamp tone="ok">Satışta</Stamp> : <Stamp tone="faint">Pasif</Stamp>}</td>
+                  <td className="right" style={{ whiteSpace: "nowrap" }}>
+                    <Button size="sm" variant="quiet" onClick={() => setEdit(p)}>
+                      Düzenle
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="quiet"
+                      aria-label={`${p.name} paketini sil`}
+                      onClick={() => confirm(`"${p.name}" silinsin mi?`) && remove.mutate(p)}
+                    >
+                      <Trash size={16} />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="small faint" style={{ marginTop: 16 }}>
+          Henüz paket yok.
+        </p>
+      )}
+      <PackageDialog value={edit} services={services} onClose={() => setEdit(null)} />
+    </section>
+  );
+}
+
+function PackageDialog({
+  value,
+  services,
+  onClose,
+}: {
+  value: ServicePackage | "new" | null;
+  services: Service[];
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const isNew = value === "new";
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
+  const [price, setPrice] = useState("");
+  const [active, setActive] = useState(true);
+
+  useEffect(() => {
+    if (!value) return;
+    const p = isNew ? null : value;
+    setName(p?.name ?? "");
+    setDescription(p?.description ?? "");
+    setPicked(p?.services.map((s) => s.id) ?? []);
+    setPrice(p ? String(p.price).replace(".", ",") : "");
+    setActive(p?.isActive ?? true);
+  }, [value, isNew]);
+
+  const usable = services.filter((s) => s.isActive);
+  const list = usable.filter((s) => picked.includes(s.id)).reduce((sum, s) => sum + s.price, 0);
+  const priceNum = Number(price.replace(",", "."));
+  const valid = name.trim().length >= 2 && picked.length >= 2 && price !== "" && priceNum >= 0 && priceNum <= list;
+
+  const save = useMutation({
+    mutationFn: () => {
+      const body = {
+        name: name.trim(),
+        description: description.trim() || null,
+        price: priceNum,
+        serviceIds: picked,
+        isActive: active,
+      };
+      return isNew
+        ? api.post("/business/salon/packages", body)
+        : api.patch(`/business/salon/packages/${(value as ServicePackage).id}`, body);
+    },
+    onSuccess: () => {
+      toast(isNew ? "Paket eklendi" : "Kaydedildi");
+      void qc.invalidateQueries({ queryKey: ["salon"] });
+      onClose();
+    },
+    onError: (e) => toast(e instanceof ApiError ? e.message : "Kaydedilemedi", "bad"),
+  });
+
+  return (
+    <Dialog
+      open={!!value}
+      onClose={onClose}
+      title={isNew ? "Paket ekle" : "Paketi düzenle"}
+      wide
+      footer={
+        <>
+          <Button onClick={onClose}>Vazgeç</Button>
+          <Button variant="primary" loading={save.isPending} disabled={!valid} onClick={() => save.mutate()}>
+            Kaydet
+          </Button>
+        </>
+      }
+    >
+      <Input label="Paket adı" value={name} onChange={(e) => setName(e.target.value)} placeholder="Gelin paketi" />
+      <Textarea
+        label="Açıklama (isteğe bağlı)"
+        rows={2}
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        maxLength={300}
+      />
+      <div className="field">
+        <span className="label">Hizmetler (en az 2)</span>
+        <div className="rows">
+          {usable.map((s) => (
+            <label key={s.id} className="row" style={{ cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                aria-label={s.name}
+                checked={picked.includes(s.id)}
+                onChange={(e) => setPicked((p) => (e.target.checked ? [...p, s.id] : p.filter((x) => x !== s.id)))}
+              />
+              <span className="grow">{s.name}</span>
+              <span className="mono small">{money(s.price)}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      <Input
+        label="Paket fiyatı (TL)"
+        inputMode="decimal"
+        value={price}
+        onChange={(e) => setPrice(e.target.value.replace(/[^\d.,]/g, ""))}
+        className="input mono"
+        hint={
+          picked.length >= 2
+            ? priceNum <= list
+              ? `Hizmetlerin toplamı ${money(list)}; müşteri ${money(Math.max(0, list - (priceNum || 0)))} tasarruf eder.`
+              : `Paket fiyatı hizmetlerin toplamını (${money(list)}) aşamaz.`
+            : "Önce en az 2 hizmet seçin."
+        }
+      />
+      {!isNew ? <Switch checked={active} onChange={setActive} label="Uygulamada sunulsun" /> : null}
     </Dialog>
   );
 }

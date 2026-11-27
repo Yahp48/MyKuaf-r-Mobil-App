@@ -256,6 +256,12 @@ const SalonSheet = forwardRef(function SalonSheet(
         <Text style={{ color: statusInfo.color, fontWeight: "700" }}>{statusInfo.label}</Text>
         {statusInfo.detail ? <Text style={styles.muted}> · {statusInfo.detail}</Text> : null}
       </Text>
+      {bookable && detail?.firstVisitDiscountPercent ? (
+        <View style={styles.dealBanner}>
+          <Ionicons name="gift-outline" size={15} color={colors.primary} />
+          <Text style={styles.dealBannerText}>İlk randevunuza %{detail.firstVisitDiscountPercent} indirim</Text>
+        </View>
+      ) : null}
       {salon.discount ? (
         <TouchableOpacity
           style={styles.dealBanner}
@@ -498,6 +504,34 @@ const SalonSheet = forwardRef(function SalonSheet(
     loadingBlock
   ) : detail.services.length ? (
     <View style={styles.pad}>
+      {detail.packages?.length ? (
+        <>
+          <Text style={styles.subTitle}>Paketler</Text>
+          {detail.packages.map((p) => (
+            <TouchableOpacity
+              key={p.id}
+              style={styles.packageCard}
+              onPress={() => book({ packageId: p.id, serviceIds: p.services.map((x) => x.id) })}
+              accessibilityRole="button"
+              accessibilityLabel={`${p.name} paketi, ${tl0(p.price)}`}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.serviceName}>{p.name}</Text>
+                <Text style={styles.mutedSmall}>
+                  {p.services.map((x) => x.name).join(" + ")} · {p.durationMinutes} dk
+                </Text>
+                {p.description ? <Text style={styles.mutedSmall}>{p.description}</Text> : null}
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                {p.saving > 0 ? <Text style={styles.oldPrice}>{tl0(p.listPrice)}</Text> : null}
+                <Text style={[styles.servicePrice, { color: colors.primary }]}>{tl0(p.price)}</Text>
+                {p.saving > 0 ? <Text style={styles.saving}>{tl0(p.saving)} tasarruf</Text> : null}
+              </View>
+            </TouchableOpacity>
+          ))}
+          <Text style={[styles.subTitle, { marginTop: 18 }]}>Tek tek hizmetler</Text>
+        </>
+      ) : null}
       <Text style={styles.hint}>Almak istediğiniz hizmetleri seçin, ardından randevu saatini belirleyin.</Text>
       {detail.services.map((s) => (
         <ServiceRow
@@ -535,6 +569,20 @@ const SalonSheet = forwardRef(function SalonSheet(
           <View style={{ flex: 1 }}>
             <Text style={styles.staffName}>{st.name}</Text>
             {st.title ? <Text style={styles.mutedSmall}>{st.title}</Text> : null}
+            {st.specialties?.length ? (
+              <View style={styles.tagRow}>
+                {st.specialties.map((t) => (
+                  <Text key={t} style={styles.tag}>
+                    {t}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+            {st.bio ? (
+              <Text style={styles.mutedSmall} numberOfLines={2}>
+                {st.bio}
+              </Text>
+            ) : null}
           </View>
           <View style={styles.staffBook}>
             <Text style={styles.staffBookText}>Randevu</Text>
@@ -810,6 +858,30 @@ const styles = StyleSheet.create({
   dealBannerText: { fontSize: 13, fontWeight: "700", color: colors.primary },
   dealNote: { fontSize: 12.5, fontWeight: "600", color: colors.primary, marginTop: 2 },
   oldPrice: { fontSize: 12.5, color: colors.muted, textDecorationLine: "line-through" },
+  subTitle: { fontSize: 15, fontWeight: "800", color: colors.text, marginTop: 8, marginBottom: 6 },
+  packageCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.primarySoft,
+    backgroundColor: "#FFF8FA",
+    marginBottom: 8,
+  },
+  saving: { fontSize: 11.5, fontWeight: "800", color: colors.success, marginTop: 2 },
+  tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 5 },
+  tag: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: colors.primary,
+    backgroundColor: colors.primarySoft,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    overflow: "hidden",
+  },
   chips: { paddingHorizontal: 16, gap: 8, paddingBottom: 12 },
   chip: {
     flexDirection: "row",

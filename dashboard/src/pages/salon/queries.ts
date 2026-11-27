@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
-import type { Appointment, AppointmentStatus, Service, Staff } from "../../lib/types";
+import type { Appointment, AppointmentStatus, Service, ServicePackage, Staff } from "../../lib/types";
 import type { Tone } from "../../components/ui";
 
 // Tüm salon sorguları "salon" anahtarıyla başlar: canlı olay gelince hepsi birlikte tazelenir.
@@ -14,6 +14,12 @@ export const useServices = () =>
   useQuery({
     queryKey: ["salon", "services"],
     queryFn: () => api.get<{ items: Service[] }>("/business/salon/services").then((r) => r.items),
+  });
+
+export const usePackages = () =>
+  useQuery({
+    queryKey: ["salon", "packages"],
+    queryFn: () => api.get<{ items: ServicePackage[] }>("/business/salon/packages").then((r) => r.items),
   });
 
 export interface DayHours {

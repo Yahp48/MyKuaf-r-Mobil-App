@@ -88,6 +88,7 @@ function SalonProfileForm() {
     photos: s.photos?.length ? s.photos : s.coverImageUrl ? [s.coverImageUrl] : [],
     kind: s.kind ?? "WOMEN",
     whatsapp: s.whatsapp ?? "",
+    firstVisit: s.firstVisitDiscountPercent ? String(s.firstVisitDiscountPercent) : "",
   });
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
 
@@ -95,8 +96,10 @@ function SalonProfileForm() {
     e.preventDefault();
     if (f.whatsapp.trim() && !isMobile(f.whatsapp))
       return toast("WhatsApp numarası 05XX XXX XX XX biçiminde olmalı", "bad");
+    const { firstVisit, ...rest } = f;
     void save({
-      ...f,
+      ...rest,
+      firstVisitDiscountPercent: firstVisit ? Number(firstVisit) : null,
       description: f.description.trim() || null,
       district: f.district.trim() || null,
       phone: f.phone.trim() || null,
@@ -135,8 +138,21 @@ function SalonProfileForm() {
           onChange={(e) => setF((x) => ({ ...x, kind: e.target.value as SalonProfile["kind"] }))}
           hint="Uygulamada salon adının altında görünür"
         >
-          <option value="WOMEN">Kadın kuaförü</option>
+          <option value="WOMEN">Kuaför</option>
           <option value="BEAUTY">Güzellik salonu</option>
+        </Select>
+        <Select
+          label="İlk ziyaret indirimi"
+          value={f.firstVisit}
+          onChange={(e) => setF((x) => ({ ...x, firstVisit: e.target.value }))}
+          hint="Salonunuza uygulamadan ilk kez randevu alan müşteriye uygulanır; indirimi siz karşılarsınız."
+        >
+          <option value="">Yok</option>
+          {[5, 10, 15, 20, 25, 30].map((p) => (
+            <option key={p} value={String(p)}>
+              %{p}
+            </option>
+          ))}
         </Select>
         <div className="field">
           <span>Fotoğraflar</span>

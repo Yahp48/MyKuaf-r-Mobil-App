@@ -141,9 +141,40 @@ export const serializeService = (
   discount: publicDiscount(s, today),
 });
 
-export const serializeStaff = (s: { id: string; name: string; title: string | null; avatarUrl: string | null }) => ({
+export const serializeStaff = (s: {
+  id: string;
+  name: string;
+  title: string | null;
+  avatarUrl: string | null;
+  specialties: string[];
+  bio: string | null;
+}) => ({
   id: s.id,
   name: s.name,
   title: s.title,
   avatarUrl: s.avatarUrl,
+  specialties: s.specialties,
+  bio: s.bio,
 });
+
+/** Paket: hizmetlerin liste fiyatı toplamı ile paket fiyatı birlikte gösterilir (tasarruf gerçek fiyattan). */
+export const serializePackage = (p: {
+  id: string;
+  name: string;
+  description: string | null;
+  priceCents: number;
+  items: { service: { id: string; name: string; priceCents: number; durationMinutes: number; isActive: boolean } }[];
+}) => {
+  const services = p.items.map((i) => i.service).filter((s) => s.isActive);
+  const list = services.reduce((sum, s) => sum + s.priceCents, 0);
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    price: toTL(p.priceCents),
+    listPrice: toTL(list),
+    saving: toTL(Math.max(0, list - p.priceCents)),
+    durationMinutes: services.reduce((sum, s) => sum + s.durationMinutes, 0),
+    services: services.map((s) => ({ id: s.id, name: s.name })),
+  };
+};

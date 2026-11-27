@@ -538,3 +538,84 @@ describe("hizmet indirimleri ve vitrin", () => {
     expect(cities.body.items[0]).toMatchObject({ city: "Kırşehir" });
   });
 });
+
+describe("paketler, uzmanlıklar ve ilk ziyaret indirimi", () => {
+  async function salonReady() {
+    const b = await registerBusiness("SALON");
+    const st = await api()
+      .post("/api/business/salon/staff")
+      .set(b.auth)
+      .send({ name: "Zeynep", specialties: ["Balyaj", "Gelin saçı"], bio: "10 yıllık deneyim" });
+    expect(st.body.staff.specialties).toEqual(["Balyaj", "Gelin saçı"]);
+    const s1 = await api()
+      .post("/api/business/salon/services")
+      .set(b.auth)
+      .send({ name: "Saç", durationMinutes: 60, price: 600 });
+    const s2 = await api()
+      .post("/api/business/salon/services")
+      .set(b.auth)
+      .send({ name: "Makyaj", durationMinutes: 60, price: 400 });
+    const hours = Array.from({ length: 7 }, (_, i) => ({
+      weekday: i + 1,
+      isClosed: false,
+      opens: "09:00",
+      closes: "18:00",
+    }));
+    await api().put("/api/business/salon/hours").set(b.auth).send({ items: hours });
+    await prisma.salon.update({ where: { id: b.salon.id }, data: { bookingLeadMinutes: 0 } });
+    return { ...b, s1: s1.body.service.id as string, s2: s2.body.service.id as string };
+  }
+
+  it("paket fiyatı hizmet toplamını aşamaz; paketle randevu paket fiyatından alınır", async () => {
+    const b = await salonReady();
+    const tooHigh = await api()
+      .post("/api/business/salon/packages")
+      .set(b.auth)
+      .send({ name: "Gelin paketi", price: 1200, serviceIds: [b.s1, b.s2] });
+    expect(tooHigh.status).toBe(400);
+    const pkg = await api()
+      .post("/api/business/salon/packages")
+      .set(b.auth)
+      .send({ name: "Gelin paketi", price: 850, serviceIds: [b.s1, b.s2] });
+    expect(pkg.status).toBe(201);
+
+    const detail = await api().get(`/api/salons/${b.salon.id}`);
+    expect(detail.body.salon.packages[0]).toMatchObject({
+      name: "Gelin paketi",
+      price: 850,
+      listPrice: 1000,
+      saving: 150,
+      durationMinutes: 120,
+    });
+    expect(detail.body.salon.staff[0]).toMatchObject({
+      specialties: ["Balyaj", "Gelin saçı"],
+      bio: "10 yıllık deneyim",
+    });
+
+    const u = await registerUser();
+    const booked = await api()
+      .post("/api/appointments")
+      .set(u.auth)
+      .send({ salonId: b.salon.id, packageId: pkg.body.package.id, date: tomorrow(), time: "10:00" });
+    expect(booked.status).toBe(201);
+    expect(booked.body.appointment).toMatchObject({ total: 850, isPackage: true });
+    expect(booked.body.appointment.services).toHaveLength(2);
+  });
+
+  it("ilk ziyaret indirimi yalnızca salondaki ilk randevuya uygulanır", async () => {
+    const b = await salonReady();
+    await api().patch("/api/business/salon/profile").set(b.auth).send({ firstVisitDiscountPercent: 20 });
+    expect((await api().get(`/api/salons/${b.salon.id}`)).body.salon.firstVisitDiscountPercent).toBe(20);
+    const u = await registerUser();
+    const first = await api()
+      .post("/api/appointments")
+      .set(u.auth)
+      .send({ salonId: b.salon.id, serviceIds: [b.s1], date: tomorrow(), time: "10:00" });
+    expect(first.body.appointment).toMatchObject({ total: 480, discount: 120 });
+    const second = await api()
+      .post("/api/appointments")
+      .set(u.auth)
+      .send({ salonId: b.salon.id, serviceIds: [b.s1], date: tomorrow(), time: "12:00" });
+    expect(second.body.appointment).toMatchObject({ total: 600, discount: 0 });
+  });
+});
