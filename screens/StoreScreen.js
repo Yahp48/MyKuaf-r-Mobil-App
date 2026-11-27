@@ -78,7 +78,15 @@ export default function StoreScreen({ navigation, route }) {
               <Text style={styles.logoText}>{initials(store.name)}</Text>
             </View>
           )}
-          <Text style={styles.name}>{store.name}</Text>
+          <Text style={styles.name}>
+            {store.name}
+            {store.verified ? (
+              <Text accessibilityLabel="Doğrulanmış işletme">
+                {" "}
+                <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+              </Text>
+            ) : null}
+          </Text>
           {store.description ? <Text style={styles.desc}>{store.description}</Text> : null}
           <View style={styles.facts}>
             <Fact icon="cube-outline" text={`${store.productCount} ürün`} />

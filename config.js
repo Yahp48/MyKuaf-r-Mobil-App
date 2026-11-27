@@ -38,3 +38,6 @@ export const CONTACT = {
   website: clean(process.env.EXPO_PUBLIC_WEBSITE_URL),
   instagram: clean(process.env.EXPO_PUBLIC_INSTAGRAM_URL),
 };
+
+/** İşletme paneli adresi (rehberdeki salonunu sahiplenmek isteyenler için). Boşsa bağlantı gösterilmez. */
+export const BUSINESS_PANEL_URL = clean(process.env.EXPO_PUBLIC_BUSINESS_PANEL_URL);

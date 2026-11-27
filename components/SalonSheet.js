@@ -17,6 +17,7 @@ import DraggableSheet from "./DraggableSheet";
 import PhotoViewer from "./PhotoViewer";
 import { SheetSkeleton } from "./Skeleton";
 import { colors } from "./theme";
+import { BUSINESS_PANEL_URL } from "../config";
 import { discountOn, discountRange, priceOn, upToDiscount } from "./pricing";
 import { useApp } from "../context/AppContext";
 import { favoriteApi, salonApi } from "../services/api";
@@ -233,6 +234,12 @@ const SalonSheet = forwardRef(function SalonSheet(
       <View style={styles.titleRow}>
         <Text style={styles.name} numberOfLines={2} accessibilityRole="header">
           {salon.name}
+          {salon.verified ? (
+            <Text accessibilityLabel="Doğrulanmış işletme">
+              {" "}
+              <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+            </Text>
+          ) : null}
         </Text>
         <TouchableOpacity onPress={share} style={styles.roundBtn} accessibilityLabel="Paylaş" hitSlop={6}>
           <Ionicons name="share-social-outline" size={19} color={colors.text} />
@@ -386,6 +393,15 @@ const SalonSheet = forwardRef(function SalonSheet(
             <Text style={styles.mutedSmall}>
               Bu salon MyKuaför'e henüz katılmadı. Randevu için telefonla ulaşabilir veya yol tarifi alabilirsiniz.
             </Text>
+            {BUSINESS_PANEL_URL ? (
+              <Text
+                style={styles.ownerLink}
+                onPress={() => Linking.openURL(`${BUSINESS_PANEL_URL}/kayit`).catch(() => {})}
+                accessibilityRole="link"
+              >
+                İşletme sahibi misiniz? Salonunuzu sahiplenin ›
+              </Text>
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -863,6 +879,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: colors.primarySoft,
   },
+  ownerLink: { fontSize: 13, fontWeight: "700", color: colors.primary, marginTop: 6 },
   listingTitle: { fontSize: 14.5, fontWeight: "700", color: colors.text },
   sourceNote: { fontSize: 11.5, color: colors.faint, marginHorizontal: 18, marginTop: 14, lineHeight: 16 },
   dealBanner: {
