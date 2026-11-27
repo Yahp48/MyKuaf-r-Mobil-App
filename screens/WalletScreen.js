@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  cardLabel: { color: "#ffe3ef", fontSize: 14 },
+  cardLabel: { color: "#FBD5DF", fontSize: 14 },
   balance: { color: "#fff", fontSize: 30, fontWeight: "bold", marginTop: 4 },
   topup: { alignItems: "center", padding: 8 },
   topupText: { color: "#fff", marginTop: 6, fontWeight: "600" },

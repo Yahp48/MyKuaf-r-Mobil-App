@@ -102,7 +102,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AppProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <Root />
       </AppProvider>
     </SafeAreaProvider>

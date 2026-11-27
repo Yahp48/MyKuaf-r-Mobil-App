@@ -38,7 +38,7 @@ export default function SignInScreen({ navigation }) {
   };
 
   return (
-    <LinearGradient colors={["#fff0f6", "#f3e8ff"]} style={styles.container}>
+    <LinearGradient colors={["#FDEEF2", "#F5F5F7"]} style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.container}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.logoBox}>
@@ -74,7 +74,7 @@ export default function SignInScreen({ navigation }) {
                 accessibilityLabel={showPassword ? "Şifreyi gizle" : "Şifreyi göster"}
                 hitSlop={10}
               >
-                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#9e8efc" />
+                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#A1A1A6" />
               </TouchableOpacity>
             }
           />

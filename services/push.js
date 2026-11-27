@@ -1,42 +1,53 @@
-import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
-import Constants from "expo-constants";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import { Platform } from "react-native";
 import { notificationApi } from "./api";
 
 let registeredToken = null;
+let Notifications = null;
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// Expo Go uzaktan push bildirimini desteklemez; orada modül hiç yüklenmez (uygulama içi bildirimler çalışmaya devam eder).
+const pushSupported = Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
+
+function notificationsModule() {
+  if (!pushSupported) return null;
+  if (!Notifications) {
+    Notifications = require("expo-notifications");
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  }
+  return Notifications;
+}
 
 /**
  * Bildirim izni ister ve Expo push token'ını sunucuya kaydeder.
- * Simülatörde, izin reddedildiğinde veya EAS projectId yoksa sessizce vazgeçer.
+ * Expo Go'da, simülatörde, izin reddedildiğinde veya EAS projectId yoksa sessizce vazgeçer.
  */
 export async function registerForPush() {
-  if (!Device.isDevice) return null;
+  const N = notificationsModule();
+  if (!N || !Device.isDevice) return null;
 
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
+    await N.setNotificationChannelAsync("default", {
       name: "Genel",
-      importance: Notifications.AndroidImportance.DEFAULT,
+      importance: N.AndroidImportance.DEFAULT,
     });
   }
 
-  const current = await Notifications.getPermissionsAsync();
-  const status = current.granted ? "granted" : (await Notifications.requestPermissionsAsync()).status;
+  const current = await N.getPermissionsAsync();
+  const status = current.granted ? "granted" : (await N.requestPermissionsAsync()).status;
   if (status !== "granted") return null;
 
   const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
   if (!projectId) return null;
 
-  const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+  const { data: token } = await N.getExpoPushTokenAsync({ projectId });
   await notificationApi.registerPushToken(token, Platform.OS);
   registeredToken = token;
   return token;

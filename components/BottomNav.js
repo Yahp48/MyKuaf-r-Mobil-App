@@ -1,18 +1,19 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useApp } from "../context/AppContext";
 import { colors } from "./theme";
 
 const TABS = [
-  { route: "Appointments", label: "Randevular", icon: (c) => <FontAwesome5 name="calendar-alt" size={22} color={c} /> },
-  { route: "Home", label: "Harita", icon: (c) => <FontAwesome5 name="map-marked-alt" size={22} color={c} /> },
-  { route: "Shop", label: "Mağaza", icon: (c) => <FontAwesome5 name="shopping-bag" size={22} color={c} />, cart: true },
-  { route: "Profile", label: "Profil", icon: (c) => <FontAwesome6 name="user" size={22} color={c} /> },
+  { route: "Home", label: "Keşfet", icon: "map" },
+  { route: "Appointments", label: "Randevular", icon: "calendar" },
+  { route: "Shop", label: "Mağaza", icon: "bag-handle", cart: true },
+  { route: "Profile", label: "Profil", icon: "person" },
 ];
 
+/** Beyaz alt sekme çubuğu: etkin sekme dolu ikon + vurgu rengi, diğerleri çizgi ikon. */
 export default function BottomNav({ active }) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -23,7 +24,7 @@ export default function BottomNav({ active }) {
     <View style={[styles.nav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
       {TABS.map((tab) => {
         const isActive = tab.route === active;
-        const color = isActive ? colors.primaryDark : "#fff";
+        const color = isActive ? colors.primary : "#8E8E93";
         return (
           <TouchableOpacity
             key={tab.route}
@@ -33,15 +34,15 @@ export default function BottomNav({ active }) {
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={tab.label}
           >
-            <View style={[styles.iconWrap, isActive && styles.activeWrap]}>
-              {tab.icon(color)}
+            <View>
+              <Ionicons name={isActive ? tab.icon : `${tab.icon}-outline`} size={24} color={color} />
               {tab.cart && cartCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{cartCount > 99 ? "99+" : cartCount}</Text>
                 </View>
               )}
             </View>
-            <Text style={[styles.label, isActive && styles.activeLabel]}>{tab.label}</Text>
+            <Text style={[styles.label, { color }, isActive && styles.activeLabel]}>{tab.label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -52,31 +53,27 @@ export default function BottomNav({ active }) {
 const styles = StyleSheet.create({
   nav: {
     flexDirection: "row",
-    backgroundColor: colors.primary,
+    backgroundColor: colors.background,
     paddingTop: 8,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#DCDCE0",
   },
-  item: { flex: 1, alignItems: "center" },
-  iconWrap: { paddingHorizontal: 14, paddingVertical: 4, borderRadius: 16 },
-  activeWrap: { backgroundColor: "#fff" },
-  label: { color: "#fff", fontSize: 11, marginTop: 3, fontWeight: "500" },
-  activeLabel: { fontWeight: "bold" },
+  item: { flex: 1, alignItems: "center", gap: 3 },
+  label: { fontSize: 11, fontWeight: "500" },
+  activeLabel: { fontWeight: "700" },
   badge: {
     position: "absolute",
     top: -4,
-    right: 2,
-    backgroundColor: colors.primaryDark,
+    right: -10,
+    backgroundColor: colors.primary,
     borderRadius: 9,
     minWidth: 18,
     height: 18,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: colors.primary,
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.background,
   },
-  badgeText: { color: "#fff", fontSize: 9, fontWeight: "bold" },
+  badgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
 });

@@ -23,7 +23,9 @@ Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kuralları
 - API adresi: `config.js` → `.env`'deki `EXPO_PUBLIC_API_URL`; geliştirmede boşsa Expo host IP'si:5000
 - Ödeme: `services/checkout.js` sağlayıcının güvenli sayfasını `expo-web-browser` ile açar, sonucu sunucudan sorgular.
   Uygulama kart bilgisi ASLA toplamaz (PCI-DSS)
-- Ortak bileşenler: `components/` (AppHeader, BottomNav, ProductCard, ui.js, theme.js, useRemote.js)
+- Ortak bileşenler: `components/` (AppHeader, BottomNav, ProductCard, ContactList, ui.js, theme.js, useRemote.js)
+- Tasarım: tek vurgu rengi `#C9184A` (`colors.primary`), beyaz başlık ve alt menü, gri yüzey üzerinde gruplu kartlar,
+  Ionicons çizgi ikonlar. Renkleri ekranlara sabit yazma; `components/theme.js`'ten al
 
 ## Backend teknoloji
 - Express 5, PostgreSQL 17 + Prisma ORM 7 (driver adapter `@prisma/adapter-pg`), Zod 4, JWT + Argon2id
@@ -58,9 +60,7 @@ Telefonla test: backend `.env` → `PUBLIC_BASE_URL=http://<bilgisayar-IP>:5000`
 1. iyzico ödeme entegrasyonu (üye işyeri hesabı ve API anahtarı gerekli) — `backend/src/modules/payments/providers.ts`
 2. Platform yönetici (admin) paneli yok: işletme askıya alma, kategori yönetimi, destek talepleri şimdilik veritabanından
 3. Production altyapısı: barındırma, alan adı + HTTPS, SMTP, EAS projectId (push bildirimleri için)
-4. Gerçek içerik: KVKK aydınlatma metni, mesafeli satış sözleşmesi, ön bilgilendirme formu (PrivacyScreen),
-   Hakkında/Destek ekranlarındaki telefon, WhatsApp ve sosyal medya adresleri yer tutucu
+4. Gerçek içerik: KVKK metni (PrivacyScreen) ve mesafeli satış sözleşmesi hukukçu onayından geçmeli;
+   destek telefonu/WhatsApp/e-posta/sosyal medya `.env` → `EXPO_PUBLIC_SUPPORT_*` ile girilmeli (boşsa gösterilmez)
 5. Görsel yükleme yerel diskte (`backend/uploads`); production'da S3 uyumlu depolamaya taşınmalı
 6. Panel alan adı (`isletme.mykuafor.app`) index.html, robots.txt ve sitemap.xml'de yer tutucu
-7. Eski ekranlar (About, Privacy, Support, Feedback) hâlâ kendi başlık/alt menü kopyalarını kullanıyor;
-   `components/AppHeader` ve `BottomNav`'a taşınabilir

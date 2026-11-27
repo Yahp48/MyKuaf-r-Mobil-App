@@ -82,7 +82,7 @@ export default function AppointmentsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <AppHeader />
+      <AppHeader title="Randevularım" />
       <View style={styles.tabs}>
         {[
           ["upcoming", "Yaklaşan"],

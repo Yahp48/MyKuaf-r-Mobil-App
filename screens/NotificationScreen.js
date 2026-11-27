@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  unread: { backgroundColor: "#fff5fa" },
+  unread: { backgroundColor: "#FDEEF2" },
   title: { fontSize: 15, color: colors.text },
   body: { fontSize: 14, color: colors.muted, marginTop: 2, lineHeight: 19 },
   date: { fontSize: 12, color: "#aaa", marginTop: 4 },

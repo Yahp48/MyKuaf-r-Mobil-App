@@ -29,7 +29,7 @@ export function Field({ label, error, icon, right, style, ...inputProps }) {
     <View style={[styles.fieldWrap, style]}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <View style={[styles.inputRow, error && { borderColor: colors.danger }]}>
-        {icon ? <MaterialIcons name={icon} size={20} color="#9e8efc" style={{ marginRight: 8 }} /> : null}
+        {icon ? <MaterialIcons name={icon} size={20} color="#A1A1A6" style={{ marginRight: 8 }} /> : null}
         <TextInput placeholderTextColor="#aaa" style={styles.input} accessibilityLabel={label} {...inputProps} />
         {right}
       </View>

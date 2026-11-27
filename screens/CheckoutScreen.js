@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginBottom: 10,
   },
-  optionOn: { borderColor: colors.primary, backgroundColor: "#fff5fa" },
+  optionOn: { borderColor: colors.primary, backgroundColor: "#FDEEF2" },
   optionTitle: { fontSize: 15, fontWeight: "600", color: colors.text },
   optionText: { fontSize: 13, color: colors.muted, marginTop: 2 },
   summary: { backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginVertical: 16 },

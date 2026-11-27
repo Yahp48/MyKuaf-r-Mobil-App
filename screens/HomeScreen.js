@@ -8,7 +8,6 @@ import {
   Platform,
   ScrollView,
   Share,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -19,15 +18,17 @@ import MapView, { Marker, Polyline } from "react-native-maps";
 import * as Location from "expo-location";
 import polyline from "@mapbox/polyline";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AntDesign, FontAwesome, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import AppHeader from "../components/AppHeader";
 import BottomNav from "../components/BottomNav";
-import { colors } from "../components/theme";
+import { colors, shadow } from "../components/theme";
 import { useRealtimeEvent } from "../services/realtime";
 import { favoriteApi, mapsApi, salonApi } from "../services/api";
 
-// Konum izni verilmezse Kırşehir merkezi gösterilir.
-const DEFAULT_REGION = { latitude: 39.1451, longitude: 34.1605, latitudeDelta: 0.05, longitudeDelta: 0.05 };
+// Konum izni yoksa / alınamazsa gösterilecek bölge (Kırşehir merkezi)
+const FALLBACK_REGION = { latitude: 39.1451, longitude: 34.1605, latitudeDelta: 0.05, longitudeDelta: 0.05 };
+// Kullanıcının çevresi: yaklaşık 2 km'lik görünüm
+const NEAR_DELTA = { latitudeDelta: 0.018, longitudeDelta: 0.018 };
 const PROMO_SEEN_KEY = "mykuafor.promoSeen.v1";
 
 export default function HomeScreen({ navigation }) {
@@ -37,6 +38,7 @@ export default function HomeScreen({ navigation }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
+  const [locating, setLocating] = useState(false);
   const [route, setRoute] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [showPromo, setShowPromo] = useState(false);
@@ -52,28 +54,63 @@ export default function HomeScreen({ navigation }) {
     }
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        loadSalons(null);
-        return;
-      }
+  const focusOn = useCallback((coords, animated = true) => {
+    mapRef.current?.animateToRegion({ ...coords, ...NEAR_DELTA }, animated ? 500 : 0);
+  }, []);
+
+  /**
+   * Konumu alır ve haritayı oraya taşır. Önce son bilinen konum (anında), ardından güncel konum (birkaç sn).
+   * `askIfDenied`: konum düğmesine basıldığında izin kapalıysa ayarlara yönlendir.
+   */
+  const locate = useCallback(
+    async ({ askIfDenied = false } = {}) => {
+      setLocating(true);
       try {
+        let { status, canAskAgain } = await Location.getForegroundPermissionsAsync();
+        if (status !== "granted" && canAskAgain) ({ status } = await Location.requestForegroundPermissionsAsync());
+        if (status !== "granted") {
+          if (askIfDenied) {
+            Alert.alert("Konum izni kapalı", "Size en yakın salonları göstermek için konum iznine ihtiyacımız var.", [
+              { text: "Vazgeç", style: "cancel" },
+              { text: "Ayarları aç", onPress: () => Linking.openSettings() },
+            ]);
+          }
+          return null;
+        }
+        const last = await Location.getLastKnownPositionAsync({ maxAge: 5 * 60_000 }).catch(() => null);
+        if (last) {
+          const quick = { latitude: last.coords.latitude, longitude: last.coords.longitude };
+          setUserLocation(quick);
+          focusOn(quick);
+        }
         const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         const coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
         setUserLocation(coords);
-        loadSalons(coords);
+        focusOn(coords);
+        return coords;
       } catch {
-        loadSalons(null);
+        if (askIfDenied) Alert.alert("Konum alınamadı", "Lütfen konum servislerinin açık olduğundan emin olun.");
+        return null;
+      } finally {
+        setLocating(false);
       }
-    })();
+    },
+    [focusOn],
+  );
 
+  useEffect(() => {
+    (async () => {
+      const coords = await locate();
+      loadSalons(coords);
+    })();
     // Mağaza tanıtımı yalnızca bir kez gösterilir.
     AsyncStorage.getItem(PROMO_SEEN_KEY)
       .then((seen) => !seen && setTimeout(() => setShowPromo(true), 1500))
       .catch(() => {});
-  }, [loadSalons]);
+  }, [locate, loadSalons]);
+
+  // İşletme panelinde yeni salon açılınca veya salon bilgisi değişince harita anında tazelenir.
+  useRealtimeEvent("salons:changed", () => loadSalons(userLocation));
 
   const closePromo = (goShop) => {
     setShowPromo(false);
@@ -81,17 +118,17 @@ export default function HomeScreen({ navigation }) {
     if (goShop) navigation.navigate("Shop");
   };
 
-  // İşletme panelinde yeni salon açılınca veya salon bilgisi değişince harita anında tazelenir.
-  useRealtimeEvent("salons:changed", () => loadSalons(userLocation));
-
-  const visibleSalons = search.trim()
-    ? salons.filter((s) => s.name.toLocaleLowerCase("tr-TR").includes(search.trim().toLocaleLowerCase("tr-TR")))
-    : salons;
+  const term = search.trim().toLocaleLowerCase("tr-TR");
+  const visibleSalons = term ? salons.filter((s) => s.name.toLocaleLowerCase("tr-TR").includes(term)) : salons;
 
   const selectSalon = (salon) => {
     setSelected(salon);
     setRoute(null);
-    mapRef.current?.animateToRegion({ ...DEFAULT_REGION, latitude: salon.latitude, longitude: salon.longitude }, 400);
+    // Kart haritanın alt yarısını kapladığı için salon biraz yukarıda konumlanır.
+    mapRef.current?.animateToRegion(
+      { latitude: salon.latitude - NEAR_DELTA.latitudeDelta * 0.18, longitude: salon.longitude, ...NEAR_DELTA },
+      400,
+    );
   };
 
   const getDirections = async () => {
@@ -108,7 +145,7 @@ export default function HomeScreen({ navigation }) {
       const coords = polyline.decode(data.polyline).map(([latitude, longitude]) => ({ latitude, longitude }));
       setRoute({ coords, distance: data.distance.text, duration: data.duration.text });
       mapRef.current?.fitToCoordinates(coords, {
-        edgePadding: { top: 60, right: 40, bottom: 320, left: 40 },
+        edgePadding: { top: 120, right: 48, bottom: 360, left: 48 },
         animated: true,
       });
     } catch (e) {
@@ -149,88 +186,152 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <AppHeader />
 
       <View style={styles.mapWrap}>
-        <View style={styles.searchBox}>
-          <MaterialIcons name="search" size={22} color="#999" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Kuaför ara"
-            placeholderTextColor="#999"
-            value={search}
-            onChangeText={setSearch}
-            accessibilityLabel="Kuaför ara"
-          />
-          {search ? (
-            <TouchableOpacity onPress={() => setSearch("")} accessibilityLabel="Aramayı temizle">
-              <AntDesign name="close" size={18} color="#999" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
         <MapView
           ref={mapRef}
-          style={styles.map}
-          initialRegion={userLocation ? { ...DEFAULT_REGION, ...userLocation } : DEFAULT_REGION}
-          showsUserLocation={!!userLocation}
+          style={StyleSheet.absoluteFill}
+          initialRegion={FALLBACK_REGION}
+          showsUserLocation
+          showsMyLocationButton={false}
+          showsCompass={false}
+          toolbarEnabled={false}
+          onPress={(e) => {
+            // Android'de işarete dokunmak haritaya da "marker-press" olarak iletilir; kartı kapatma.
+            if (e.nativeEvent?.action === "marker-press") return;
+            if (selected) setSelected(null);
+          }}
         >
           {visibleSalons.map((salon) => (
             <Marker
               key={salon.id}
               coordinate={{ latitude: salon.latitude, longitude: salon.longitude }}
               title={salon.name}
-              pinColor={salon.isOpenNow ? colors.primary : "gray"}
+              pinColor={salon.isOpenNow ? colors.primary : "#8E8E93"}
               onPress={() => selectSalon(salon)}
             />
           ))}
-          {route && <Polyline coordinates={route.coords} strokeColor={colors.primary} strokeWidth={4} />}
+          {route && <Polyline coordinates={route.coords} strokeColor={colors.primary} strokeWidth={5} />}
         </MapView>
+
+        {/* Arama */}
+        <View style={styles.searchWrap} pointerEvents="box-none">
+          <View style={styles.search}>
+            <Ionicons name="search" size={20} color={colors.muted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Salon veya kuaför ara"
+              placeholderTextColor={colors.faint}
+              value={search}
+              onChangeText={setSearch}
+              returnKeyType="search"
+              accessibilityLabel="Salon ara"
+            />
+            {search ? (
+              <TouchableOpacity onPress={() => setSearch("")} accessibilityLabel="Aramayı temizle" hitSlop={10}>
+                <Ionicons name="close-circle" size={20} color={colors.faint} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          {!loading ? (
+            <View style={styles.countPill}>
+              <Text style={styles.countText}>
+                {term
+                  ? `${visibleSalons.length} sonuç`
+                  : userLocation
+                    ? `Yakınınızda ${salons.length} salon`
+                    : `${salons.length} salon`}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
         {loading && (
           <View style={styles.mapLoading}>
             <ActivityIndicator color={colors.primary} />
           </View>
         )}
 
+        {/* Konumuma git */}
+        <TouchableOpacity
+          style={[styles.locateButton, { bottom: selected ? 24 + 300 : 24 }]}
+          onPress={() => (userLocation && !locating ? focusOn(userLocation) : locate({ askIfDenied: true }))}
+          accessibilityRole="button"
+          accessibilityLabel="Konumuma git"
+        >
+          {locating ? (
+            <ActivityIndicator color={colors.primary} size="small" />
+          ) : (
+            <Ionicons name="locate" size={22} color={userLocation ? colors.primary : colors.text} />
+          )}
+        </TouchableOpacity>
+
         {selected && (
           <View style={styles.sheet}>
-            <TouchableOpacity style={styles.sheetClose} onPress={() => setSelected(null)} accessibilityLabel="Kapat">
-              <AntDesign name="close" size={20} color="#333" />
+            <View style={styles.handle} />
+            <TouchableOpacity
+              style={styles.sheetClose}
+              onPress={() => setSelected(null)}
+              accessibilityLabel="Kapat"
+              hitSlop={10}
+            >
+              <Ionicons name="close" size={20} color={colors.muted} />
             </TouchableOpacity>
-            <ScrollView>
+            <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={styles.salonName}>{selected.name}</Text>
-              <View style={styles.row}>
-                <FontAwesome name="star" size={15} color="#f5a623" />
-                <Text style={styles.rating}>
-                  {selected.ratingCount
-                    ? `${selected.rating} (${selected.ratingCount} değerlendirme)`
-                    : "Henüz değerlendirme yok"}
+
+              <View style={styles.metaRow}>
+                {selected.ratingCount ? (
+                  <View style={styles.metaItem}>
+                    <Ionicons name="star" size={14} color="#F5A623" />
+                    <Text style={styles.metaStrong}>{selected.rating}</Text>
+                    <Text style={styles.metaText}>({selected.ratingCount})</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.metaText}>Yeni salon</Text>
+                )}
+                <Text style={styles.dot}>·</Text>
+                <Text style={[styles.metaStrong, { color: selected.isOpenNow ? colors.success : colors.danger }]}>
+                  {selected.isOpenNow ? "Açık" : "Kapalı"}
                 </Text>
+                {selected.todayHours ? (
+                  <Text style={styles.metaText}>
+                    {" "}
+                    {selected.todayHours.opens}–{selected.todayHours.closes}
+                  </Text>
+                ) : null}
+                {selected.distanceKm !== undefined ? (
+                  <>
+                    <Text style={styles.dot}>·</Text>
+                    <Text style={styles.metaText}>{selected.distanceKm} km</Text>
+                  </>
+                ) : null}
               </View>
-              <Text style={[styles.hours, { color: selected.isOpenNow ? colors.success : colors.danger }]}>
-                {selected.isOpenNow ? "Şu an açık" : "Şu an kapalı"}
-                {selected.todayHours
-                  ? ` · Bugün ${selected.todayHours.opens} - ${selected.todayHours.closes}`
-                  : " · Bugün kapalı"}
-                {selected.distanceKm !== undefined ? ` · ${selected.distanceKm} km` : ""}
-              </Text>
-              <Text style={styles.address}>{selected.address}</Text>
-              {route && (
-                <Text style={styles.routeInfo}>
-                  Rota: {route.distance} · yaklaşık {route.duration}
-                </Text>
-              )}
+
+              <View style={styles.addressRow}>
+                <Ionicons name="location-outline" size={16} color={colors.muted} />
+                <Text style={styles.address}>{selected.address}</Text>
+              </View>
+              {route ? (
+                <View style={styles.addressRow}>
+                  <Ionicons name="navigate-outline" size={16} color={colors.primary} />
+                  <Text style={[styles.address, { color: colors.text, fontWeight: "600" }]}>
+                    {route.distance} · yaklaşık {route.duration}
+                  </Text>
+                </View>
+              ) : null}
 
               <View style={styles.actions}>
-                <Action icon="directions" label="Yol Tarifi" onPress={getDirections} loading={routeLoading} />
-                <Action icon="call" label="Ara" onPress={callSalon} />
+                <Action icon="navigate-outline" label="Yol tarifi" onPress={getDirections} loading={routeLoading} />
+                <Action icon="call-outline" label="Ara" onPress={callSalon} />
                 <Action
-                  icon={selected.isFavorite ? "favorite" : "favorite-border"}
-                  label="Kaydet"
+                  icon={selected.isFavorite ? "heart" : "heart-outline"}
+                  label={selected.isFavorite ? "Kayıtlı" : "Kaydet"}
                   onPress={toggleFavorite}
+                  active={selected.isFavorite}
                 />
-                <Action icon="share" label="Paylaş" onPress={shareSalon} />
+                <Action icon="share-outline" label="Paylaş" onPress={shareSalon} />
               </View>
 
               <TouchableOpacity
@@ -238,9 +339,10 @@ export default function HomeScreen({ navigation }) {
                 onPress={() =>
                   navigation.navigate("CalendarScreen", { salonId: selected.id, salonName: selected.name })
                 }
+                accessibilityRole="button"
               >
-                <FontAwesome5 name="calendar-alt" size={20} color="#fff" />
-                <Text style={styles.bookText}>Randevu Al</Text>
+                <Text style={styles.bookText}>Randevu al</Text>
+                <Ionicons name="arrow-forward" size={18} color="#fff" />
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -251,15 +353,16 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.overlay}>
           <View style={styles.promo}>
             <TouchableOpacity style={styles.promoClose} onPress={() => closePromo(false)} accessibilityLabel="Kapat">
-              <AntDesign name="close" size={22} color="#333" />
+              <Ionicons name="close" size={20} color={colors.text} />
             </TouchableOpacity>
             <Image
               source={{ uri: "https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=600&h=360&fit=crop" }}
               style={styles.promoImage}
               accessibilityIgnoresInvertColors
             />
-            <View style={{ padding: 20 }}>
-              <Text style={styles.promoTitle}>Mağazamız açıldı!</Text>
+            <View style={{ padding: 22 }}>
+              <Text style={styles.promoKicker}>YENİ</Text>
+              <Text style={styles.promoTitle}>Mağazamız açıldı</Text>
               <Text style={styles.promoText}>
                 Salonlarımızda kullandığımız profesyonel saç bakım ürünleri artık uygulamada.
               </Text>
@@ -276,10 +379,16 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-function Action({ icon, label, onPress, loading }) {
+function Action({ icon, label, onPress, loading, active }) {
   return (
     <TouchableOpacity style={styles.action} onPress={onPress} disabled={loading} accessibilityLabel={label}>
-      {loading ? <ActivityIndicator color="#fff" size="small" /> : <MaterialIcons name={icon} size={20} color="#fff" />}
+      <View style={[styles.actionIcon, active && { backgroundColor: colors.primarySoft }]}>
+        {loading ? (
+          <ActivityIndicator color={colors.primary} size="small" />
+        ) : (
+          <Ionicons name={icon} size={21} color={active ? colors.primary : colors.text} />
+        )}
+      </View>
       <Text style={styles.actionText}>{label}</Text>
     </TouchableOpacity>
   );
@@ -287,90 +396,126 @@ function Action({ icon, label, onPress, loading }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  searchBox: {
-    position: "absolute",
-    top: 12,
-    left: 16,
-    right: 16,
-    zIndex: 5,
+  mapWrap: { flex: 1 },
+  searchWrap: { position: "absolute", top: 20, left: 16, right: 16, alignItems: "flex-start" },
+  search: {
+    alignSelf: "stretch",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 24,
+    backgroundColor: colors.background,
+    borderRadius: 14,
     paddingHorizontal: 14,
-    height: 46,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    height: 50,
+    ...shadow,
   },
-  searchInput: { flex: 1, marginLeft: 8, fontSize: 15, color: colors.text },
-  mapWrap: { flex: 1 },
-  map: { flex: 1 },
+  searchInput: { flex: 1, marginLeft: 10, fontSize: 16, color: colors.text },
+  countPill: {
+    marginTop: 10,
+    backgroundColor: colors.background,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    ...shadow,
+    shadowOpacity: 0.06,
+  },
+  countText: { fontSize: 12.5, fontWeight: "600", color: colors.text },
   mapLoading: { position: "absolute", top: "45%", alignSelf: "center" },
+  locateButton: {
+    position: "absolute",
+    right: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow,
+  },
   sheet: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    maxHeight: "60%",
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    elevation: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
+    maxHeight: 300,
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 16,
+    ...shadow,
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 16,
   },
-  sheetClose: { position: "absolute", right: 14, top: 14, zIndex: 2, padding: 6 },
-  salonName: { fontSize: 20, fontWeight: "bold", color: colors.text, marginRight: 30 },
-  row: { flexDirection: "row", alignItems: "center", marginTop: 6 },
-  rating: { marginLeft: 6, color: colors.text, fontSize: 14 },
-  hours: { marginTop: 6, fontSize: 14, fontWeight: "600" },
-  address: { marginTop: 6, fontSize: 14, color: colors.muted },
-  routeInfo: { marginTop: 6, fontSize: 14, color: colors.accent, fontWeight: "600" },
-  actions: { flexDirection: "row", justifyContent: "space-between", marginTop: 16 },
-  action: {
-    backgroundColor: colors.primary,
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  actionText: { color: "#fff", marginLeft: 4, fontSize: 12, fontWeight: "600" },
-  bookButton: {
-    marginTop: 16,
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    paddingVertical: 14,
-    flexDirection: "row",
+  handle: { alignSelf: "center", width: 36, height: 4, borderRadius: 2, backgroundColor: "#D8D8DC", marginBottom: 12 },
+  sheetClose: {
+    position: "absolute",
+    right: 14,
+    top: 14,
+    zIndex: 2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
-  bookText: { color: "#fff", fontSize: 16, fontWeight: "bold", marginLeft: 10 },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 },
-  promo: { backgroundColor: "#fff", borderRadius: 20, overflow: "hidden", width: "100%" },
+  salonName: { fontSize: 21, fontWeight: "700", color: colors.text, marginRight: 40, letterSpacing: -0.3 },
+  metaRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", marginTop: 6 },
+  metaItem: { flexDirection: "row", alignItems: "center", gap: 3 },
+  metaStrong: { fontSize: 14, fontWeight: "600", color: colors.text },
+  metaText: { fontSize: 14, color: colors.muted },
+  dot: { marginHorizontal: 6, color: colors.faint },
+  addressRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: 8 },
+  address: { flex: 1, fontSize: 14, color: colors.muted, lineHeight: 20 },
+  actions: { flexDirection: "row", justifyContent: "space-between", marginTop: 16 },
+  action: { alignItems: "center", flex: 1 },
+  actionIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionText: { marginTop: 6, fontSize: 12, fontWeight: "500", color: colors.text },
+  bookButton: {
+    marginTop: 18,
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    height: 52,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  bookText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 24 },
+  promo: { backgroundColor: colors.background, borderRadius: 20, overflow: "hidden", width: "100%" },
   promoClose: {
     position: "absolute",
     top: 12,
     right: 12,
     zIndex: 2,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderRadius: 18,
-    padding: 6,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
   },
   promoImage: { width: "100%", height: 180 },
-  promoTitle: { fontSize: 20, fontWeight: "bold", textAlign: "center", color: colors.text },
-  promoText: { fontSize: 14, color: colors.muted, textAlign: "center", marginTop: 8, lineHeight: 20 },
+  promoKicker: { fontSize: 11, fontWeight: "800", color: colors.primary, letterSpacing: 1.5 },
+  promoTitle: { fontSize: 22, fontWeight: "700", color: colors.text, marginTop: 4, letterSpacing: -0.3 },
+  promoText: { fontSize: 15, color: colors.muted, marginTop: 8, lineHeight: 21 },
   promoButton: {
-    marginTop: 18,
+    marginTop: 20,
     backgroundColor: colors.primary,
-    borderRadius: 24,
-    paddingVertical: 12,
+    borderRadius: 14,
+    height: 50,
     alignItems: "center",
+    justifyContent: "center",
   },
-  promoButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  promoButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 });

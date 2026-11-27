@@ -1,21 +1,35 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { FontAwesome6, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "../context/AppContext";
 import AppHeader from "../components/AppHeader";
 import BottomNav from "../components/BottomNav";
 import { colors, formatTL } from "../components/theme";
 
-const MENU = [
-  { route: "AccountSettings", icon: "sliders", label: "Hesap Ayarları" },
-  { route: "Order", icon: "bag-shopping", label: "Siparişlerim" },
-  { route: "Favorites", icon: "heart", label: "Favorilerim" },
-  { route: "WalletScreen", icon: "wallet", label: "Cüzdanım" },
-  { route: "Reviews", icon: "comment-dots", label: "Değerlendirmelerim" },
-  { route: "Support", icon: "headset", label: "Müşteri Hizmetleri" },
-  { route: "Feedback", icon: "star", label: "Uygulama Geri Bildirimi" },
-  { route: "Privacy", icon: "lock", label: "Gizlilik ve KVKK" },
-  { route: "About", icon: "circle-info", label: "Hakkında" },
+const GROUPS = [
+  {
+    title: "HESABIM",
+    items: [
+      { route: "Order", icon: "receipt-outline", label: "Siparişlerim" },
+      { route: "Favorites", icon: "heart-outline", label: "Favorilerim" },
+      { route: "Reviews", icon: "star-outline", label: "Değerlendirmelerim" },
+      { route: "AccountSettings", icon: "person-circle-outline", label: "Hesap ayarları" },
+    ],
+  },
+  {
+    title: "YARDIM",
+    items: [
+      { route: "Support", icon: "chatbubble-ellipses-outline", label: "Müşteri hizmetleri" },
+      { route: "Feedback", icon: "megaphone-outline", label: "Uygulama geri bildirimi" },
+    ],
+  },
+  {
+    title: "DİĞER",
+    items: [
+      { route: "Privacy", icon: "shield-checkmark-outline", label: "Gizlilik ve KVKK" },
+      { route: "About", icon: "information-circle-outline", label: "Hakkında" },
+    ],
+  },
 ];
 
 export default function ProfileScreen({ navigation }) {
@@ -29,28 +43,53 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <AppHeader />
+      <AppHeader title="Profil" />
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.profile}>
           <View style={styles.avatar}>
             <Text style={styles.initials}>{initials}</Text>
           </View>
-          <View style={{ flex: 1, marginLeft: 14 }}>
+          <View style={{ flex: 1 }}>
             <Text style={styles.name}>{user?.name}</Text>
             <Text style={styles.email}>{user?.email}</Text>
           </View>
-          <TouchableOpacity style={styles.wallet} onPress={() => navigation.navigate("WalletScreen")}>
-            <Text style={styles.walletLabel}>Bakiye</Text>
-            <Text style={styles.walletValue}>{formatTL(user?.walletBalance ?? 0)}</Text>
-          </TouchableOpacity>
         </View>
 
-        {MENU.map((item) => (
-          <TouchableOpacity key={item.route} style={styles.item} onPress={() => navigation.navigate(item.route)}>
-            <FontAwesome6 name={item.icon} size={20} color={colors.primary} style={{ width: 28 }} />
-            <Text style={styles.itemText}>{item.label}</Text>
-            <MaterialIcons name="chevron-right" size={24} color="#ccc" />
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.wallet}
+          onPress={() => navigation.navigate("WalletScreen")}
+          accessibilityRole="button"
+          accessibilityLabel={`Cüzdan, bakiye ${formatTL(user?.walletBalance ?? 0)}`}
+        >
+          <View style={styles.walletIcon}>
+            <Ionicons name="wallet-outline" size={22} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.walletLabel}>Cüzdan bakiyesi</Text>
+            <Text style={styles.walletValue}>{formatTL(user?.walletBalance ?? 0)}</Text>
+          </View>
+          <Text style={styles.walletAction}>Yükle</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+        </TouchableOpacity>
+
+        {GROUPS.map((g) => (
+          <View key={g.title}>
+            <Text style={styles.groupLabel}>{g.title}</Text>
+            <View style={styles.card}>
+              {g.items.map((item, i) => (
+                <TouchableOpacity
+                  key={item.route}
+                  style={[styles.item, i > 0 && styles.border]}
+                  onPress={() => navigation.navigate(item.route)}
+                  accessibilityRole="button"
+                >
+                  <Ionicons name={item.icon} size={22} color={colors.text} />
+                  <Text style={styles.itemText}>{item.label}</Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         ))}
       </ScrollView>
       <BottomNav active="Profile" />
@@ -59,36 +98,51 @@ export default function ProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.surface },
   scroll: { padding: 16, paddingBottom: 32 },
-  profile: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: "#fff5fa",
-    marginBottom: 16,
-  },
+  profile: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 8 },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  initials: { color: "#fff", fontSize: 20, fontWeight: "bold" },
-  name: { fontSize: 17, fontWeight: "bold", color: colors.text },
-  email: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  wallet: { alignItems: "flex-end" },
-  walletLabel: { fontSize: 12, color: colors.muted },
-  walletValue: { fontSize: 15, fontWeight: "bold", color: colors.primary },
-  item: {
+  initials: { color: "#fff", fontSize: 21, fontWeight: "700" },
+  name: { fontSize: 20, fontWeight: "700", color: colors.text, letterSpacing: -0.3 },
+  email: { fontSize: 14, color: colors.muted, marginTop: 2 },
+  wallet: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    gap: 12,
+    backgroundColor: colors.background,
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 16,
   },
-  itemText: { flex: 1, fontSize: 16, color: colors.text, marginLeft: 8 },
+  walletIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  walletLabel: { fontSize: 13, color: colors.muted },
+  walletValue: { fontSize: 18, fontWeight: "700", color: colors.text, marginTop: 1 },
+  walletAction: { fontSize: 14, fontWeight: "600", color: colors.primary },
+  groupLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.muted,
+    letterSpacing: 0.8,
+    marginTop: 22,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  card: { backgroundColor: colors.background, borderRadius: 14, overflow: "hidden" },
+  item: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 15 },
+  border: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#DCDCE0" },
+  itemText: { flex: 1, fontSize: 16, color: colors.text },
 });

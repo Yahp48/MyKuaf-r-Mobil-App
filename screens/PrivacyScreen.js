@@ -1,354 +1,168 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Switch, Alert } from "react-native";
-import { AntDesign as Icon } from "@expo/vector-icons";
-import { FontAwesome5 as FontAwesome5 } from "@expo/vector-icons";
-import { FontAwesome6 as FontAwesome6 } from "@expo/vector-icons";
+import { Alert, Linking, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "../context/AppContext";
+import { userApi } from "../services/api";
+import AppHeader from "../components/AppHeader";
+import { colors } from "../components/theme";
+
+// Not: Metin genel çerçevedir; yayından önce hukukçuya gözden geçirtilmeli (bkz. CLAUDE.md "Bilinen eksikler").
+const SECTIONS = [
+  {
+    title: "Hangi verileri işliyoruz?",
+    body:
+      "Ad soyad, e-posta, cep telefonu; randevu ve sipariş bilgileri; teslimat adresleri; uygulamayı kullanırken " +
+      "konumunuz (yalnızca izin verdiğinizde ve yakın salonları göstermek için) ve bildirim almak üzere cihaz " +
+      "anahtarınız. Kart bilgileriniz uygulamaya ve sunucularımıza hiç ulaşmaz; ödeme lisanslı ödeme kuruluşunun " +
+      "güvenli sayfasında yapılır.",
+  },
+  {
+    title: "Neden işliyoruz?",
+    body:
+      "Hesabınızı oluşturmak ve korumak, randevu ve siparişlerinizi ilgili salona/satıcıya iletmek, ödeme ve iadeleri " +
+      "yürütmek, size randevu ve sipariş bildirimleri göndermek ve yasal yükümlülüklerimizi (fatura, vergi kayıtları) " +
+      "yerine getirmek için. Hukuki sebepler: sözleşmenin kurulması ve ifası, hukuki yükümlülük ve meşru menfaat " +
+      "(KVKK md. 5/2-c, ç, f). Pazarlama iletişimi yalnızca açık rızanızla yapılır.",
+  },
+  {
+    title: "Kimlerle paylaşıyoruz?",
+    body:
+      "Randevu aldığınız salonla adınız ve telefonunuz; sipariş verdiğiniz satıcıyla teslimat adresiniz paylaşılır. " +
+      "Ayrıca barındırma, e-posta ve ödeme hizmeti sağlayıcılarımız ile kanunen yetkili kurumlar. Verileriniz " +
+      "satılmaz ve reklam amacıyla üçüncü kişilere verilmez.",
+  },
+  {
+    title: "Haklarınız",
+    body:
+      "KVKK md. 11 uyarınca verilerinizin işlenip işlenmediğini öğrenme, düzeltilmesini veya silinmesini isteme, " +
+      "işlemeye itiraz etme ve zararın giderilmesini talep etme haklarınız vardır. Hesabınızı uygulama içinden " +
+      "kendiniz silebilir, diğer talepleriniz için Müşteri Hizmetleri'ne yazabilirsiniz.",
+  },
+];
 
 export default function PrivacyScreen({ navigation }) {
-  const { state } = useApp();
-  const cartCount = state.cartItems.length;
-  const [settings, setSettings] = useState({
-    locationSharing: true,
-    dataCollection: false,
-    marketingEmails: true,
-    pushNotifications: true,
-    profileVisibility: true,
-    reviewsVisible: true,
-    phoneVisible: false,
-    emailVisible: true,
-  });
+  const { user, status, actions } = useApp();
+  const signedIn = status === "signedIn";
+  const [marketing, setMarketing] = useState(!!user?.marketingOptIn);
+  const [saving, setSaving] = useState(false);
 
-  const updateSetting = (key, value) => {
-    setSettings((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+  const toggleMarketing = async (value) => {
+    setMarketing(value);
+    setSaving(true);
+    try {
+      const { user: updated } = await userApi.update({ marketingOptIn: value });
+      actions.setUser(updated);
+    } catch (e) {
+      setMarketing(!value);
+      Alert.alert("Kaydedilemedi", e.message);
+    } finally {
+      setSaving(false);
+    }
   };
-
-  const showPrivacyInfo = (title, content) => {
-    Alert.alert(title, content, [{ text: "Anladım" }]);
-  };
-
-  const deleteAccount = () => {
-    Alert.alert("Hesabı Sil", "Bu işlem geri alınamaz! Tüm verileriniz kalıcı olarak silinecektir.", [
-      { text: "İptal", style: "cancel" },
-      {
-        text: "Sil",
-        style: "destructive",
-        onPress: () => {
-          Alert.alert("Hesap Silindi", "Hesabınız başarıyla silindi.");
-          navigation.navigate("SignIn");
-        },
-      },
-    ]);
-  };
-
-  const SettingItem = ({ title, subtitle, value, onValueChange, infoText }) => (
-    <View style={styles.settingItem}>
-      <View style={styles.settingContent}>
-        <Text style={styles.settingTitle}>{title}</Text>
-        {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
-      </View>
-      <View style={styles.settingControls}>
-        {infoText && (
-          <TouchableOpacity onPress={() => showPrivacyInfo(title, infoText)} style={styles.infoButton}>
-            <FontAwesome6 name="circle-info" size={16} color="#666" />
-          </TouchableOpacity>
-        )}
-        <Switch
-          value={value}
-          onValueChange={onValueChange}
-          trackColor={{ false: "#ccc", true: "#FF4896" }}
-          thumbColor={value ? "#fff" : "#f4f3f4"}
-        />
-      </View>
-    </View>
-  );
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={30} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.logo}>GİZLİLİK</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Notifications")}>
-          <FontAwesome6 name="bell" size={30} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <AppHeader title="Gizlilik ve KVKK" back />
+      <ScrollView contentContainerStyle={styles.scroll}>
+        {signedIn ? (
+          <>
+            <Text style={styles.groupLabel}>İZİNLERİM</Text>
+            <View style={styles.card}>
+              <View style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowTitle}>Kampanya ve fırsat iletileri</Text>
+                  <Text style={styles.rowSub}>E-posta ve SMS ile. İstediğiniz zaman kapatabilirsiniz.</Text>
+                </View>
+                <Switch
+                  value={marketing}
+                  onValueChange={toggleMarketing}
+                  disabled={saving}
+                  trackColor={{ false: "#D8D8DC", true: colors.primary }}
+                  thumbColor="#fff"
+                  accessibilityLabel="Kampanya ve fırsat iletileri"
+                />
+              </View>
+              <View style={styles.divider} />
+              <TouchableOpacity style={styles.row} onPress={() => Linking.openSettings()} accessibilityRole="button">
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowTitle}>Konum ve bildirim izinleri</Text>
+                  <Text style={styles.rowSub}>Telefonunuzun ayarlarından yönetilir.</Text>
+                </View>
+                <Ionicons name="open-outline" size={18} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
 
-      <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🔒 Veri Gizliliği</Text>
+            <Text style={styles.groupLabel}>VERİLERİM</Text>
+            <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => navigation.navigate("Support")}
+                accessibilityRole="button"
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowTitle}>Verilerim hakkında talepte bulun</Text>
+                  <Text style={styles.rowSub}>Bilgi, düzeltme veya kopya talebi (KVKK md. 11)</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+              </TouchableOpacity>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => navigation.navigate("AccountSettings")}
+                accessibilityRole="button"
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rowTitle, { color: colors.danger }]}>Hesabımı sil</Text>
+                  <Text style={styles.rowSub}>Hesap Ayarları'nda şifrenizle onaylayarak</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : null}
 
-          <SettingItem
-            title="Konum Paylaşımı"
-            subtitle="Yakınınızdaki kuaförleri bulmak için"
-            value={settings.locationSharing}
-            onValueChange={(value) => updateSetting("locationSharing", value)}
-            infoText="Konum bilginiz sadece size yakın kuaförleri göstermek için kullanılır ve üçüncü taraflarla paylaşılmaz."
-          />
-
-          <SettingItem
-            title="Veri Toplama"
-            subtitle="Uygulama kullanım istatistikleri"
-            value={settings.dataCollection}
-            onValueChange={(value) => updateSetting("dataCollection", value)}
-            infoText="Anonim kullanım verileri toplayarak uygulamayı iyileştirmemize yardımcı olursunuz."
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📧 İletişim Tercihleri</Text>
-
-          <SettingItem
-            title="Pazarlama E-postaları"
-            subtitle="Kampanya ve fırsat bilgileri"
-            value={settings.marketingEmails}
-            onValueChange={(value) => updateSetting("marketingEmails", value)}
-            infoText="Özel indirimler, yeni kuaför kayıtları ve kampanyalar hakkında bilgi alın."
-          />
-
-          <SettingItem
-            title="Anlık Bildirimler"
-            subtitle="Randevu hatırlatmaları ve güncellemeler"
-            value={settings.pushNotifications}
-            onValueChange={(value) => updateSetting("pushNotifications", value)}
-            infoText="Randevu hatırlatmaları, onay bildirimleri ve önemli güncellemeler için gereklidir."
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>👤 Profil Görünürlüğü</Text>
-
-          <SettingItem
-            title="Profil Görünürlüğü"
-            subtitle="Diğer kullanıcılar profilinizi görebilir"
-            value={settings.profileVisibility}
-            onValueChange={(value) => updateSetting("profileVisibility", value)}
-            infoText="Profiliniz kuaförlerin sizi tanımasına yardımcı olur ancak istediğiniz zaman gizleyebilirsiniz."
-          />
-
-          <SettingItem
-            title="Değerlendirmelerim Görünsün"
-            subtitle="Yazdığınız yorumlar herkese açık"
-            value={settings.reviewsVisible}
-            onValueChange={(value) => updateSetting("reviewsVisible", value)}
-            infoText="Değerlendirmeleriniz diğer kullanıcılara kuaför seçiminde yardımcı olur."
-          />
-
-          <SettingItem
-            title="Telefon Numarası Görünsün"
-            subtitle="Kuaförler sizinle doğrudan iletişim kurabilir"
-            value={settings.phoneVisible}
-            onValueChange={(value) => updateSetting("phoneVisible", value)}
-            infoText="Telefon numaranız sadece randevu aldığınız kuaförlere gösterilir."
-          />
-
-          <SettingItem
-            title="E-posta Adresi Görünsün"
-            subtitle="Bildirimler ve iletişim için"
-            value={settings.emailVisible}
-            onValueChange={(value) => updateSetting("emailVisible", value)}
-            infoText="E-posta adresiniz kuaförlerle iletişim ve randevu onayları için kullanılır."
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📄 Gizlilik Belgeleri</Text>
-
-          <TouchableOpacity style={styles.documentButton}>
-            <FontAwesome6 name="file-contract" size={16} color="#FF4896" />
-            <Text style={styles.documentText}>Gizlilik Politikası</Text>
-            <FontAwesome6 name="chevron-right" size={12} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.documentButton}>
-            <FontAwesome6 name="handshake" size={16} color="#FF4896" />
-            <Text style={styles.documentText}>Kullanım Şartları</Text>
-            <FontAwesome6 name="chevron-right" size={12} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.documentButton}>
-            <FontAwesome6 name="cookie-bite" size={16} color="#FF4896" />
-            <Text style={styles.documentText}>Çerez Politikası</Text>
-            <FontAwesome6 name="chevron-right" size={12} color="#666" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💾 Veri Yönetimi</Text>
-
-          <TouchableOpacity style={styles.actionButton}>
-            <FontAwesome6 name="download" size={16} color="#3b82f6" />
-            <Text style={[styles.actionText, { color: "#3b82f6" }]}>Verilerimi İndir</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionButton} onPress={deleteAccount}>
-            <FontAwesome6 name="trash-alt" size={16} color="#ef4444" />
-            <Text style={[styles.actionText, { color: "#ef4444" }]}>Hesabımı Sil</Text>
-          </TouchableOpacity>
+        <Text style={styles.groupLabel}>KVKK AYDINLATMA METNİ</Text>
+        <View style={[styles.card, styles.textCard]}>
+          <Text style={styles.intro}>
+            MyKuaför olarak kişisel verilerinizi 6698 sayılı Kişisel Verilerin Korunması Kanunu'na uygun şekilde
+            işliyoruz. Bu metin, hangi verileri neden işlediğimizi ve haklarınızı özetler.
+          </Text>
+          {SECTIONS.map((s) => (
+            <View key={s.title} style={styles.section}>
+              <Text style={styles.sectionTitle}>{s.title}</Text>
+              <Text style={styles.body}>{s.body}</Text>
+            </View>
+          ))}
+          <Text style={styles.footnote}>
+            Mesafeli satış sözleşmesi ve ön bilgilendirme formu her siparişte ödeme adımında ayrıca gösterilir.
+          </Text>
         </View>
       </ScrollView>
-
-      <View style={styles.bottomNav}>
-        <TouchableOpacity onPress={() => navigation.navigate("Appointments")} style={styles.navButton}>
-          <FontAwesome5 name="calendar-alt" size={24} color="#fff" />
-          <Text style={styles.navText}>Randevular</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.navButton}>
-          <FontAwesome5 name="map-marked-alt" size={24} color="#fff" />
-          <Text style={styles.navText}>Harita</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate("Shop")} style={styles.navButton}>
-          <FontAwesome5 name="shopping-bag" size={28} color="#fff" />
-          {cartCount > 0 && (
-            <View style={styles.navCartBadge}>
-              <Text style={styles.navCartBadgeText}>{cartCount > 99 ? "99+" : cartCount}</Text>
-            </View>
-          )}
-          <Text style={styles.navText}>Mağaza</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate("Profile")} style={styles.navButton}>
-          <FontAwesome6 name="user" size={24} color="#fff" />
-          <Text style={styles.navText}>Profil</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f9fa" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#FF4896",
-    paddingTop: 15,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-  },
-  logo: { color: "white", fontSize: 18, fontWeight: "bold" },
-  content: { flex: 1, paddingBottom: 80 },
-  section: {
-    backgroundColor: "#fff",
-    marginHorizontal: 15,
-    marginTop: 15,
-    borderRadius: 15,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 15,
-  },
-  settingItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-  },
-  settingContent: { flex: 1 },
-  settingTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#333",
-    marginBottom: 2,
-  },
-  settingSubtitle: {
+  container: { flex: 1, backgroundColor: colors.surface },
+  scroll: { padding: 16, paddingBottom: 40 },
+  groupLabel: {
     fontSize: 12,
-    color: "#666",
+    fontWeight: "700",
+    color: colors.muted,
+    letterSpacing: 0.8,
+    marginTop: 12,
+    marginBottom: 8,
+    marginLeft: 4,
   },
-  settingControls: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  infoButton: {
-    padding: 5,
-    marginRight: 5,
-  },
-  documentButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-  },
-  documentText: {
-    fontSize: 14,
-    color: "#333",
-    marginLeft: 10,
-    flex: 1,
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-  },
-  actionText: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginLeft: 10,
-  },
-  bottomNav: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    backgroundColor: "#FF4896",
-    height: 70,
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    paddingHorizontal: 10,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  navButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-    paddingVertical: 8,
-  },
-  navText: {
-    color: "#fff",
-    fontSize: 11,
-    marginTop: 4,
-    fontWeight: "500",
-  },
-  navCartBadge: {
-    position: "absolute",
-    top: -4,
-    right: 8,
-    backgroundColor: "#e00061",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#FF4896",
-  },
-  navCartBadgeText: {
-    color: "white",
-    fontSize: 10,
-    fontWeight: "bold",
-  },
+  card: { backgroundColor: colors.background, borderRadius: 14, overflow: "hidden" },
+  textCard: { padding: 18 },
+  row: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  rowTitle: { fontSize: 16, fontWeight: "500", color: colors.text },
+  rowSub: { fontSize: 13, color: colors.muted, marginTop: 2, lineHeight: 18 },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: "#DCDCE0", marginLeft: 16 },
+  intro: { fontSize: 15, color: colors.text, lineHeight: 22 },
+  section: { marginTop: 18 },
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: 6 },
+  body: { fontSize: 14.5, color: colors.muted, lineHeight: 21 },
+  footnote: { fontSize: 13, color: colors.faint, marginTop: 18, lineHeight: 19 },
 });

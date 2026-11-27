@@ -24,3 +24,17 @@ export const API_URL = resolveApiUrl();
 export const SOCKET_URL = API_URL.replace(/\/api$/, "");
 export const APP_SCHEME = "mykuafor";
 export const REQUEST_TIMEOUT_MS = 15000;
+
+/**
+ * İletişim bilgileri (.env → EXPO_PUBLIC_*). Girilmeyen bilgi uygulamada hiç gösterilmez;
+ * böylece yer tutucu numara/adres yayına çıkamaz.
+ */
+const clean = (v) => (v && v.trim() ? v.trim() : null);
+export const CONTACT = {
+  phone: clean(process.env.EXPO_PUBLIC_SUPPORT_PHONE),
+  whatsapp: clean(process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP),
+  email: clean(process.env.EXPO_PUBLIC_SUPPORT_EMAIL),
+  hours: clean(process.env.EXPO_PUBLIC_SUPPORT_HOURS),
+  website: clean(process.env.EXPO_PUBLIC_WEBSITE_URL),
+  instagram: clean(process.env.EXPO_PUBLIC_INSTAGRAM_URL),
+};

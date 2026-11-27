@@ -177,7 +177,7 @@ export default function CalendarScreen({ navigation, route }) {
             >
               <View style={{ flex: 1 }}>
                 <Text style={[styles.serviceName, on && { color: "#fff" }]}>{s.name}</Text>
-                <Text style={[styles.serviceMeta, on && { color: "#ffe3ef" }]}>{s.durationMinutes} dk</Text>
+                <Text style={[styles.serviceMeta, on && { color: "#FBD5DF" }]}>{s.durationMinutes} dk</Text>
               </View>
               <Text style={[styles.servicePrice, on && { color: "#fff" }]}>{formatTL(s.price)}</Text>
             </TouchableOpacity>
@@ -318,9 +318,9 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
     width: 92,
   },
-  staffOn: { borderColor: colors.primary, backgroundColor: "#fff0f6" },
+  staffOn: { borderColor: colors.primary, backgroundColor: "#FDEEF2" },
   staffImage: { width: 60, height: 60, borderRadius: 30 },
-  anyStaff: { backgroundColor: "#f3e8ff" },
+  anyStaff: { backgroundColor: "#F5F5F7" },
   staffName: { marginTop: 6, fontWeight: "600", color: colors.text },
   staffTitle: { fontSize: 11, color: colors.muted },
   times: { flexDirection: "row", flexWrap: "wrap" },

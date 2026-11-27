@@ -1,15 +1,27 @@
+// Tek vurgu rengi (#C9184A) + nötr tonlar. İkincil renk yok: vurgu dışındaki her şey gri/mürekkep.
 export const colors = {
-  primary: "#FF4896",
-  primaryDark: "#e00061",
-  accent: "#5A189A",
-  text: "#222",
-  muted: "#777",
-  border: "#eee",
-  background: "#fff",
-  surface: "#f8f8fa",
-  success: "#2e7d32",
-  danger: "#d32f2f",
-  warning: "#ed6c02",
+  primary: "#C9184A",
+  primaryDark: "#A4133C",
+  primarySoft: "#FDEEF2",
+  // Eski "accent" kullanımları artık koyu mürekkep rengine düşer (mor kaldırıldı).
+  accent: "#1C1C1E",
+  text: "#1C1C1E",
+  muted: "#6E6E73",
+  faint: "#A1A1A6",
+  border: "#ECECEF",
+  background: "#FFFFFF",
+  surface: "#F5F5F7",
+  success: "#1E8E3E",
+  danger: "#D93025",
+  warning: "#B26A00",
+};
+
+export const shadow = {
+  shadowColor: "#000",
+  shadowOpacity: 0.08,
+  shadowRadius: 12,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 4,
 };
 
 const tl = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" });
