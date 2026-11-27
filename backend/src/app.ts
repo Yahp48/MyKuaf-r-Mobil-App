@@ -21,6 +21,7 @@ import { paymentsRouter } from "./modules/payments/routes.ts";
 import { cardsRouter } from "./modules/cards/routes.ts";
 import { storesRouter } from "./modules/stores/routes.ts";
 import { loyaltyRouter } from "./modules/loyalty/routes.ts";
+import { adminRouter } from "./modules/admin/routes.ts";
 import { notificationsRouter } from "./modules/notifications/routes.ts";
 import { supportRouter } from "./modules/support/routes.ts";
 import { mapsRouter } from "./modules/maps/routes.ts";
@@ -82,6 +83,7 @@ export function createApp() {
   api.use("/cards", cardsRouter);
   api.use("/stores", storesRouter);
   api.use("/loyalty", loyaltyRouter);
+  api.use("/admin", adminRouter);
   api.use("/notifications", notificationsRouter);
   api.use("/support", supportRouter);
   api.use("/maps", mapsRouter);

@@ -33,6 +33,9 @@ Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kuralları
   `backend/prisma/data/istanbul-salons.ts`, kaynak OpenStreetMap/ODbL — atıf zorunlu; fotoğraf/puan kopyalanmaz,
   saat bilinmiyorsa uydurulmaz). Randevu/müsaitlik yalnızca `bookableSalonWhere`
 - Kayıtlı kart: kart ödeme kuruluşunda saklanır, bizde yalnızca anahtar + son 4 hane (`SavedCard`); kart ekleme 1 TL doğrulama + iade
+- Yönetim paneli (`dashboard/src/pages/admin`, API `/api/admin`, rol ADMIN): işletme doğrulama (vergi levhası
+  `private-uploads/` içinde, herkese açık değil), askıya alma, rehber sahiplenme onayı, kategoriler, destek yanıtı,
+  yorum gizleme. Hatırlatma/bekleme listesi işleri `backend/src/modules/appointments/jobs.ts`, puan `modules/loyalty`
 - Ürün rozetleri (`backend/src/modules/products/metrics.ts`) yalnızca gerçek satış/favori verisinden; mağaza logosunu satıcı kendisi yükler
 - İndirim: hizmet başına yüzde + tarih aralığı; fiyat randevu gününe göre sunucuda hesaplanır (`backend/src/modules/salons/discount.ts`).
   Son 30 günde fiyatı artırılan hizmette indirim yok, indirim sürerken fiyat artırılamaz
@@ -52,10 +55,11 @@ Mobil (kök dizin):
 - `npx expo-doctor` — bağımlılık/yapılandırma kontrolü
 Backend (`backend/`):
 - `docker compose up -d` (PostgreSQL), `npm run db:deploy`, `npm run db:seed`, `npm run dev`
-- `npm test` (65 test, `mykuafor_test` veritabanı), `npm run typecheck`
+- `npm test` (75 test, `mykuafor_test` veritabanı), `npm run typecheck`
 - Şema değişikliği: `prisma/schema.prisma` düzenle → `npm run db:migrate -- --name <ad>`
 - Demo hesapları (yalnızca yerel seed, şifre `Demo12345`): müşteri `demo@mykuafor.test`,
-  kuaför paneli `salon@mykuafor.test` ("MyKuaför Demo Salon", Kadıköy), satıcı paneli `satici@mykuafor.test`
+  kuaför paneli `salon@mykuafor.test` ("MyKuaför Demo Salon", Kadıköy), satıcı paneli `satici@mykuafor.test`,
+  yönetim paneli `admin@mykuafor.test` (/yonetim). Production'da yönetici: `npm run admin:create -- <e-posta> "<Ad>"`
 Panel (`dashboard/`): `npm run dev` (http://localhost:5173, /api'yi :5000'e yönlendirir), `npm run build`
 Telefonla test: backend `.env` → `PUBLIC_BASE_URL=http://<bilgisayar-IP>:5000`; `npx expo start` → Expo Go ile QR
 
@@ -70,7 +74,6 @@ Telefonla test: backend `.env` → `PUBLIC_BASE_URL=http://<bilgisayar-IP>:5000`
 
 ## Bilinen eksikler / sıradaki işler
 1. iyzico ödeme entegrasyonu (üye işyeri hesabı ve API anahtarı gerekli) — `backend/src/modules/payments/providers.ts`
-2. Platform yönetici (admin) paneli yok: işletme askıya alma, kategori yönetimi, destek talepleri şimdilik veritabanından
 3. Production altyapısı: barındırma, alan adı + HTTPS, SMTP, EAS projectId (push bildirimleri için)
 4. Gerçek içerik: KVKK metni (PrivacyScreen) ve mesafeli satış sözleşmesi hukukçu onayından geçmeli;
    destek telefonu/WhatsApp/e-posta/sosyal medya `.env` → `EXPO_PUBLIC_SUPPORT_*` ile girilmeli (boşsa gösterilmez)

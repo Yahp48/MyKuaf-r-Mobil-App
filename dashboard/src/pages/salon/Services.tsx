@@ -479,9 +479,7 @@ function PackagesSection({ services }: { services: Service[] }) {
     <section style={{ marginTop: 40 }}>
       <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 21 }}>
-            Paketler
-          </h2>
+          <h2 style={{ margin: 0, fontSize: 21 }}>Paketler</h2>
           <p className="small muted" style={{ margin: "4px 0 0" }}>
             Birden çok hizmeti avantajlı tek fiyatla sunun. Müşteri, liste fiyatı ve tasarrufu birlikte görür.
           </p>

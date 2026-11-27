@@ -22,8 +22,13 @@ export interface Business {
   returnPolicy: string | null;
   logoUrl: string | null;
   storeDescription: string | null;
+  verificationStatus: VerificationStatus;
+  verificationNote: string | null;
+  hasTaxCertificate: boolean;
   createdAt: string;
 }
+
+export type VerificationStatus = "UNVERIFIED" | "PENDING" | "VERIFIED" | "REJECTED";
 
 export interface Owner {
   id: string;
@@ -60,8 +65,10 @@ export interface SalonProfile {
 
 export interface Session {
   owner: Owner;
+  /** Yönetici oturumunda null'dur; işletme sayfaları yöneticiye hiç açılmaz (RequireBusiness yönlendirir). */
   business: Business;
   salon: SalonProfile | null;
+  isAdmin?: boolean;
 }
 
 export type AppointmentStatus = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";

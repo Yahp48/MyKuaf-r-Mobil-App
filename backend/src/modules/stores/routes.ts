@@ -18,6 +18,7 @@ const serializeStore = (
     storeDescription: string | null;
     city: string;
     createdAt: Date;
+    verificationStatus: string;
   },
   productCount: number,
 ) => ({
@@ -27,6 +28,7 @@ const serializeStore = (
   description: b.storeDescription,
   city: b.city,
   productCount,
+  verified: b.verificationStatus === "VERIFIED",
   since: b.createdAt.toISOString(),
 });
 

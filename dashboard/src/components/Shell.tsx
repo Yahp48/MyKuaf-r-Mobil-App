@@ -117,6 +117,91 @@ function Groups({ groups }: { groups: { label: string; items: Item[] }[] }) {
   );
 }
 
+function AdminNav() {
+  const { data } = useQuery({
+    queryKey: ["admin", "overview"],
+    queryFn: () =>
+      api.get<{ pendingVerifications: number; pendingClaims: number; openTickets: number }>("/admin/overview"),
+  });
+  const groups: { label: string; items: Item[] }[] = [
+    {
+      label: "Platform",
+      items: [
+        { to: "/yonetim", label: "Genel bakış", icon: <ChartBar size={18} />, end: true },
+        {
+          to: "/yonetim/isletmeler",
+          label: "İşletmeler",
+          icon: <Storefront size={18} />,
+          count: data?.pendingVerifications,
+        },
+        {
+          to: "/yonetim/sahiplenme",
+          label: "Sahiplenme talepleri",
+          icon: <Scissors size={18} />,
+          count: data?.pendingClaims,
+        },
+      ],
+    },
+    {
+      label: "İçerik",
+      items: [
+        { to: "/yonetim/kategoriler", label: "Kategoriler", icon: <Package size={18} /> },
+        { to: "/yonetim/destek", label: "Destek talepleri", icon: <Receipt size={18} />, count: data?.openTickets },
+        { to: "/yonetim/yorumlar", label: "Yorum denetimi", icon: <Star size={18} /> },
+      ],
+    },
+  ];
+  return <Groups groups={groups} />;
+}
+
+/** Platform yöneticisi paneli: işletme paneliyle aynı düzen, kendi menüsü. */
+export function AdminShell() {
+  const { session, signOut } = useSession();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [open, setOpen] = useState(false);
+  useEffect(() => setOpen(false), [location.pathname]);
+  return (
+    <div className="shell" data-business="ADMIN">
+      <aside className="index" data-open={open} aria-label="Gezinme">
+        <a className="wordmark" href="/yonetim">
+          <b>MyKuaför</b>
+          <i aria-hidden />
+        </a>
+        <div className="index-business">Platform yönetimi</div>
+        <AdminNav />
+        <div className="index-foot">
+          <span className="muted">{session?.owner.name}</span>
+          <Button
+            variant="quiet"
+            size="sm"
+            style={{ justifyContent: "flex-start", paddingLeft: 0 }}
+            onClick={async () => {
+              await signOut();
+              navigate("/giris", { replace: true });
+            }}
+          >
+            <SignOut size={16} /> Çıkış yap
+          </Button>
+        </div>
+      </aside>
+      <div>
+        <div className="mobile-bar">
+          <Button variant="quiet" size="sm" onClick={() => setOpen(true)} aria-label="Menüyü aç" aria-expanded={open}>
+            <List size={22} />
+          </Button>
+          <b style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>Platform yönetimi</b>
+        </div>
+        <main className="main" id="icerik" onClick={() => open && setOpen(false)}>
+          <Suspense fallback={<Loading rows={6} />}>
+            <Outlet />
+          </Suspense>
+        </main>
+      </div>
+    </div>
+  );
+}
+
 export function Shell() {
   const { business, owner } = useBusiness();
   const { signOut } = useSession();

@@ -47,7 +47,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (email: string, password: string) => {
     const r = await api.post<Session & { accessToken: string }>("/business/auth/login", { email, password });
     setAccessToken(r.accessToken);
-    const s = { owner: r.owner, business: r.business, salon: r.salon };
+    const s = { owner: r.owner, business: r.business, salon: r.salon, isAdmin: r.isAdmin };
     setSessionState(s);
     setStatus("ready");
     return s;
@@ -89,4 +89,4 @@ export function useBusiness() {
   return session;
 }
 
-export const homeFor = (s: Session) => (s.business.type === "SALON" ? "/salon" : "/magaza");
+export const homeFor = (s: Session) => (s.isAdmin ? "/yonetim" : s.business.type === "SALON" ? "/salon" : "/magaza");

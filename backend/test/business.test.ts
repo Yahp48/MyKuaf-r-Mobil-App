@@ -619,3 +619,117 @@ describe("paketler, uzmanlıklar ve ilk ziyaret indirimi", () => {
     expect(second.body.appointment).toMatchObject({ total: 600, discount: 0 });
   });
 });
+
+describe("yönetici paneli", () => {
+  async function adminAuth() {
+    const email = `admin${Date.now()}@example.com`;
+    await prisma.user.create({
+      data: {
+        email,
+        name: "Yönetici",
+        role: "ADMIN",
+        passwordHash: await (await import("../src/lib/password.ts")).hashPassword("Sifre12345"),
+      },
+    });
+    const login = await api().post("/api/business/auth/login").send({ email, password: "Sifre12345" });
+    expect(login.status).toBe(200);
+    expect(login.body.isAdmin).toBe(true);
+    return { Authorization: `Bearer ${login.body.accessToken}` };
+  }
+
+  it("işletme hesabı yönetici uçlarına giremez", async () => {
+    const b = await registerBusiness("SALON");
+    expect((await api().get("/api/admin/overview").set(b.auth)).status).toBe(403);
+  });
+
+  it("vergi levhası doğrulaması: belge yüklenir, yönetici onaylar, uygulamada rozet görünür", async () => {
+    const admin = await adminAuth();
+    const b = await registerBusiness("SALON");
+    await api().post("/api/business/salon/staff").set(b.auth).send({ name: "Elif" });
+    await api().post("/api/business/salon/services").set(b.auth).send({ name: "Fön", durationMinutes: 30, price: 100 });
+    const pdf = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
+    const doc = await api().post("/api/business/documents").set(b.auth).attach("file", pdf, "levha.pdf");
+    expect(doc.status).toBe(201);
+    const apply = await api().post("/api/business/verification").set(b.auth).send({ documentKey: doc.body.key });
+    expect(apply.body.business.verificationStatus).toBe("PENDING");
+
+    const pending = await api().get("/api/admin/businesses").set(admin).query({ verification: "PENDING" });
+    expect(pending.body.items[0]).toMatchObject({ id: b.business.id, hasTaxCertificate: true });
+    const file = await api().get(`/api/admin/businesses/${b.business.id}/tax-certificate`).set(admin);
+    expect(file.status).toBe(200);
+    expect(file.headers["content-type"]).toContain("application/pdf");
+    // Belge herkese açık değil
+    expect((await api().get(`/uploads/${doc.body.key}`)).status).toBe(404);
+
+    await api().post(`/api/admin/businesses/${b.business.id}/verification`).set(admin).send({ status: "VERIFIED" });
+    const salon = (await api().get("/api/salons")).body.items.find((s: { id: string }) => s.id === b.salon.id);
+    expect(salon.verified).toBe(true);
+
+    const suspend = await api()
+      .post(`/api/admin/businesses/${b.business.id}/status`)
+      .set(admin)
+      .send({ status: "SUSPENDED", reason: "Test" });
+    expect(suspend.status).toBe(200);
+    expect(
+      (await api().get("/api/salons")).body.items.find((s: { id: string }) => s.id === b.salon.id),
+    ).toBeUndefined();
+  });
+
+  it("rehber kaydı sahiplenilir: onaylanınca rehber kaydı kalkar, favoriler taşınır", async () => {
+    const admin = await adminAuth();
+    const listing = await prisma.salon.create({
+      data: {
+        slug: `rehber-${Date.now()}`,
+        name: "Moda Güzellik",
+        address: "Moda Cad. 1",
+        city: "İstanbul",
+        latitude: 40.98,
+        longitude: 29.02,
+        phone: "+902160000001",
+        isListing: true,
+      },
+    });
+    const fan = await registerUser();
+    await api().put(`/api/favorites/salons/${listing.id}`).set(fan.auth);
+    const b = await registerBusiness("SALON");
+    const found = await api().get("/api/business/salon/claims/search").set(b.auth).query({ q: "moda" });
+    expect(found.body.items[0].id).toBe(listing.id);
+    const claim = await api().post("/api/business/salon/claims").set(b.auth).send({ listingId: listing.id });
+    expect(claim.status).toBe(201);
+    expect((await api().post("/api/business/salon/claims").set(b.auth).send({ listingId: listing.id })).status).toBe(
+      409,
+    );
+
+    const claims = await api().get("/api/admin/claims").set(admin);
+    expect(claims.body.items[0].listing.name).toBe("Moda Güzellik");
+    expect((await api().post(`/api/admin/claims/${claim.body.claim.id}/approve`).set(admin)).status).toBe(200);
+    expect((await prisma.salon.findUniqueOrThrow({ where: { id: listing.id } })).isActive).toBe(false);
+    expect(
+      await prisma.favoriteSalon.findFirst({ where: { userId: fan.user.id, salonId: b.salon.id } }),
+    ).not.toBeNull();
+    // İşletmenin kendi telefonu korunur; rehber kaydı haritadan kalkar
+    expect(
+      (await api().get("/api/salons")).body.items.find((s: { id: string }) => s.id === listing.id),
+    ).toBeUndefined();
+  });
+
+  it("kategori, destek yanıtı ve yorum gizleme", async () => {
+    const admin = await adminAuth();
+    const cat = await api().post("/api/admin/categories").set(admin).send({ name: "Saç Boyası" });
+    expect(cat.body.category.slug).toBe("sac-boyasi");
+    expect((await api().post("/api/admin/categories").set(admin).send({ name: "Saç Boyası" })).status).toBe(409);
+
+    const u = await registerUser();
+    const t = await api()
+      .post("/api/support/tickets")
+      .set(u.auth)
+      .send({ type: "SUPPORT", subject: "Soru", message: "Randevumu nasıl değiştiririm?" });
+    expect(t.status).toBe(201);
+    const ticketId = (await api().get("/api/admin/tickets").set(admin)).body.items[0].id;
+    await api()
+      .post(`/api/admin/tickets/${ticketId}/reply`)
+      .set(admin)
+      .send({ reply: "Randevularım ekranından iptal edip yeniden alabilirsiniz." });
+    expect(await prisma.notification.count({ where: { userId: u.user.id, type: "support_reply" } })).toBe(1);
+  });
+});

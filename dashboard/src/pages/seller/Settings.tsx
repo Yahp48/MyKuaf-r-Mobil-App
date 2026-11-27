@@ -1,3 +1,4 @@
+import { VerificationForm } from "../../components/Verification";
 import { useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router";
 import { api, ApiError } from "../../lib/api";
@@ -13,6 +14,7 @@ import { ImageUploader } from "../../components/ImageUploader";
 const TABS = [
   ["magaza", "Mağaza ve kargo"],
   ["isletme", "Vergi ve iletişim"],
+  ["dogrulama", "Doğrulama"],
   ["hesap", "Hesap"],
 ] as const;
 
@@ -37,6 +39,7 @@ export default function SellerSettings() {
       </div>
       {tab === "magaza" && <StoreForm />}
       {tab === "isletme" && <BusinessInfoForm />}
+      {tab === "dogrulama" && <VerificationForm />}
       {tab === "hesap" && <AccountForm />}
     </>
   );

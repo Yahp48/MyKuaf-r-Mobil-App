@@ -24,6 +24,9 @@ export function serializeBusiness(b: Business) {
     returnPolicy: b.returnPolicy,
     logoUrl: b.logoUrl,
     storeDescription: b.storeDescription,
+    verificationStatus: b.verificationStatus,
+    verificationNote: b.verificationNote,
+    hasTaxCertificate: !!b.taxCertificateUrl,
     createdAt: b.createdAt.toISOString(),
   };
 }

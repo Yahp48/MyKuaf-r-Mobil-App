@@ -1,3 +1,4 @@
+import { VerificationForm } from "../../components/Verification";
 import { useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ const TABS = [
   ["salon", "Salon profili"],
   ["kurallar", "Randevu kuralları"],
   ["isletme", "Vergi ve iletişim"],
+  ["dogrulama", "Doğrulama"],
   ["hesap", "Hesap"],
 ] as const;
 
@@ -41,6 +43,7 @@ export default function Settings() {
       {tab === "salon" && <SalonProfileForm />}
       {tab === "kurallar" && <RulesForm />}
       {tab === "isletme" && <BusinessInfoForm />}
+      {tab === "dogrulama" && <VerificationForm />}
       {tab === "hesap" && <AccountForm />}
     </>
   );

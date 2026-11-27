@@ -32,6 +32,14 @@
   --t-fast: 120ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+/* Platform yönetimi: nötr mürekkep */
+[data-business="ADMIN"] {
+  --accent: #3b3a55;
+  --accent-ink: #2a2940;
+  --accent-wash: #e4e3ee;
+  --accent-wash-2: #d3d2e3;
+}
+
 /* Satıcı işletmeler kendi mürekkep rengini taşır */
 [data-business="SELLER"] {
   --accent: #1f5f6b;
@@ -1733,4 +1741,21 @@ dialog.dialog::backdrop {
   padding: 14px 16px;
   display: grid;
   gap: 12px;
+}
+
+/* Tanım listesi (yönetim ayrıntıları) */
+.facts {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) 1fr;
+  gap: 6px 16px;
+  margin: 0 0 16px;
+}
+
+.facts dt {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.facts dd {
+  margin: 0;
 }

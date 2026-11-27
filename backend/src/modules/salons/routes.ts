@@ -15,7 +15,7 @@ import {
   serializeWorkingHours,
   serializePackage,
 } from "./serialize.ts";
-import { SUMMARY_SERVICE_SELECT, publicDiscount, todayIn } from "./discount.ts";
+import { SUMMARY_BUSINESS_SELECT, SUMMARY_SERVICE_SELECT, publicDiscount, todayIn } from "./discount.ts";
 import { toTL } from "../../lib/money.ts";
 import { DateTime } from "luxon";
 import { userUploadPrefix } from "../../lib/uploads.ts";
@@ -51,7 +51,11 @@ salonsRouter.get("/", optionalAuth, async (req, res) => {
     // Konuma göre sıralama. Salon sayısı on binleri bulursa PostGIS'e geçilmeli.
     const all = await prisma.salon.findMany({
       where,
-      include: { workingHours: true, services: { where: { isActive: true }, select: SUMMARY_SERVICE_SELECT } },
+      include: {
+        workingHours: true,
+        business: SUMMARY_BUSINESS_SELECT,
+        services: { where: { isActive: true }, select: SUMMARY_SERVICE_SELECT },
+      },
     });
     const withDistance = all
       .map((s) => ({ s, d: distanceKm(query.lat!, query.lng!, s.latitude, s.longitude) }))
@@ -68,7 +72,11 @@ salonsRouter.get("/", optionalAuth, async (req, res) => {
   const [rows, total] = await Promise.all([
     prisma.salon.findMany({
       where,
-      include: { workingHours: true, services: { where: { isActive: true }, select: SUMMARY_SERVICE_SELECT } },
+      include: {
+        workingHours: true,
+        business: SUMMARY_BUSINESS_SELECT,
+        services: { where: { isActive: true }, select: SUMMARY_SERVICE_SELECT },
+      },
       orderBy: [{ ratingAvg: "desc" }, { name: "asc" }],
       ...paginate(query.page, query.pageSize),
     }),
@@ -113,7 +121,11 @@ salonsRouter.get("/featured", optionalAuth, async (req, res) => {
   const where = { ...visibleSalonWhere, city: { equals: q.city, mode: "insensitive" as const } };
   const salons = await prisma.salon.findMany({
     where,
-    include: { workingHours: true, services: { where: { isActive: true }, select: SUMMARY_SERVICE_SELECT } },
+    include: {
+      workingHours: true,
+      business: SUMMARY_BUSINESS_SELECT,
+      services: { where: { isActive: true }, select: SUMMARY_SERVICE_SELECT },
+    },
   });
   const ids = salons.map((s) => s.id);
   const [completed, reviews] = ids.length
@@ -269,6 +281,7 @@ salonsRouter.get("/:id", optionalAuth, async (req, res) => {
     where: { id, ...visibleSalonWhere },
     include: {
       workingHours: true,
+      business: SUMMARY_BUSINESS_SELECT,
       staff: { where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
       services: { where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
       packages: {

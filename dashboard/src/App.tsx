@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router";
 import { homeFor, useSession } from "./lib/session";
-import { Shell } from "./components/Shell";
+import { AdminShell, Shell } from "./components/Shell";
 import { Loading } from "./components/ui";
 import Landing from "./pages/public/Landing";
 import Login from "./pages/public/Login";
@@ -30,6 +30,13 @@ const SellerFinance = lazy(() => import("./pages/seller/Finance"));
 const SellerReviews = lazy(() => import("./pages/seller/Reviews"));
 const SellerSettings = lazy(() => import("./pages/seller/Settings"));
 
+const AdminOverview = lazy(() => import("./pages/admin/Overview"));
+const AdminBusinesses = lazy(() => import("./pages/admin/Businesses"));
+const AdminClaims = lazy(() => import("./pages/admin/Claims"));
+const AdminCategories = lazy(() => import("./pages/admin/Categories"));
+const AdminTickets = lazy(() => import("./pages/admin/Tickets"));
+const AdminReviews = lazy(() => import("./pages/admin/Reviews"));
+
 function FullPageLoading() {
   return (
     <div style={{ padding: 48, maxWidth: 520, margin: "10vh auto" }}>
@@ -44,7 +51,17 @@ function RequireBusiness({ type, children }: { type: BusinessType; children: Rea
   const location = useLocation();
   if (status === "loading") return <FullPageLoading />;
   if (!session) return <Navigate to="/giris" replace state={{ from: location.pathname }} />;
-  if (session.business.type !== type) return <Navigate to={homeFor(session)} replace />;
+  if (session.isAdmin || session.business.type !== type) return <Navigate to={homeFor(session)} replace />;
+  return <>{children}</>;
+}
+
+/** Yönetim bölümü yalnızca platform yöneticilerine açıktır. */
+function RequireAdmin({ children }: { children: ReactNode }) {
+  const { status, session } = useSession();
+  const location = useLocation();
+  if (status === "loading") return <FullPageLoading />;
+  if (!session) return <Navigate to="/giris" replace state={{ from: location.pathname }} />;
+  if (!session.isAdmin) return <Navigate to={homeFor(session)} replace />;
   return <>{children}</>;
 }
 
@@ -98,6 +115,22 @@ export default function App() {
           <Route path="gelir-gider" element={<SalonFinance />} />
           <Route path="yorumlar" element={<SalonReviews />} />
           <Route path="ayarlar" element={<SalonSettings />} />
+        </Route>
+
+        <Route
+          path="/yonetim"
+          element={
+            <RequireAdmin>
+              <AdminShell />
+            </RequireAdmin>
+          }
+        >
+          <Route index element={<AdminOverview />} />
+          <Route path="isletmeler" element={<AdminBusinesses />} />
+          <Route path="sahiplenme" element={<AdminClaims />} />
+          <Route path="kategoriler" element={<AdminCategories />} />
+          <Route path="destek" element={<AdminTickets />} />
+          <Route path="yorumlar" element={<AdminReviews />} />
         </Route>
 
         <Route

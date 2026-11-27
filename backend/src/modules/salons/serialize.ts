@@ -69,6 +69,7 @@ export function serializeSalonSummary(
     longitude: number;
     timezone: string;
     isListing?: boolean;
+    business?: { verificationStatus: string } | null;
     dataSource?: string | null;
     sourceRef?: string | null;
     coverImageUrl: string | null;
@@ -101,6 +102,7 @@ export function serializeSalonSummary(
     kindLabel: SALON_KIND_LABEL[s.kind],
     // false: rehber kaydı — online randevu yok, yalnızca bilgi ve iletişim
     bookable: !s.isListing,
+    verified: s.business?.verificationStatus === "VERIFIED",
     source: s.isListing && s.dataSource ? { name: s.dataSource, ref: s.sourceRef ?? null } : null,
     priceRange: prices.length ? { min: toTL(Math.min(...prices)), max: toTL(Math.max(...prices)) } : null,
     // Bitmemiş indirimlerin en yükseği (bugün geçerli değilse activeToday=false)

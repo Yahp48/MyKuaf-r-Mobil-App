@@ -297,6 +297,13 @@ async function seedDemo(seller: { id: string; shippingFeeCents: number; freeShip
   });
   await prisma.salon.update({ where: { id: salon.id }, data: { businessId: salonBiz.id } });
 
+  // Yerel platform yöneticisi (yönetim paneli: /yonetim)
+  await prisma.user.upsert({
+    where: { email: "admin@mykuafor.test" },
+    create: { email: "admin@mykuafor.test", name: "Platform Yöneticisi", passwordHash, role: "ADMIN" },
+    update: { role: "ADMIN" },
+  });
+
   const owners: [string, string, string][] = [
     ["salon@mykuafor.test", "Zeynep Yıldız", salonBiz.id],
     ["satici@mykuafor.test", "Mert Aydın", seller.id],

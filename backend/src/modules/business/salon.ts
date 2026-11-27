@@ -8,7 +8,7 @@ import { humanCode } from "../../lib/codes.ts";
 import { fromTL, toTL } from "../../lib/money.ts";
 import { shortName } from "../../lib/names.ts";
 import { requireAuth } from "../../middleware/auth.ts";
-import { requireBusiness, salonOf } from "../../middleware/business.ts";
+import { businessOf, requireBusiness, salonOf } from "../../middleware/business.ts";
 import { broadcast, emitToBusiness, emitToUser } from "../../realtime/socket.ts";
 import { notify } from "../notifications/notify.ts";
 import { ACTIVE_APPOINTMENT_STATUSES, computeAvailability, resolveServices, salonDay } from "../salons/availability.ts";
@@ -797,6 +797,53 @@ salonPanelRouter.delete("/services/:id", async (req, res) => {
   else await prisma.service.delete({ where: { id } });
   salonChanged(salon);
   res.json({ deleted: !used, deactivated: !!used });
+});
+
+// ───────────── Rehber kaydını sahiplenme ─────────────
+
+/** Haritadaki rehber kayıtlarında arama (işletmenin kendi salonunu bulması için). */
+salonPanelRouter.get("/claims/search", async (req, res) => {
+  const { q } = parse(z.object({ q: z.string().trim().min(2, "En az 2 harf").max(80) }), req.query);
+  const rows = await prisma.salon.findMany({
+    where: { isListing: true, isActive: true, businessId: null, name: { contains: q, mode: "insensitive" } },
+    take: 10,
+    orderBy: { name: "asc" },
+  });
+  res.json({
+    items: rows.map((s) => ({ id: s.id, name: s.name, address: s.address, phone: s.phone, district: s.district })),
+  });
+});
+
+salonPanelRouter.get("/claims", async (req, res) => {
+  const b = businessOf(req);
+  const rows = await prisma.salonClaim.findMany({
+    where: { businessId: b.id },
+    include: { listing: { select: { name: true, address: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+  res.json({
+    items: rows.map((c) => ({
+      id: c.id,
+      status: c.status,
+      note: c.note,
+      listing: c.listing,
+      createdAt: c.createdAt.toISOString(),
+    })),
+  });
+});
+
+salonPanelRouter.post("/claims", async (req, res) => {
+  const b = businessOf(req);
+  const { listingId } = parse(z.object({ listingId: zId }), req.body);
+  const listing = await prisma.salon.findFirst({
+    where: { id: listingId, isListing: true, isActive: true, businessId: null },
+  });
+  if (!listing) throw notFound("Rehber kaydı bulunamadı");
+  if (await prisma.salonClaim.findFirst({ where: { businessId: b.id, status: "PENDING" } })) {
+    throw new AppError(409, "CLAIM_PENDING", "İncelenen bir talebiniz zaten var");
+  }
+  const claim = await prisma.salonClaim.create({ data: { listingId, businessId: b.id } });
+  res.status(201).json({ claim: { id: claim.id, status: claim.status } });
 });
 
 // ───────────── Paketler ─────────────

@@ -106,6 +106,20 @@ export const api = {
   put: <T>(path: string, body?: unknown) => request<T>("PUT", path, { body }),
   patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, { body }),
   del: <T>(path: string) => request<T>("DELETE", path),
+  /** Doğrulama belgesi (PDF/görsel): gizli klasöre yazılır, anahtar döner. */
+  uploadDocument: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return request<{ key: string }>("POST", "/business/documents", { form });
+  },
+  /** Yetkili dosya indirme (ör. yöneticinin vergi levhasını açması). */
+  blob: async (path: string) => {
+    const go = () => fetch(buildUrl(path), { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {} });
+    let res = await go();
+    if (res.status === 401 && (await refreshSession())) res = await go();
+    if (!res.ok) throw new ApiError(res.status, "HTTP_ERROR", "Dosya açılamadı");
+    return res.blob();
+  },
   upload: (file: File) => {
     const form = new FormData();
     form.append("file", file);

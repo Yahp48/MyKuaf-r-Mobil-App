@@ -47,6 +47,9 @@ export function publicDiscount(s: Discountable, today: string) {
 }
 
 /** Salon kartı için hizmetlerden gereken alanlar: fiyat aralığı ve indirim rozeti. */
+/** Salon listelerinde doğrulama rozeti için işletmeden gereken alan. */
+export const SUMMARY_BUSINESS_SELECT = { select: { verificationStatus: true } } as const;
+
 export const SUMMARY_SERVICE_SELECT = {
   priceCents: true,
   discountPercent: true,

@@ -1,4 +1,12 @@
-import { detectImage, documentUpload, imageUpload, isPdf, requireImage, savePrivate, saveUpload } from "../../lib/uploads.ts";
+import {
+  detectImage,
+  documentUpload,
+  imageUpload,
+  isPdf,
+  requireImage,
+  savePrivate,
+  saveUpload,
+} from "../../lib/uploads.ts";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.ts";
@@ -46,6 +54,22 @@ businessCommonRouter.patch("/profile", async (req, res) => {
     },
   });
   if (b.type === "SELLER") broadcast("catalog:changed", { sellerId: b.id });
+  res.json({ business: serializeBusiness(updated) });
+});
+
+/** Doğrulama başvurusu: yüklenen vergi levhası yönetici incelemesine gider. */
+businessCommonRouter.post("/verification", async (req, res) => {
+  const b = businessOf(req);
+  const { documentKey } = parse(
+    z.object({ documentKey: z.string().regex(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(pdf|jpg|png|webp)$/, "Geçersiz belge") }),
+    req.body,
+  );
+  if (!documentKey.startsWith(`${b.id}/`)) throw new AppError(400, "INVALID_DOCUMENT", "Geçersiz belge");
+  if (b.verificationStatus === "VERIFIED") throw new AppError(400, "ALREADY_VERIFIED", "İşletmeniz zaten doğrulandı");
+  const updated = await prisma.business.update({
+    where: { id: b.id },
+    data: { taxCertificateUrl: documentKey, verificationStatus: "PENDING", verificationNote: null },
+  });
   res.json({ business: serializeBusiness(updated) });
 });
 

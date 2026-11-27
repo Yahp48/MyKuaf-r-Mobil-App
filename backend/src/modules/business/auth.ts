@@ -116,6 +116,8 @@ async function sessionPayload(uid: string) {
     where: { id: uid },
     include: { business: { include: { salon: true } } },
   });
+  // Platform yöneticisi: işletmesi yoktur, panelde yönetim bölümünü görür.
+  if (user.role === "ADMIN") return { owner: serializeOwner(user), business: null, salon: null, isAdmin: true };
   const b = user.business!;
   return {
     owner: serializeOwner(user),
@@ -195,14 +197,14 @@ businessAuthRouter.post("/login", authLimiter, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { email: body.email }, include: { business: true } });
   const ok = await verifyPassword(user?.deletedAt ? null : user?.passwordHash, body.password);
   if (!user || !ok) throw new AppError(401, "INVALID_CREDENTIALS", "E-posta veya şifre hatalı");
-  if (user.role !== "BUSINESS_OWNER" || !user.business) {
+  if (user.role !== "ADMIN" && (user.role !== "BUSINESS_OWNER" || !user.business)) {
     throw new AppError(
       403,
       "NOT_BUSINESS_ACCOUNT",
       "Bu bir müşteri hesabı. İşletme paneli için işletme hesabıyla giriş yapın.",
     );
   }
-  if (user.business.status === "SUSPENDED") {
+  if (user.business?.status === "SUSPENDED") {
     throw new AppError(403, "BUSINESS_SUSPENDED", "İşletme hesabınız askıya alınmış. Lütfen bizimle iletişime geçin.");
   }
   const tokens = await issueTokens(user, req.get("user-agent"));
@@ -225,7 +227,14 @@ businessAuthRouter.post("/logout", async (req, res) => {
   res.status(204).end();
 });
 
-businessAuthRouter.get("/me", requireAuth, requireBusiness(), async (req, res) => {
-  businessOf(req);
-  res.json(await sessionPayload(userId(req)));
+businessAuthRouter.get("/me", requireAuth, (req, res, next) => {
+  if (req.user?.role === "ADMIN") {
+    sessionPayload(userId(req)).then((p) => res.json(p), next);
+    return;
+  }
+  requireBusiness()(req, res, (err?: unknown) => {
+    if (err) return next(err);
+    businessOf(req);
+    sessionPayload(userId(req)).then((p) => res.json(p), next);
+  });
 });
