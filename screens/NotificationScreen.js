@@ -5,10 +5,11 @@ import { notificationApi } from "../services/api";
 import { useApp } from "../context/AppContext";
 import AppHeader from "../components/AppHeader";
 import BottomNav from "../components/BottomNav";
-import { EmptyState, ErrorState, Loading } from "../components/ui";
+import { EmptyState } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { useRealtimeEvent } from "../services/realtime";
 import { colors, formatDate } from "../components/theme";
+import { LoadError, ListSkeleton } from "../components/Skeleton";
 
 const ICONS = {
   appointment_confirmed: "event-available",
@@ -62,9 +63,9 @@ export default function NotificationScreen({ navigation }) {
     <View style={styles.container}>
       <AppHeader title="Bildirimler" back />
       {loading && !data ? (
-        <Loading />
+        <ListSkeleton />
       ) : error && !data ? (
-        <ErrorState message={error} onRetry={reload} />
+        <LoadError message={error} onRetry={reload} skeleton={<ListSkeleton />} />
       ) : (
         <FlatList
           data={data.items}

@@ -6,6 +6,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import * as Linking from "expo-linking";
 import { AppProvider, useApp } from "./context/AppContext";
 import { EmptyState, Loading } from "./components/ui";
+import OfflineBanner from "./components/OfflineBanner";
 
 import SignInScreen from "./screens/SignInScreen";
 import SignUpScreen from "./screens/SignUpScreen";
@@ -108,6 +109,7 @@ export default function App() {
       <AppProvider>
         <StatusBar style="dark" />
         <Root />
+        <OfflineBanner />
       </AppProvider>
     </SafeAreaProvider>
   );

@@ -15,6 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import DraggableSheet from "./DraggableSheet";
 import PhotoViewer from "./PhotoViewer";
+import { SheetSkeleton } from "./Skeleton";
 import { colors } from "./theme";
 import { discountOn, discountRange, priceOn, upToDiscount } from "./pricing";
 import { useApp } from "../context/AppContext";
@@ -354,7 +355,7 @@ const SalonSheet = forwardRef(function SalonSheet(
           </TouchableOpacity>
         </>
       ) : (
-        <ActivityIndicator color={colors.primary} />
+        <SheetSkeleton />
       )}
     </View>
   );
@@ -514,9 +515,7 @@ const SalonSheet = forwardRef(function SalonSheet(
   );
 
   const reviewsTab = !reviews ? (
-    <View style={styles.centerBlock}>
-      <ActivityIndicator color={colors.primary} />
-    </View>
+    <SheetSkeleton />
   ) : reviews.summary.count ? (
     <View style={styles.pad}>
       <ReviewSummary summary={reviews.summary} />

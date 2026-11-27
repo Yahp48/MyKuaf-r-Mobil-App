@@ -13,9 +13,10 @@ import {
 import { FontAwesome } from "@expo/vector-icons";
 import { appointmentApi, salonApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
-import { Button, EmptyState, ErrorState, Loading } from "../components/ui";
+import { Button, EmptyState } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { colors, formatDate } from "../components/theme";
+import { LoadError, ListSkeleton } from "../components/Skeleton";
 
 /** Tamamlanan randevular: değerlendirilmemiş olanlar için puan ve yorum verilir. */
 export default function ReviewsScreen() {
@@ -57,9 +58,9 @@ export default function ReviewsScreen() {
     <View style={styles.container}>
       <AppHeader title="Değerlendirmelerim" back />
       {loading && !data ? (
-        <Loading />
+        <ListSkeleton />
       ) : error && !data ? (
-        <ErrorState message={error} onRetry={reload} />
+        <LoadError message={error} onRetry={reload} skeleton={<ListSkeleton />} />
       ) : (
         <FlatList
           data={data}

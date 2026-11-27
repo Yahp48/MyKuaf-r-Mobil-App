@@ -17,9 +17,10 @@ import { productApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import BottomNav from "../components/BottomNav";
 import ProductCard from "../components/ProductCard";
-import { EmptyState, ErrorState, Loading } from "../components/ui";
+import { EmptyState } from "../components/ui";
 import { useRealtimeEvent } from "../services/realtime";
 import { colors } from "../components/theme";
+import { LoadError, GridSkeleton } from "../components/Skeleton";
 
 const SORTS = [
   ["newest", "En yeni"],
@@ -177,9 +178,9 @@ export default function ShopScreen({ navigation }) {
       </View>
 
       {loading && items.length === 0 ? (
-        <Loading />
+        <GridSkeleton header />
       ) : error && items.length === 0 ? (
-        <ErrorState message={error} onRetry={() => load(1, "initial")} />
+        <LoadError message={error} onRetry={() => load(1, "initial")} skeleton={<GridSkeleton header />} />
       ) : (
         <FlatList
           data={items}

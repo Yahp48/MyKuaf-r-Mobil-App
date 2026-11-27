@@ -16,10 +16,11 @@ import { useApp } from "../context/AppContext";
 import { favoriteApi, productApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import ProductCard from "../components/ProductCard";
-import { Button, ErrorState, Loading } from "../components/ui";
+import { Button } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { useRealtimeEvent } from "../services/realtime";
 import { colors, formatDate, formatTL } from "../components/theme";
+import { LoadError, DetailSkeleton } from "../components/Skeleton";
 
 const { width } = Dimensions.get("window");
 
@@ -43,13 +44,13 @@ export default function ProductDetailScreen({ navigation, route }) {
   if (loading && !data)
     return (
       <Wrapper>
-        <Loading />
+        <DetailSkeleton />
       </Wrapper>
     );
   if (error && !data)
     return (
       <Wrapper>
-        <ErrorState message={error} onRetry={reload} />
+        <LoadError message={error} onRetry={reload} skeleton={<DetailSkeleton />} />
       </Wrapper>
     );
 

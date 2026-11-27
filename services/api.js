@@ -210,7 +210,7 @@ export const orderApi = {
 };
 
 export const walletApi = {
-  get: (page = 1) => get("/wallet", { page }),
+  get: (page = 1, type) => get("/wallet", { page, type }),
   topup: (amount, returnUrl) => post("/wallet/topups", { amount, returnUrl }),
 };
 

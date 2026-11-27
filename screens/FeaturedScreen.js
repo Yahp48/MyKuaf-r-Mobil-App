@@ -17,6 +17,7 @@ import { colors, formatTL, shadow } from "../components/theme";
 import { Stars, distanceText, openStatusText } from "../components/SalonSheet";
 import { discountRange, upToDiscount } from "../components/pricing";
 import { salonApi } from "../services/api";
+import { CardListSkeleton, LoadError } from "../components/Skeleton";
 import { useRealtimeEvent } from "../services/realtime";
 
 const PERIODS = [
@@ -119,17 +120,12 @@ export default function FeaturedScreen({ navigation, route }) {
           </View>
         </View>
 
-        {error ? (
-          <View style={styles.center}>
-            <Text style={styles.muted}>{error}</Text>
-            <TouchableOpacity onPress={load} style={styles.retry}>
-              <Text style={styles.retryText}>Tekrar dene</Text>
-            </TouchableOpacity>
+        {error && !ranking ? (
+          <View style={{ minHeight: 420 }}>
+            <LoadError message={error} onRetry={load} skeleton={<CardListSkeleton cards={3} />} />
           </View>
         ) : !ranking ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.primary} />
-          </View>
+          <CardListSkeleton cards={3} />
         ) : ranking.items.length ? (
           <View style={styles.list}>
             {ranking.items.map((item) => (

@@ -3,10 +3,11 @@ import { Alert, Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { orderApi } from "../services/api";
 import { useApp } from "../context/AppContext";
 import AppHeader from "../components/AppHeader";
-import { Button, ErrorState, Loading, StatusPill } from "../components/ui";
+import { Button, StatusPill } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { useRealtimeEvent } from "../services/realtime";
 import { ORDER_STATUS, colors, formatDate, formatTL } from "../components/theme";
+import { LoadError, DetailSkeleton } from "../components/Skeleton";
 
 export default function OrderDetailScreen({ route }) {
   const { orderId } = route.params;
@@ -20,13 +21,13 @@ export default function OrderDetailScreen({ route }) {
   if (loading && !order)
     return (
       <Wrapper>
-        <Loading />
+        <DetailSkeleton image={false} />
       </Wrapper>
     );
   if (error && !order)
     return (
       <Wrapper>
-        <ErrorState message={error} onRetry={reload} />
+        <LoadError message={error} onRetry={reload} skeleton={<DetailSkeleton image={false} />} />
       </Wrapper>
     );
 

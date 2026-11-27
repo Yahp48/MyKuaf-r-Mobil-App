@@ -4,9 +4,10 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { favoriteApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import ProductCard from "../components/ProductCard";
-import { EmptyState, ErrorState, Loading } from "../components/ui";
+import { EmptyState } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { colors } from "../components/theme";
+import { LoadError, GridSkeleton } from "../components/Skeleton";
 
 export default function FavoritesScreen({ navigation }) {
   const loader = useCallback(() => favoriteApi.list(), []);
@@ -36,8 +37,8 @@ export default function FavoritesScreen({ navigation }) {
   };
 
   let content;
-  if (loading && !data) content = <Loading />;
-  else if (error && !data) content = <ErrorState message={error} onRetry={reload} />;
+  if (loading && !data) content = <GridSkeleton />;
+  else if (error && !data) content = <LoadError message={error} onRetry={reload} skeleton={<GridSkeleton />} />;
   else {
     const list = tab === "salons" ? data.salons : data.products;
     content = (

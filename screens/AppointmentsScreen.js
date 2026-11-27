@@ -4,10 +4,11 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { appointmentApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import BottomNav from "../components/BottomNav";
-import { Button, EmptyState, ErrorState, Loading, StatusPill } from "../components/ui";
+import { Button, EmptyState, StatusPill } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { useRealtimeEvent } from "../services/realtime";
 import { APPOINTMENT_STATUS, colors, formatDate, formatTL } from "../components/theme";
+import { LoadError, CardListSkeleton } from "../components/Skeleton";
 
 export default function AppointmentsScreen({ navigation }) {
   const [scope, setScope] = useState("upcoming");
@@ -101,9 +102,9 @@ export default function AppointmentsScreen({ navigation }) {
       </View>
 
       {loading && !data ? (
-        <Loading />
+        <CardListSkeleton />
       ) : error && !data ? (
-        <ErrorState message={error} onRetry={reload} />
+        <LoadError message={error} onRetry={reload} skeleton={<CardListSkeleton />} />
       ) : (
         <FlatList
           data={data?.items ?? []}

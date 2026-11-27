@@ -5,9 +5,10 @@ import { useApp } from "../context/AppContext";
 import { orderApi, userApi } from "../services/api";
 import { openCheckout, paymentReturnUrl } from "../services/checkout";
 import AppHeader from "../components/AppHeader";
-import { Button, Checkbox, ErrorState, Loading } from "../components/ui";
+import { Button, Checkbox } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { colors, formatTL } from "../components/theme";
+import { LoadError, FormSkeleton } from "../components/Skeleton";
 
 export default function CheckoutScreen({ navigation }) {
   const { cart, user, actions } = useApp();
@@ -76,13 +77,13 @@ export default function CheckoutScreen({ navigation }) {
   if (loading && !addresses)
     return (
       <Wrapper>
-        <Loading />
+        <FormSkeleton />
       </Wrapper>
     );
   if (error && !addresses)
     return (
       <Wrapper>
-        <ErrorState message={error} onRetry={reload} />
+        <LoadError message={error} onRetry={reload} skeleton={<FormSkeleton />} />
       </Wrapper>
     );
 

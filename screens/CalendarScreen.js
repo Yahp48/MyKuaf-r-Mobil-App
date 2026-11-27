@@ -4,9 +4,10 @@ import { Calendar, LocaleConfig } from "react-native-calendars";
 import { useApp } from "../context/AppContext";
 import { appointmentApi, salonApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
-import { Button, ErrorState, Field, Loading } from "../components/ui";
+import { Button, Field } from "../components/ui";
 import { colors, formatTL } from "../components/theme";
 import { discountOn, discountRange, priceOn } from "../components/pricing";
+import { LoadError, FormSkeleton } from "../components/Skeleton";
 
 LocaleConfig.locales.tr = {
   monthNames: [
@@ -148,7 +149,7 @@ export default function CalendarScreen({ navigation, route }) {
     return (
       <View style={styles.container}>
         <AppHeader title="Randevu Al" back />
-        <ErrorState message={loadError} onRetry={loadSalon} />
+        <LoadError message={loadError} onRetry={loadSalon} skeleton={<FormSkeleton />} />
       </View>
     );
   }
@@ -156,7 +157,7 @@ export default function CalendarScreen({ navigation, route }) {
     return (
       <View style={styles.container}>
         <AppHeader title="Randevu Al" back />
-        <Loading />
+        <FormSkeleton />
       </View>
     );
   }

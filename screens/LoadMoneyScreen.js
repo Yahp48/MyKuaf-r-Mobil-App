@@ -22,7 +22,7 @@ const QUICK = [100, 250, 500, 1000];
 export default function LoadMoneyScreen({ navigation, route }) {
   const limits = route.params?.limits ?? { minTopup: 50, maxTopup: 5000 };
   const { actions } = useApp();
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState(route.params?.amount ? String(route.params.amount) : "");
   const [loading, setLoading] = useState(false);
 
   const value = Number(amount.replace(",", "."));

@@ -3,10 +3,11 @@ import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } fr
 import { MaterialIcons } from "@expo/vector-icons";
 import { orderApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
-import { EmptyState, ErrorState, Loading, StatusPill } from "../components/ui";
+import { EmptyState, StatusPill } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { useRealtimeEvent } from "../services/realtime";
 import { ORDER_STATUS, colors, formatDate, formatTL } from "../components/theme";
+import { LoadError, CardListSkeleton } from "../components/Skeleton";
 
 export default function OrderScreen({ navigation }) {
   const loader = useCallback(() => orderApi.list(), []);
@@ -37,9 +38,9 @@ export default function OrderScreen({ navigation }) {
     <View style={styles.container}>
       <AppHeader title="Siparişlerim" back />
       {loading && !data ? (
-        <Loading />
+        <CardListSkeleton />
       ) : error && !data ? (
-        <ErrorState message={error} onRetry={reload} />
+        <LoadError message={error} onRetry={reload} skeleton={<CardListSkeleton />} />
       ) : (
         <FlatList
           data={data?.items ?? []}
