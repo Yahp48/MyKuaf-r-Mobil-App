@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import DraggableSheet from "./DraggableSheet";
 import PhotoViewer from "./PhotoViewer";
 import { colors } from "./theme";
+import { discountOn, discountRange, priceOn, upToDiscount } from "./pricing";
 import { useApp } from "../context/AppContext";
 import { favoriteApi, salonApi } from "../services/api";
 import { useRealtimeEvent } from "../services/realtime";
@@ -213,7 +214,8 @@ const SalonSheet = forwardRef(function SalonSheet(
 
   const togglePick = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const pickedServices = (detail?.services ?? []).filter((s) => picked.includes(s.id));
-  const pickedTotal = pickedServices.reduce((sum, s) => sum + s.price, 0);
+  // Bugünün fiyatı; kesin tutar randevu gününe göre sunucuda hesaplanır.
+  const pickedTotal = pickedServices.reduce((sum, s) => sum + priceOn(s), 0);
 
   const statusInfo = openStatusText(salon);
   const meta = [salon.kindLabel, priceRangeText(salon.priceRange), distanceText(salon.distanceKm)].filter(Boolean);
@@ -249,6 +251,24 @@ const SalonSheet = forwardRef(function SalonSheet(
         <Text style={{ color: statusInfo.color, fontWeight: "700" }}>{statusInfo.label}</Text>
         {statusInfo.detail ? <Text style={styles.muted}> · {statusInfo.detail}</Text> : null}
       </Text>
+      {salon.discount ? (
+        <TouchableOpacity
+          style={styles.dealBanner}
+          onPress={() => {
+            setTab("services");
+            sheetRef.current?.snapTo("full");
+          }}
+          accessibilityRole="button"
+        >
+          <Ionicons name="pricetag" size={15} color={colors.primary} />
+          <Text style={styles.dealBannerText}>
+            {salon.discount.activeToday
+              ? `Seçili hizmetlerde ${upToDiscount(salon.discount.maxPercent)}`
+              : `Yakında ${upToDiscount(salon.discount.maxPercent)}`}
+          </Text>
+          <Ionicons name="chevron-forward" size={15} color={colors.primary} />
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 
@@ -623,13 +643,14 @@ function Section({ title, action, onAction, children }) {
 }
 
 function ServiceRow({ service, picked, onPress, withDescription }) {
+  const deal = discountOn(service);
   return (
     <TouchableOpacity
       style={styles.serviceRow}
       onPress={onPress}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: picked }}
-      accessibilityLabel={`${service.name}, ${service.durationMinutes} dakika, ${tl0(service.price)}`}
+      accessibilityLabel={`${service.name}, ${service.durationMinutes} dakika, ${tl0(deal ? deal.price : service.price)}${deal ? `, yüzde ${deal.percent} indirimli` : ""}`}
     >
       <View style={{ flex: 1 }}>
         <Text style={styles.serviceName}>{service.name}</Text>
@@ -639,8 +660,18 @@ function ServiceRow({ service, picked, onPress, withDescription }) {
           </Text>
         ) : null}
         <Text style={styles.mutedSmall}>{service.durationMinutes} dk</Text>
+        {service.discount ? (
+          <Text style={styles.dealNote}>
+            %{service.discount.percent} indirim · {discountRange(service.discount)}
+          </Text>
+        ) : null}
       </View>
-      <Text style={styles.servicePrice}>{tl0(service.price)}</Text>
+      <View style={{ alignItems: "flex-end" }}>
+        {deal ? <Text style={styles.oldPrice}>{tl0(service.price)}</Text> : null}
+        <Text style={[styles.servicePrice, deal && { color: colors.primary }]}>
+          {tl0(deal ? deal.price : service.price)}
+        </Text>
+      </View>
       <View style={[styles.check, picked && styles.checkOn]}>
         {picked ? <Ionicons name="checkmark" size={15} color="#fff" /> : null}
       </View>
@@ -717,6 +748,20 @@ const styles = StyleSheet.create({
   muted: { fontSize: 14, color: colors.muted, marginTop: 2 },
   mutedSmall: { fontSize: 13, color: colors.muted, marginTop: 2, lineHeight: 18 },
   statusLine: { fontSize: 14, marginTop: 3 },
+  dealBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: colors.primarySoft,
+  },
+  dealBannerText: { fontSize: 13, fontWeight: "700", color: colors.primary },
+  dealNote: { fontSize: 12.5, fontWeight: "600", color: colors.primary, marginTop: 2 },
+  oldPrice: { fontSize: 12.5, color: colors.muted, textDecorationLine: "line-through" },
   chips: { paddingHorizontal: 16, gap: 8, paddingBottom: 12 },
   chip: {
     flexDirection: "row",

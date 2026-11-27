@@ -25,6 +25,7 @@ import BottomNav, { useBottomNavHeight } from "../components/BottomNav";
 import DraggableSheet from "../components/DraggableSheet";
 import SalonSheet, { HALF_RATIO, Stars, distanceText, openStatusText } from "../components/SalonSheet";
 import { colors, shadow } from "../components/theme";
+import { upToDiscount } from "../components/pricing";
 import { useApp } from "../context/AppContext";
 import { useRealtimeEvent } from "../services/realtime";
 import { mapsApi, salonApi } from "../services/api";
@@ -49,7 +50,7 @@ const initials = (name = "") =>
     .map((w) => w[0].toLocaleUpperCase("tr-TR"))
     .join("");
 
-export default function HomeScreen({ navigation }) {
+export default function HomeScreen({ navigation, route: navRoute }) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const navHeight = useBottomNavHeight();
@@ -62,7 +63,7 @@ export default function HomeScreen({ navigation }) {
   const [salons, setSalons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ open: false, top: false, fav: false, kind: null });
+  const [filters, setFilters] = useState({ open: false, top: false, fav: false, deal: false, kind: null });
   const [selected, setSelected] = useState(null);
   const [salonSnap, setSalonSnap] = useState("closed");
   const [listOpen, setListOpen] = useState(false);
@@ -165,12 +166,16 @@ export default function HomeScreen({ navigation }) {
           (!filters.open || s.isOpenNow) &&
           (!filters.top || (s.ratingCount > 0 && s.rating >= 4.5)) &&
           (!filters.fav || s.isFavorite) &&
+          (!filters.deal || !!s.discount) &&
           (!filters.kind || s.kind === filters.kind),
       ),
     [salons, term, filters],
   );
   const kindsPresent = useMemo(() => new Set(salons.map((s) => s.kind)), [salons]);
-  const filtering = term || filters.open || filters.top || filters.fav || filters.kind;
+  const filtering = term || filters.open || filters.top || filters.fav || filters.deal || filters.kind;
+  const hasDeals = salons.some((s) => s.discount);
+  // Liste konuma göre sıralı gelir: en yakın salonun şehri vitrin için varsayılan şehirdir.
+  const nearestCity = salons[0]?.city;
 
   // Özel işaretler: görünüm değişince Android'in işaret görüntüsünü yeniden çizmesi için kısa süre izlenir.
   const markerKey = `${visibleSalons.map((s) => s.id).join(",")}|${selected?.id ?? ""}`;
@@ -248,6 +253,15 @@ export default function HomeScreen({ navigation }) {
     if (listOpen) listSheetRef.current?.snapTo("half");
   }, [listOpen]);
 
+  // Vitrinden bir salona dokunulunca harita o salonu açar (listede yoksa gelen özet kullanılır).
+  const focusSalon = navRoute?.params?.focusSalon;
+  useEffect(() => {
+    if (!focusSalon) return;
+    selectSalon(salons.find((s) => s.id === focusSalon.id) ?? focusSalon);
+    navigation.setParams({ focusSalon: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSalon]);
+
   const salonSheetVisible = !!selected;
   // Konum düğmesi: kart yarım ekrandayken kartın hemen üstünde, aksi halde alt menünün üstünde
   const controlsBottom = salonSheetVisible && salonSnap !== "closed" ? screenHeight - halfY + 12 : navHeight + 14;
@@ -291,6 +305,11 @@ export default function HomeScreen({ navigation }) {
               <View style={styles.marker}>
                 <View style={[styles.pin, !salon.isOpenNow && styles.pinClosed, isSel && styles.pinSelected]}>
                   <Ionicons name="cut" size={isSel ? 18 : 14} color="#fff" />
+                  {salon.discount?.activeToday ? (
+                    <View style={styles.pinDeal}>
+                      <Text style={styles.pinDealText}>%</Text>
+                    </View>
+                  ) : null}
                 </View>
                 <Text style={[styles.markerLabel, isSel && styles.markerLabelSel]} numberOfLines={1}>
                   {salon.name}
@@ -352,7 +371,20 @@ export default function HomeScreen({ navigation }) {
           contentContainerStyle={styles.filters}
           keyboardShouldPersistTaps="handled"
         >
+          <FeatureChip
+            icon="trophy"
+            label="Öne çıkanlar"
+            onPress={() => navigation.navigate("Featured", { city: nearestCity })}
+          />
           <FilterChip icon="time-outline" label="Şimdi açık" on={filters.open} onPress={() => toggleFilter("open")} />
+          {hasDeals ? (
+            <FilterChip
+              icon="pricetag-outline"
+              label="İndirimli"
+              on={filters.deal}
+              onPress={() => toggleFilter("deal")}
+            />
+          ) : null}
           <FilterChip icon="star-outline" label="4,5+ puan" on={filters.top} onPress={() => toggleFilter("top")} />
           <FilterChip
             icon="bookmark-outline"
@@ -511,6 +543,15 @@ function FilterChip({ icon, label, on, onPress }) {
   );
 }
 
+function FeatureChip({ icon, label, onPress }) {
+  return (
+    <TouchableOpacity onPress={onPress} style={[styles.filterChip, styles.featureChip]} accessibilityRole="button">
+      <Ionicons name={icon} size={15} color="#fff" />
+      <Text style={[styles.filterText, { color: "#fff" }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 function SalonListItem({ salon, onPress }) {
   const status = openStatusText(salon);
   const meta = [salon.kindLabel, distanceText(salon.distanceKm)].filter(Boolean).join(" · ");
@@ -539,6 +580,12 @@ function SalonListItem({ salon, onPress }) {
           )}
         </View>
         {meta ? <Text style={styles.listMuted}>{meta}</Text> : null}
+        {salon.discount ? (
+          <Text style={styles.listDeal}>
+            {salon.discount.activeToday ? "" : "Yakında: "}
+            {upToDiscount(salon.discount.maxPercent)}
+          </Text>
+        ) : null}
         <Text style={styles.listMuted} numberOfLines={1}>
           <Text style={{ color: status.color, fontWeight: "700" }}>{status.label}</Text>
           {status.detail ? ` · ${status.detail}` : ""}
@@ -668,6 +715,22 @@ const styles = StyleSheet.create({
   },
   pinClosed: { backgroundColor: "#8E8E93" },
   pinSelected: { width: 38, height: 38, borderRadius: 19, borderWidth: 3 },
+  pinDeal: {
+    position: "absolute",
+    top: -6,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.text,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#fff",
+  },
+  pinDealText: { color: "#fff", fontSize: 9, fontWeight: "900" },
+  featureChip: { backgroundColor: colors.primary },
+  listDeal: { fontSize: 13, fontWeight: "700", color: colors.primary, marginTop: 3 },
   markerLabel: {
     marginTop: 2,
     fontSize: 11.5,

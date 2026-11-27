@@ -31,6 +31,7 @@ import FeedbackScreen from "./screens/FeedbackScreen";
 import SupportScreen from "./screens/SupportScreen";
 import PrivacyScreen from "./screens/PrivacyScreen";
 import AboutScreen from "./screens/AboutScreen";
+import FeaturedScreen from "./screens/FeaturedScreen";
 
 const Stack = createStackNavigator();
 
@@ -57,6 +58,7 @@ function MainStack() {
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Appointments" component={AppointmentsScreen} />
       <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
+      <Stack.Screen name="Featured" component={FeaturedScreen} />
       <Stack.Screen name="Shop" component={ShopScreen} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <Stack.Screen name="ShoppingCart" component={ShoppingCartScreen} />

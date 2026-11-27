@@ -173,6 +173,9 @@ export const salonApi = {
   availability: (id, { date, serviceIds, staffId }) => get(`/salons/${id}/availability`, { date, serviceIds, staffId }),
   reviews: (id, page = 1) => get(`/salons/${id}/reviews`, { page }),
   addReview: (id, data) => post(`/salons/${id}/reviews`, data),
+  cities: () => get("/salons/cities"),
+  featured: (city, period) => get("/salons/featured", { city, period }),
+  deals: (city) => get("/salons/deals", { city }),
 };
 
 export const appointmentApi = {

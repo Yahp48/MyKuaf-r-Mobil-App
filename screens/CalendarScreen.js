@@ -6,6 +6,7 @@ import { appointmentApi, salonApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import { Button, ErrorState, Field, Loading } from "../components/ui";
 import { colors, formatTL } from "../components/theme";
+import { discountOn, discountRange, priceOn } from "../components/pricing";
 
 LocaleConfig.locales.tr = {
   monthNames: [
@@ -95,7 +96,9 @@ export default function CalendarScreen({ navigation, route }) {
     () => (salon?.services ?? []).filter((s) => serviceIds.includes(s.id)),
     [salon, serviceIds],
   );
-  const total = selectedServices.reduce((sum, s) => sum + s.price, 0);
+  // İndirim randevu gününe göre uygulanır; gün seçilmediyse bugünün fiyatı gösterilir.
+  const priceDay = date || undefined;
+  const total = selectedServices.reduce((sum, s) => sum + priceOn(s, priceDay), 0);
   const duration = selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
 
   const toggleService = (id) => setServiceIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -167,6 +170,7 @@ export default function CalendarScreen({ navigation, route }) {
         <Text style={styles.section}>1. Hizmet seçin</Text>
         {salon.services.map((s) => {
           const on = serviceIds.includes(s.id);
+          const deal = discountOn(s, priceDay);
           return (
             <TouchableOpacity
               key={s.id}
@@ -178,8 +182,23 @@ export default function CalendarScreen({ navigation, route }) {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.serviceName, on && { color: "#fff" }]}>{s.name}</Text>
                 <Text style={[styles.serviceMeta, on && { color: "#FBD5DF" }]}>{s.durationMinutes} dk</Text>
+                {s.discount && !deal ? (
+                  <Text style={[styles.dealNote, on && { color: "#FBD5DF" }]}>
+                    %{s.discount.percent} indirim · {discountRange(s.discount)}
+                  </Text>
+                ) : null}
               </View>
-              <Text style={[styles.servicePrice, on && { color: "#fff" }]}>{formatTL(s.price)}</Text>
+              <View style={{ alignItems: "flex-end" }}>
+                {deal ? (
+                  <>
+                    <Text style={[styles.oldPrice, on && { color: "#FBD5DF" }]}>{formatTL(s.price)}</Text>
+                    <Text style={[styles.servicePrice, on && { color: "#fff" }]}>{formatTL(deal.price)}</Text>
+                    <Text style={[styles.dealBadge, on && styles.dealBadgeOn]}>%{deal.percent}</Text>
+                  </>
+                ) : (
+                  <Text style={[styles.servicePrice, on && { color: "#fff" }]}>{formatTL(s.price)}</Text>
+                )}
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -292,6 +311,19 @@ function StaffChip({ label, subtitle, image, selected, onPress }) {
 }
 
 const styles = StyleSheet.create({
+  oldPrice: { fontSize: 12.5, color: colors.muted, textDecorationLine: "line-through" },
+  dealNote: { fontSize: 12, color: colors.primary, fontWeight: "600", marginTop: 2 },
+  dealBadge: {
+    marginTop: 3,
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#fff",
+    backgroundColor: colors.primary,
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    overflow: "hidden",
+  },
+  dealBadgeOn: { backgroundColor: "#fff", color: colors.primary },
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: 16, paddingBottom: 48 },
   section: { fontSize: 17, fontWeight: "bold", color: colors.accent, marginTop: 20, marginBottom: 10 },
