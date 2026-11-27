@@ -1,6 +1,8 @@
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
+import { FontAwesome, Ionicons, MaterialIcons } from "@expo/vector-icons";
+
+const BADGE_ICON = { bestseller: "flame", favorite: "heart", new: "sparkles" };
 import { colors, formatTL } from "./theme";
 
 export default function ProductCard({ product: p, onPress, onAdd, adding, style }) {
@@ -23,6 +25,12 @@ export default function ProductCard({ product: p, onPress, onAdd, adding, style 
             <Text style={styles.discountText}>%{p.discountPercent}</Text>
           </View>
         )}
+        {p.badges?.length ? (
+          <View style={styles.badge} accessibilityLabel={p.badges[0].label}>
+            <Ionicons name={BADGE_ICON[p.badges[0].key] ?? "star"} size={11} color="#fff" />
+            <Text style={styles.badgeText}>{p.badges[0].label}</Text>
+          </View>
+        ) : null}
         {!p.inStock && (
           <View style={styles.soldOut}>
             <Text style={styles.soldOutText}>Tükendi</Text>
@@ -78,6 +86,19 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   discountText: { color: "#fff", fontSize: 11, fontWeight: "bold" },
+  badge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "rgba(28,28,30,0.82)",
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  badgeText: { color: "#fff", fontSize: 10.5, fontWeight: "800" },
   soldOut: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(255,255,255,0.6)",

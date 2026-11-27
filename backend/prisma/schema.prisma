@@ -92,6 +92,9 @@ model Business {
   shippingFeeCents           Int     @default(2999)
   freeShippingThresholdCents Int     @default(50000)
   returnPolicy               String?
+  // Mağaza vitrini: satıcının kendi yüklediği logo ve kısa tanıtım
+  logoUrl                    String?
+  storeDescription           String?
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)

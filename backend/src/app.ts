@@ -19,6 +19,7 @@ import { ordersRouter } from "./modules/orders/routes.ts";
 import { walletRouter } from "./modules/wallet/routes.ts";
 import { paymentsRouter } from "./modules/payments/routes.ts";
 import { cardsRouter } from "./modules/cards/routes.ts";
+import { storesRouter } from "./modules/stores/routes.ts";
 import { notificationsRouter } from "./modules/notifications/routes.ts";
 import { supportRouter } from "./modules/support/routes.ts";
 import { mapsRouter } from "./modules/maps/routes.ts";
@@ -78,6 +79,7 @@ export function createApp() {
   api.use("/wallet", walletRouter);
   api.use("/payments", paymentsRouter);
   api.use("/cards", cardsRouter);
+  api.use("/stores", storesRouter);
   api.use("/notifications", notificationsRouter);
   api.use("/support", supportRouter);
   api.use("/maps", mapsRouter);

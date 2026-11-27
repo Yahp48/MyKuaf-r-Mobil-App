@@ -36,6 +36,7 @@ import FeaturedScreen from "./screens/FeaturedScreen";
 import TryOnScreen from "./screens/TryOnScreen";
 import SavedCardsScreen from "./screens/SavedCardsScreen";
 import AddressesScreen from "./screens/AddressesScreen";
+import StoreScreen from "./screens/StoreScreen";
 
 const Stack = createStackNavigator();
 
@@ -65,6 +66,7 @@ function MainStack() {
       <Stack.Screen name="Featured" component={FeaturedScreen} />
       <Stack.Screen name="SavedCards" component={SavedCardsScreen} />
       <Stack.Screen name="Addresses" component={AddressesScreen} />
+      <Stack.Screen name="Store" component={StoreScreen} />
       <Stack.Screen name="TryOn" component={TryOnScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="Shop" component={ShopScreen} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />

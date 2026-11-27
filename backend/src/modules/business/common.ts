@@ -29,6 +29,8 @@ const profileSchema = businessInfoSchema
     shippingFee: z.number().min(0).max(1000).multipleOf(0.01).optional(),
     freeShippingThreshold: z.number().min(0).max(100_000).multipleOf(0.01).optional(),
     returnPolicy: z.string().trim().max(3000).nullable().optional(),
+    logoUrl: z.string().url().max(500).nullable().optional(),
+    storeDescription: z.string().trim().max(300).nullable().optional(),
   })
   .strict();
 

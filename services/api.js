@@ -192,6 +192,12 @@ export const productApi = {
   related: (id) => get(`/products/${id}/related`),
   reviews: (id, page = 1) => get(`/products/${id}/reviews`, { page }),
   addReview: (id, data) => post(`/products/${id}/reviews`, data),
+  brands: (seller) => get("/products/brands", { seller }),
+};
+
+export const storeApi = {
+  list: () => get("/stores"),
+  detail: (id) => get(`/stores/${id}`),
 };
 
 export const cartApi = {

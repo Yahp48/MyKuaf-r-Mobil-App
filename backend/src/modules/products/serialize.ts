@@ -16,9 +16,9 @@ export function serializeProduct(
     ratingAvg: number;
     ratingCount: number;
     category: { id: string; slug: string; name: string };
-    seller: { id: string; displayName: string };
+    seller: { id: string; displayName: string; logoUrl?: string | null };
   },
-  extra: { isFavorite?: boolean } = {},
+  extra: { isFavorite?: boolean; badges?: { key: string; label: string }[] } = {},
 ) {
   const discountPercent =
     p.compareAtPriceCents && p.compareAtPriceCents > p.priceCents
@@ -42,12 +42,15 @@ export function serializeProduct(
     rating: Math.round(p.ratingAvg * 10) / 10,
     ratingCount: p.ratingCount,
     category: p.category,
-    seller: { id: p.seller.id, name: p.seller.displayName },
+    seller: { id: p.seller.id, name: p.seller.displayName, logoUrl: p.seller.logoUrl ?? null },
+    badges: extra.badges ?? [],
     ...(extra.isFavorite !== undefined ? { isFavorite: extra.isFavorite } : {}),
   };
 }
 
 export const productInclude = {
   category: { select: { id: true, slug: true, name: true } },
-  seller: { select: { id: true, displayName: true, shippingFeeCents: true, freeShippingThresholdCents: true } },
+  seller: {
+    select: { id: true, displayName: true, logoUrl: true, shippingFeeCents: true, freeShippingThresholdCents: true },
+  },
 } as const;

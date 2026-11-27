@@ -20,6 +20,8 @@ export interface Business {
   shippingFee: number;
   freeShippingThreshold: number;
   returnPolicy: string | null;
+  logoUrl: string | null;
+  storeDescription: string | null;
   createdAt: string;
 }
 

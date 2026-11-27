@@ -8,6 +8,7 @@ import type { Business } from "../../lib/types";
 import { Button, Input, PageHead, Textarea } from "../../components/ui";
 import { AccountForm, BusinessInfoForm } from "../../components/SettingsForms";
 import { useToast } from "../../components/Toast";
+import { ImageUploader } from "../../components/ImageUploader";
 
 const TABS = [
   ["magaza", "Mağaza ve kargo"],
@@ -49,6 +50,8 @@ function StoreForm() {
   const [fee, setFee] = useState(String(business.shippingFee).replace(".", ","));
   const [free, setFree] = useState(String(business.freeShippingThreshold).replace(".", ","));
   const [policy, setPolicy] = useState(business.returnPolicy ?? "");
+  const [logo, setLogo] = useState<string[]>(business.logoUrl ? [business.logoUrl] : []);
+  const [about, setAbout] = useState(business.storeDescription ?? "");
   const [busy, setBusy] = useState(false);
   const num = (v: string) => Number(v.replace(/\./g, "").replace(",", "."));
 
@@ -61,6 +64,8 @@ function StoreForm() {
         shippingFee: num(fee),
         freeShippingThreshold: num(free),
         returnPolicy: policy.trim() || null,
+        logoUrl: logo[0] ?? null,
+        storeDescription: about.trim() || null,
       });
       setSession((s) => ({ ...s, business: b }));
       toast("Mağaza ayarları kaydedildi; uygulamadaki sepetlere yansıdı");
@@ -78,6 +83,22 @@ function StoreForm() {
         hint="Uygulamada ürünlerin altında görünür"
         value={displayName}
         onChange={(e) => setDisplayName(e.target.value)}
+      />
+      <div className="field">
+        <span className="label">Mağaza logosu</span>
+        <ImageUploader value={logo} onChange={setLogo} max={1} />
+        <span className="hint">
+          Uygulamadaki mağaza vitrininde yuvarlak olarak görünür. Yalnızca size ait veya kullanım hakkınız olan bir logo
+          yükleyin; kare ve en az 400×400 piksel önerilir.
+        </span>
+      </div>
+      <Textarea
+        label="Mağaza tanıtımı (isteğe bağlı)"
+        rows={2}
+        value={about}
+        onChange={(e) => setAbout(e.target.value)}
+        maxLength={300}
+        hint="Mağaza sayfanızın üstünde görünür"
       />
       <div className="form-row">
         <Input

@@ -22,6 +22,8 @@ export function serializeBusiness(b: Business) {
     shippingFee: toTL(b.shippingFeeCents),
     freeShippingThreshold: toTL(b.freeShippingThresholdCents),
     returnPolicy: b.returnPolicy,
+    logoUrl: b.logoUrl,
+    storeDescription: b.storeDescription,
     createdAt: b.createdAt.toISOString(),
   };
 }

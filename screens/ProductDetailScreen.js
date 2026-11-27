@@ -138,7 +138,15 @@ export default function ProductDetailScreen({ navigation, route }) {
         <View style={styles.body}>
           {p.brand ? <Text style={styles.brand}>{p.brand}</Text> : null}
           <Text style={styles.name}>{p.name}</Text>
-          {p.seller ? <Text style={styles.muted}>Satıcı: {p.seller.name}</Text> : null}
+          {p.seller ? (
+            <Text
+              style={styles.muted}
+              onPress={() => navigation.navigate("Store", { storeId: p.seller.id, name: p.seller.name })}
+              accessibilityRole="link"
+            >
+              Satıcı: <Text style={{ color: colors.primary, fontWeight: "700" }}>{p.seller.name} ›</Text>
+            </Text>
+          ) : null}
           <View style={styles.row}>
             <FontAwesome name="star" size={15} color="#f5a623" />
             <Text style={styles.muted}>

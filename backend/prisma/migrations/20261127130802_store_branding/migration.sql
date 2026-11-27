@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Business" ADD COLUMN     "logoUrl" TEXT,
+ADD COLUMN     "storeDescription" TEXT;
