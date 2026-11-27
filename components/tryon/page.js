@@ -51,6 +51,7 @@ window.__tryon = {
     if (cmd.scan) { scan.samples = []; state.scanning = true; }
     if (cmd.scanDone) state.scanning = false;
     if (cmd.capture) capture();
+    if (cmd.captureRaw) captureRaw();
   },
 };
 
@@ -504,6 +505,24 @@ function scanStep(lm, w, h) {
 }
 
 // ── Fotoğraf ──
+// Yapay zekâ denemesi için efektsiz kare (JPEG)
+function captureRaw() {
+  try {
+    const w = video.videoWidth, h = video.videoHeight;
+    const scale = Math.min(1, 1280 / Math.max(w, h));
+    const out = document.createElement("canvas");
+    out.width = Math.round(w * scale);
+    out.height = Math.round(h * scale);
+    const o = out.getContext("2d");
+    o.translate(out.width, 0);
+    o.scale(-1, 1);
+    o.drawImage(video, 0, 0, out.width, out.height);
+    post({ type: "rawPhoto", data: out.toDataURL("image/jpeg", 0.9).split(",")[1] });
+  } catch (e) {
+    post({ type: "error", code: "capture", message: String(e) });
+  }
+}
+
 function capture() {
   try {
     const out = document.createElement("canvas");

@@ -27,6 +27,7 @@ import BottomNav from "../components/BottomNav";
 import { colors } from "../components/theme";
 import { TRYON_PAGE } from "../components/tryon/page";
 import { FACE_SHAPES, HAIR_COLORS, HAIRSTYLES, MAKEUP_LOOKS } from "../components/tryon/catalog";
+import { tryonApi } from "../services/api";
 
 const ITEM = 62;
 const GAP = 14;
@@ -80,6 +81,34 @@ export default function TryOnScreen({ navigation }) {
   }, []);
 
   // Yüz şekline uygun modeller önce
+  // Yapay zekâ ile gerçekçi deneme: sunucuda anahtar tanımlıysa görünür
+  const [ai, setAi] = useState(null);
+  const [grabbing, setGrabbing] = useState(false);
+  useEffect(() => {
+    if (!isFocused) return;
+    tryonApi
+      .config()
+      .then(setAi)
+      .catch(() => setAi(null));
+  }, [isFocused]);
+
+  const openAi = () => {
+    if (status !== "ready" || grabbing) return;
+    setGrabbing(true);
+    send({ captureRaw: true });
+  };
+  const onRawPhoto = async (base64) => {
+    try {
+      const file = new File(Paths.cache, `mykuafor-ai-${Date.now()}.jpg`);
+      await file.write(base64, { encoding: "base64" });
+      navigation.navigate("AiTryOn", { photoUri: file.uri, shape });
+    } catch (e) {
+      Alert.alert("Fotoğraf alınamadı", e.message);
+    } finally {
+      setGrabbing(false);
+    }
+  };
+
   const styles_ = useMemo(() => {
     const list = [...HAIRSTYLES].sort((a, b) => Number(b.suits.includes(shape)) - Number(a.suits.includes(shape)));
     return [NO_STYLE, ...list];
@@ -207,6 +236,9 @@ export default function TryOnScreen({ navigation }) {
         break;
       case "photo":
         savePhoto(msg.data);
+        break;
+      case "rawPhoto":
+        onRawPhoto(msg.data);
         break;
       default:
     }
@@ -364,6 +396,21 @@ export default function TryOnScreen({ navigation }) {
         />
         {/* Alt panel: kaydırmalı seçenekler + kategoriler */}
         <View style={styles.bottom} onLayout={(e) => setPanelHeight(Math.round(e.nativeEvent.layout.height))}>
+          {category === "styles" && ai?.enabled ? (
+            <TouchableOpacity
+              style={styles.aiBtn}
+              onPress={openAi}
+              disabled={grabbing || status !== "ready"}
+              accessibilityRole="button"
+            >
+              {grabbing ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Ionicons name="sparkles" size={15} color="#fff" />
+              )}
+              <Text style={styles.aiText}>Yapay zekâ ile gerçekçi dene · {ai.remaining} hak</Text>
+            </TouchableOpacity>
+          ) : null}
           <View style={styles.labelRow}>
             <Text style={styles.itemLabel}>{current?.label}</Text>
             {category === "styles" && current?.length ? <Text style={styles.itemMeta}>{current.length}</Text> : null}
@@ -592,6 +639,18 @@ const styles = StyleSheet.create({
   hintText: { color: "#fff", fontWeight: "600" },
   bottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 10, paddingBottom: 12 },
   shadeTop: { position: "absolute", top: 0, left: 0, right: 0 },
+  aiBtn: {
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    height: 36,
+    marginBottom: 10,
+  },
+  aiText: { color: "#fff", fontWeight: "800", fontSize: 13.5 },
   shadeBottom: { position: "absolute", bottom: 0, left: 0, right: 0 },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 6 },
   itemLabel: {

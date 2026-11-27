@@ -32,6 +32,12 @@ const schema = z
 
     GOOGLE_MAPS_SERVER_API_KEY: z.string().default(""),
 
+    // Yapay zekâ saç modeli denemesi (fotoğraftan). Anahtar yoksa özellik uygulamada görünmez.
+    TRYON_AI_PROVIDER: z.enum(["none", "ailabtools"]).default("none"),
+    AILABTOOLS_API_KEY: z.string().default(""),
+    // Kullanıcı başına günlük istek sınırı (her istek ücretlidir)
+    TRYON_AI_DAILY_LIMIT: z.coerce.number().int().min(0).max(100).default(5),
+
     SMTP_HOST: z.string().default(""),
     SMTP_PORT: z.coerce.number().int().positive().default(587),
     SMTP_USER: z.string().default(""),

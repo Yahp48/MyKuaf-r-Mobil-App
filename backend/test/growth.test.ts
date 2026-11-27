@@ -160,3 +160,12 @@ describe("fotoğraflı yorum", () => {
     expect(list.body.items[0].photos).toEqual([up.body.url]);
   });
 });
+
+describe("yapay zekâ saç denemesi", () => {
+  it("anahtar yokken kapalıdır (uygulama özelliği göstermez)", async () => {
+    const u = await registerUser();
+    expect((await api().get("/api/tryon/ai/config").set(u.auth)).body).toEqual({ enabled: false });
+    const r = await api().get("/api/tryon/ai/abc.def").set(u.auth);
+    expect(r.status).toBe(503);
+  });
+});

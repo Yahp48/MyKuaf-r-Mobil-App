@@ -846,3 +846,16 @@ model SalonClaim {
 
   @@index([status, createdAt])
 }
+
+/// Yapay zekâ saç modeli denemesi istekleri (günlük kullanım sınırı ve maliyet takibi için).
+/// Fotoğraf saklanmaz; yalnızca istek zamanı ve sağlayıcıdaki görev kimliği tutulur.
+model AiTryonRequest {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  userId         String   @db.Uuid
+  hairStyle      String
+  color          String
+  providerTaskId String   @unique
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([userId, createdAt])
+}

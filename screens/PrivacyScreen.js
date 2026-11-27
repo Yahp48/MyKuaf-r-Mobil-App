@@ -32,6 +32,15 @@ const SECTIONS = [
       "satılmaz ve reklam amacıyla üçüncü kişilere verilmez.",
   },
   {
+    title: "Canlı deneme ve fotoğraflar",
+    body:
+      "Canlı denemede (saç modeli, renk, makyaj) kamera görüntünüz yalnızca telefonunuzda işlenir; sunucularımıza " +
+      "gönderilmez ve kaydedilmez. \"Yapay zekâ ile gerçekçi dene\" özelliğini kullanırsanız, yalnızca açık rızanızla " +
+      "çektiğiniz fotoğraf yurt dışındaki görüntü işleme hizmet sağlayıcısına gönderilir (KVKK md. 9); fotoğraf " +
+      "saklanmaz, oluşturulan görseller 24 saat sonra silinir. Yorumlara eklediğiniz fotoğraflar salon sayfasında " +
+      "herkese açık yayınlanır; yorumunuzu silmek için Müşteri Hizmetleri'ne yazabilirsiniz.",
+  },
+  {
     title: "Haklarınız",
     body:
       "KVKK md. 11 uyarınca verilerinizin işlenip işlenmediğini öğrenme, düzeltilmesini veya silinmesini isteme, " +

@@ -190,6 +190,19 @@ export const salonApi = {
   leaveWaitlist: (id, date) => del(`/salons/${id}/waitlist/${date}`),
 };
 
+export const tryonApi = {
+  config: () => get("/tryon/ai/config"),
+  create: (uri, hairStyle, color) => {
+    const form = new FormData();
+    form.append("image", { uri, name: "photo.jpg", type: "image/jpeg" });
+    form.append("hairStyle", hairStyle);
+    form.append("color", color);
+    form.append("consent", "true");
+    return request("/tryon/ai", { method: "POST", form });
+  },
+  poll: (token) => get(`/tryon/ai/${encodeURIComponent(token)}`),
+};
+
 export const loyaltyApi = {
   get: () => get("/loyalty"),
   redeem: (points) => post("/loyalty/redeem", { points }),
