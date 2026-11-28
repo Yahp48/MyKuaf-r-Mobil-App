@@ -35,6 +35,9 @@ model User {
   referralRewardedAt DateTime? @db.Timestamptz(3)
   // İşletme hesabı ise bağlı olduğu işletme (panel girişi)
   businessId         String?   @db.Uuid
+  // Yönetici tarafından askıya alındıysa giriş ve oturum yenileme reddedilir
+  suspendedAt        DateTime? @db.Timestamptz(3)
+  suspendReason      String?
   deletedAt          DateTime? @db.Timestamptz(3)
   createdAt          DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt          DateTime  @updatedAt @db.Timestamptz(3)
@@ -58,6 +61,7 @@ model User {
   savedCards          SavedCard[]
   loyaltyTransactions LoyaltyTransaction[]
   waitlistEntries     WaitlistEntry[]
+  adminActions        AdminAction[]
 
   @@index([businessId])
 }
@@ -446,6 +450,9 @@ model Product {
   images              String[]
   features            String[]
   isActive            Boolean  @default(true)
+  // Yönetici yayından kaldırdıysa satıcı yeniden açamaz
+  blockedAt           DateTime? @db.Timestamptz(3)
+  blockReason         String?
   isFeatured          Boolean  @default(false)
   ratingAvg           Float    @default(0)
   ratingCount         Int      @default(0)
@@ -866,4 +873,22 @@ model AiTryonRequest {
   createdAt      DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([userId, createdAt])
+}
+
+// ───────────────────────────── Yönetim ─────────────────────────────
+
+/// Yöneticilerin yaptığı her işlem (doğrulama, askıya alma, yorum gizleme…): denetim izi.
+model AdminAction {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  adminId    String?  @db.Uuid
+  action     String
+  targetType String
+  targetId   String?
+  summary    String
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  admin User? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([targetType, targetId])
 }

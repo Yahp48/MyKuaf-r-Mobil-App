@@ -275,6 +275,9 @@ const serializeSellerProduct = (p: SellerProduct, sold?: number) => ({
   images: p.images,
   features: p.features,
   isActive: p.isActive,
+  // Yönetici yayından kaldırdıysa satıcı görür; ürün uygulamada görünmez
+  blockedAt: p.blockedAt?.toISOString() ?? null,
+  blockReason: p.blockReason,
   rating: Math.round(p.ratingAvg * 10) / 10,
   ratingCount: p.ratingCount,
   ...(sold !== undefined ? { sold30d: sold } : {}),

@@ -43,7 +43,7 @@ export async function issueTokens(
 export async function rotateRefreshToken(raw: string, userAgent?: string): Promise<TokenPair> {
   const existing = await prisma.refreshToken.findUnique({
     where: { tokenHash: sha256(raw) },
-    include: { user: { select: { id: true, role: true, deletedAt: true } } },
+    include: { user: { select: { id: true, role: true, deletedAt: true, suspendedAt: true } } },
   });
   if (!existing) throw unauthorized("Oturum geçersiz, lütfen tekrar giriş yapın");
 
@@ -55,7 +55,7 @@ export async function rotateRefreshToken(raw: string, userAgent?: string): Promi
     logger.warn({ userId: existing.userId }, "Yenileme token'ı yeniden kullanıldı; oturum ailesi iptal edildi");
     throw unauthorized("Oturum geçersiz, lütfen tekrar giriş yapın");
   }
-  if (existing.expiresAt < new Date() || existing.user.deletedAt) {
+  if (existing.expiresAt < new Date() || existing.user.deletedAt || existing.user.suspendedAt) {
     throw unauthorized("Oturum süresi doldu, lütfen tekrar giriş yapın");
   }
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import { useApp } from "../context/AppContext";
@@ -9,6 +9,7 @@ import { colors, formatTL } from "../components/theme";
 import { discountOn, discountRange, priceOn } from "../components/pricing";
 import { LoadError, FormSkeleton } from "../components/Skeleton";
 import { toast } from "../components/Feedback";
+import { useRealtimeEvent } from "../services/realtime";
 
 LocaleConfig.locales.tr = {
   monthNames: [
@@ -78,20 +79,39 @@ export default function CalendarScreen({ navigation, route }) {
     loadSalon();
   }, [loadSalon]);
 
+  // Başka biri bu salonda randevu alır/iptal ederse boş saatler canlı tazelenir (seçim korunur).
+  const liveReload = useRef(false);
+  useRealtimeEvent("availability:changed", (p) => {
+    if (p?.salonId !== salonId) return;
+    liveReload.current = true;
+    setSlotsVersion((v) => v + 1);
+  });
+
   // Seçimler değişince boş saatleri yeniden getir.
   useEffect(() => {
-    setTime("");
+    const live = liveReload.current;
+    liveReload.current = false;
+    if (!live) setTime("");
     if (!date || serviceIds.length === 0) return setSlots([]);
     let cancelled = false;
-    setSlotsLoading(true);
+    if (!live) setSlotsLoading(true);
     salonApi
       .availability(salonId, { date, serviceIds, staffId: staffId ?? undefined })
       .then((res) => {
         if (cancelled) return;
         const all = new Set(res.staff.flatMap((s) => s.slots));
         setSlots([...all].sort());
+        if (live) {
+          setTime((t) => {
+            if (t && !all.has(t)) {
+              toast.info("Seçtiğiniz saat az önce doldu", "Lütfen başka bir saat seçin.");
+              return "";
+            }
+            return t;
+          });
+        }
       })
-      .catch((e) => !cancelled && toast.error("Saatler alınamadı", e.message))
+      .catch((e) => !cancelled && !live && toast.error("Saatler alınamadı", e.message))
       .finally(() => !cancelled && setSlotsLoading(false));
     return () => {
       cancelled = true;

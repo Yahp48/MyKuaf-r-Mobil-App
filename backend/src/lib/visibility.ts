@@ -21,5 +21,7 @@ export const visibleSalonWhere = {
 /** Satışta olan ürün: aktif ve satıcısı askıda değil. */
 export const sellableProductWhere = {
   isActive: true,
+  // Yönetici yayından kaldırdıysa satılamaz
+  blockedAt: null,
   seller: { status: "ACTIVE" },
 } satisfies Prisma.ProductWhereInput;

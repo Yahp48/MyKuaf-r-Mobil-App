@@ -19,6 +19,7 @@ import { SUMMARY_BUSINESS_SELECT, SUMMARY_SERVICE_SELECT, publicDiscount, todayI
 import { toTL } from "../../lib/money.ts";
 import { DateTime } from "luxon";
 import { userUploadPrefix } from "../../lib/uploads.ts";
+import { emitToAdmins, emitToBusiness } from "../../realtime/socket.ts";
 
 export const salonsRouter = Router();
 
@@ -428,5 +429,8 @@ salonsRouter.post("/:id/reviews", requireAuth, async (req, res) => {
     });
     return created;
   });
+  const reviewed = await prisma.salon.findUnique({ where: { id: salonId }, select: { name: true, businessId: true } });
+  if (reviewed?.businessId) emitToBusiness(reviewed.businessId, "review:new", { rating: review.rating });
+  emitToAdmins("review.created", `${reviewed?.name ?? "Salon"} için ${review.rating} yıldızlı yeni yorum`);
   res.status(201).json({ review: { id: review.id, rating: review.rating, comment: review.comment } });
 });

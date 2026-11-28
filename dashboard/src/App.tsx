@@ -36,6 +36,14 @@ const AdminClaims = lazy(() => import("./pages/admin/Claims"));
 const AdminCategories = lazy(() => import("./pages/admin/Categories"));
 const AdminTickets = lazy(() => import("./pages/admin/Tickets"));
 const AdminReviews = lazy(() => import("./pages/admin/Reviews"));
+const AdminUsers = lazy(() => import("./pages/admin/Users"));
+const AdminProducts = lazy(() => import("./pages/admin/Products"));
+const AdminAppointments = lazy(() =>
+  import("./pages/admin/Operations").then((m) => ({ default: m.AdminAppointments })),
+);
+const AdminOrders = lazy(() => import("./pages/admin/Operations").then((m) => ({ default: m.AdminOrders })));
+const AdminPayments = lazy(() => import("./pages/admin/Operations").then((m) => ({ default: m.AdminPayments })));
+const AdminActivity = lazy(() => import("./pages/admin/Operations").then((m) => ({ default: m.AdminActivity })));
 
 function FullPageLoading() {
   return (
@@ -131,6 +139,12 @@ export default function App() {
           <Route path="kategoriler" element={<AdminCategories />} />
           <Route path="destek" element={<AdminTickets />} />
           <Route path="yorumlar" element={<AdminReviews />} />
+          <Route path="musteriler" element={<AdminUsers />} />
+          <Route path="randevular" element={<AdminAppointments />} />
+          <Route path="siparisler" element={<AdminOrders />} />
+          <Route path="odemeler" element={<AdminPayments />} />
+          <Route path="urunler" element={<AdminProducts />} />
+          <Route path="islem-gecmisi" element={<AdminActivity />} />
         </Route>
 
         <Route

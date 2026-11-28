@@ -4,6 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BookOpenText,
   CalendarDots,
+  ClockCounterClockwise,
+  CreditCard,
+  ShoppingBag,
+  UserList,
   ChartBar,
   Clock,
   Gear,
@@ -143,15 +147,29 @@ function AdminNav() {
           icon: <Scissors size={18} />,
           count: data?.pendingClaims,
         },
+        { to: "/yonetim/musteriler", label: "Müşteriler", icon: <UserList size={18} /> },
+      ],
+    },
+    {
+      label: "Operasyon",
+      items: [
+        { to: "/yonetim/randevular", label: "Tüm randevular", icon: <CalendarDots size={18} /> },
+        { to: "/yonetim/siparisler", label: "Tüm siparişler", icon: <ShoppingBag size={18} /> },
+        { to: "/yonetim/odemeler", label: "Ödemeler", icon: <CreditCard size={18} /> },
       ],
     },
     {
       label: "İçerik",
       items: [
-        { to: "/yonetim/kategoriler", label: "Kategoriler", icon: <Package size={18} /> },
         { to: "/yonetim/destek", label: "Destek talepleri", icon: <Receipt size={18} />, count: data?.openTickets },
         { to: "/yonetim/yorumlar", label: "Yorum denetimi", icon: <Star size={18} /> },
+        { to: "/yonetim/urunler", label: "Ürün denetimi", icon: <Package size={18} /> },
+        { to: "/yonetim/kategoriler", label: "Kategoriler", icon: <BookOpenText size={18} /> },
       ],
+    },
+    {
+      label: "Denetim",
+      items: [{ to: "/yonetim/islem-gecmisi", label: "İşlem geçmişi", icon: <ClockCounterClockwise size={18} /> }],
     },
   ];
   return <Groups groups={groups} />;
@@ -160,6 +178,8 @@ function AdminNav() {
 /** Platform yöneticisi paneli: işletme paneliyle aynı düzen, kendi menüsü. */
 export function AdminShell() {
   const { session, signOut } = useSession();
+  // Yönetim paneli de canlı: yeni işletme, talep, yorum, sipariş geldiğinde listeler anında tazelenir.
+  const connected = useRealtime(true);
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
@@ -174,6 +194,9 @@ export function AdminShell() {
         <div className="index-business">Platform yönetimi</div>
         <AdminNav />
         <div className="index-foot">
+          <span className="live-dot" data-on={connected}>
+            {connected ? "Canlı bağlantı açık" : "Bağlanıyor…"}
+          </span>
           <span className="muted">{session?.owner.name}</span>
           <Button
             variant="quiet"

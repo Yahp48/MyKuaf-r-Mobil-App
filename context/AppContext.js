@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   authApi,
   cartApi,
@@ -25,6 +25,7 @@ export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
   const [cart, setCart] = useState(EMPTY_CART);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const refreshUserRef = useRef(null);
 
   const resetLocalState = useCallback(() => {
     disconnectRealtime();
@@ -77,7 +78,12 @@ export function AppProvider({ children }) {
   // Canlı olaylar: yeni bildirim rozeti artırır; sipariş/randevu değişince sepet ve sayaç tazelenir.
   useEffect(() => {
     const offs = [
-      onRealtime("notification:new", () => setUnreadNotifications((n) => n + 1)),
+      // Bildirim çoğu zaman bakiye/puan değişimiyle gelir (puan kazanıldı, iade, yükleme): kullanıcı da tazelenir.
+      onRealtime("notification:new", () => {
+        setUnreadNotifications((n) => n + 1);
+        refreshUserRef.current?.().catch(() => {});
+      }),
+      onRealtime("payment:updated", () => refreshUserRef.current?.().catch(() => {})),
       onRealtime("order:updated", () => refreshCart().catch(() => {})),
       onRealtime("catalog:changed", () => refreshCart().catch(() => {})),
       onRealtime("realtime:connected", () => refreshUnread().catch(() => {})),
@@ -130,6 +136,7 @@ export function AppProvider({ children }) {
     setUser(me);
     return me;
   }, []);
+  refreshUserRef.current = refreshUser;
 
   const value = useMemo(() => {
     const cartItems = cart.items.map((i) => ({ ...i.product, quantity: i.quantity, lineTotal: i.lineTotal }));

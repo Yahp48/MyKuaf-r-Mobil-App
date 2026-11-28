@@ -20,8 +20,14 @@ Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kuralları
 - Expo CNG: `android/` ve `ios/` git'te YOK; native ayarlar `app.config.js`'te (EAS Build / `npx expo prebuild`)
 - Navigasyon: `@react-navigation/stack`. `App.js` oturuma göre `AuthStack` (giriş/kayıt) veya `MainStack` gösterir
 - Global durum: `context/AppContext.js` → oturum, sunucudaki sepet, okunmamış bildirim sayısı
-- Canlı bağlantı: `services/realtime.js` (Socket.IO). `salons:changed`, `catalog:changed`, `appointment:updated`,
-  `order:updated`, `notification:new`; ekranlarda `useRealtimeEvent` ile dinlenir
+- Canlı bağlantı: `services/realtime.js` (Socket.IO). `salons:changed`, `catalog:changed`, `availability:changed`
+  (boş saatler), `appointment:updated`, `order:updated`, `notification:new`, `payment:updated`; ekranlarda `useRealtimeEvent`.
+  Sunucu odaları: `user:<id>`, `business:<id>` (randevu/sipariş/yorum, `business:updated`, `product:moderated`),
+  `admins` (`admin:activity`). Panel: `dashboard/src/lib/realtime.ts` (TanStack Query anahtarlarını tazeler)
+- Alt menü App kökünde tek (`PersistentBottomNav`, `components/BottomNav.js`); ekranlar yalnızca `<BottomNavSpacer />` koyar.
+  Hangi ekranda görüneceği `ROUTE_TAB`'da
+- Geri bildirim: `Alert.alert` KULLANILMAZ. `components/Feedback.js` → `toast.success/error/info` (kısa, akışı durdurmaz),
+  `confirm({...})` yalnızca geri alınamaz işlemler için. Gereksiz "eklendi" mesajı yok (sepet rozeti zıplar)
 - API: `services/api.js` tek istemci. Yenileme token'ı `expo-secure-store`'da, erişim token'ı bellekte; 401'de otomatik yenileme
 - API adresi: `config.js` → `.env`'deki `EXPO_PUBLIC_API_URL`; geliştirmede boşsa Expo host IP'si:5000
 - Ödeme: `services/checkout.js` sağlayıcının güvenli sayfasını uygulama içi pencerede açar (`components/PaymentSheet.js`,
@@ -39,9 +45,11 @@ Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kuralları
   `backend/prisma/data/istanbul-salons.ts`, kaynak OpenStreetMap/ODbL — atıf zorunlu; fotoğraf/puan kopyalanmaz,
   saat bilinmiyorsa uydurulmaz). Randevu/müsaitlik yalnızca `bookableSalonWhere`
 - Kayıtlı kart: kart ödeme kuruluşunda saklanır, bizde yalnızca anahtar + son 4 hane (`SavedCard`); kart ekleme 1 TL doğrulama + iade
-- Yönetim paneli (`dashboard/src/pages/admin`, API `/api/admin`, rol ADMIN): işletme doğrulama (vergi levhası
-  `private-uploads/` içinde, herkese açık değil), askıya alma, rehber sahiplenme onayı, kategoriler, destek yanıtı,
-  yorum gizleme. Hatırlatma/bekleme listesi işleri `backend/src/modules/appointments/jobs.ts`, puan `modules/loyalty`
+- Yönetim paneli (`dashboard/src/pages/admin`, API `/api/admin` + `admin/center.ts`, rol ADMIN): canlı özet (bugün,
+  30 gün, 14 günlük grafik), işletme doğrulama (vergi levhası `private-uploads/` içinde), askıya alma, rehber sahiplenme,
+  müşteriler (askıya alma → giriş/yenileme kapanır), tüm randevu/sipariş/ödemeler, ürün denetimi (`blockedAt`,
+  satıcı açamaz), kategoriler, destek yanıtı, yorum gizleme, işlem geçmişi (`AdminAction`, her değiştirici işlem
+  `audit(res, …)` ile yazılır). Hatırlatma/bekleme listesi işleri `backend/src/modules/appointments/jobs.ts`, puan `modules/loyalty`
 - Ürün rozetleri (`backend/src/modules/products/metrics.ts`) yalnızca gerçek satış/favori verisinden; mağaza logosunu satıcı kendisi yükler
 - İndirim: hizmet başına yüzde + tarih aralığı; fiyat randevu gününe göre sunucuda hesaplanır (`backend/src/modules/salons/discount.ts`).
   Son 30 günde fiyatı artırılan hizmette indirim yok, indirim sürerken fiyat artırılamaz
@@ -64,7 +72,7 @@ Mobil (kök dizin):
 - `npx expo-doctor` — bağımlılık/yapılandırma kontrolü
 Backend (`backend/`):
 - `docker compose up -d` (PostgreSQL), `npm run db:deploy`, `npm run db:seed`, `npm run dev`
-- `npm test` (78 test, `mykuafor_test` veritabanı), `npm run typecheck`
+- `npm test` (82 test, `mykuafor_test` veritabanı), `npm run typecheck`
 - Şema değişikliği: `prisma/schema.prisma` düzenle → `npm run db:migrate -- --name <ad>`
 - Demo hesapları (yalnızca yerel seed, şifre `Demo12345`): müşteri `demo@mykuafor.test`,
   kuaför paneli `salon@mykuafor.test` ("MyKuaför Demo Salon", Kadıköy), satıcı paneli `satici@mykuafor.test`,

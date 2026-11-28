@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma.ts";
 import { pageResult, paginate, parse, zPagination } from "../../lib/validate.ts";
 import { requireAuth, userId } from "../../middleware/auth.ts";
+import { emitToAdmins } from "../../realtime/socket.ts";
 
 export const supportRouter = Router();
 supportRouter.use(requireAuth);
@@ -35,6 +36,7 @@ const serialize = (t: {
 supportRouter.post("/tickets", async (req, res) => {
   const body = parse(ticketSchema, req.body);
   const ticket = await prisma.supportTicket.create({ data: { ...body, userId: userId(req) } });
+  emitToAdmins("ticket.opened", `Yeni ${ticket.type === "FEEDBACK" ? "geri bildirim" : "destek talebi"}: ${ticket.subject}`);
   res.status(201).json({ ticket: serialize(ticket) });
 });
 

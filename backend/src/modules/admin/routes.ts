@@ -7,14 +7,17 @@ import { AppError, forbidden, notFound } from "../../lib/errors.ts";
 import { privatePath } from "../../lib/uploads.ts";
 import { shortName } from "../../lib/names.ts";
 import { requireAuth } from "../../middleware/auth.ts";
-import { broadcast } from "../../realtime/socket.ts";
+import { broadcast, emitToBusiness } from "../../realtime/socket.ts";
+import { audit, auditMiddleware, registerCenterRoutes } from "./center.ts";
 import { notify } from "../notifications/notify.ts";
 import { serializeBusiness } from "../business/serialize.ts";
 import type { Prisma } from "../../generated/prisma/client.ts";
 
 /**
  * Platform yönetici paneli uçları (/api/admin). Yalnızca ADMIN rolü.
- * İşletme doğrulama ve askıya alma, salon sahiplenme talepleri, kategoriler, destek talepleri, yorum moderasyonu.
+ * İşletme doğrulama ve askıya alma, salon sahiplenme talepleri, kategoriler, destek talepleri, yorum moderasyonu;
+ * müşteriler, tüm randevu/sipariş/ödemeler, ürün denetimi ve işlem geçmişi center.ts'te.
+ * Her değiştirici işlem işlem geçmişine (AdminAction) yazılır.
  */
 export const adminRouter = Router();
 
@@ -22,7 +25,8 @@ function requireAdmin(req: Request, _res: Response, next: NextFunction) {
   if (req.user?.role !== "ADMIN") return next(forbidden("Bu alan yalnızca platform yöneticileri içindir"));
   next();
 }
-adminRouter.use(requireAuth, requireAdmin);
+adminRouter.use(requireAuth, requireAdmin, auditMiddleware);
+registerCenterRoutes(adminRouter);
 
 // ───────────── Özet ─────────────
 
@@ -151,8 +155,22 @@ adminRouter.post("/businesses/:id/verification", async (req, res) => {
     include: { members: true, salon: true },
   });
   broadcast(b.type === "SALON" ? "salons:changed" : "catalog:changed", { businessId: id });
+  emitToBusiness(id, "business:updated", { verificationStatus: b.verificationStatus });
+  audit(res, {
+    action: `business.verification.${body.status.toLowerCase()}`,
+    targetType: "business",
+    targetId: id,
+    summary: `${b.displayName} ${VERIFICATION_TEXT[body.status]}${body.note ? `: ${body.note}` : ""}`,
+  });
   res.json({ business: adminBusiness(b) });
 });
+
+const VERIFICATION_TEXT: Record<string, string> = {
+  VERIFIED: "doğrulandı",
+  REJECTED: "doğrulaması reddedildi",
+  PENDING: "incelemeye alındı",
+  UNVERIFIED: "doğrulaması kaldırıldı",
+};
 
 const statusSchema = z.object({
   status: z.enum(["ACTIVE", "SUSPENDED"]),
@@ -171,6 +189,13 @@ adminRouter.post("/businesses/:id/status", async (req, res) => {
     include: { members: true, salon: true },
   });
   broadcast(b.type === "SALON" ? "salons:changed" : "catalog:changed", { businessId: id });
+  emitToBusiness(id, "business:updated", { status: b.status });
+  audit(res, {
+    action: body.status === "SUSPENDED" ? "business.suspend" : "business.activate",
+    targetType: "business",
+    targetId: id,
+    summary: `${b.displayName} ${body.status === "SUSPENDED" ? `askıya alındı: ${body.reason}` : "yeniden etkinleştirildi"}`,
+  });
   res.json({ business: adminBusiness(b) });
 });
 
@@ -254,6 +279,12 @@ adminRouter.post("/claims/:id/approve", async (req, res) => {
     });
   });
   broadcast("salons:changed", { salonId: target.id });
+  audit(res, {
+    action: "claim.approve",
+    targetType: "claim",
+    targetId: id,
+    summary: `${claim.business.displayName}, "${claim.listing.name}" kaydını sahiplendi`,
+  });
   res.json({ ok: true });
 });
 
@@ -265,6 +296,12 @@ adminRouter.post("/claims/:id/reject", async (req, res) => {
     data: { status: "REJECTED", note, decidedAt: new Date() },
   });
   if (!updated.count) throw notFound("Bekleyen talep bulunamadı");
+  audit(res, {
+    action: "claim.reject",
+    targetType: "claim",
+    targetId: id,
+    summary: `Sahiplenme talebi reddedildi: ${note}`,
+  });
   res.json({ ok: true });
 });
 
@@ -313,6 +350,12 @@ adminRouter.post("/categories", async (req, res) => {
   }
   const c = await prisma.category.create({ data: { ...body, slug } });
   broadcast("catalog:changed", { categoryId: c.id });
+  audit(res, {
+    action: "category.create",
+    targetType: "category",
+    targetId: c.id,
+    summary: `Kategori eklendi: ${c.name}`,
+  });
   res.status(201).json({ category: c });
 });
 
@@ -323,6 +366,12 @@ adminRouter.patch("/categories/:id", async (req, res) => {
     throw notFound("Kategori bulunamadı");
   });
   broadcast("catalog:changed", { categoryId: id });
+  audit(res, {
+    action: "category.update",
+    targetType: "category",
+    targetId: id,
+    summary: `Kategori güncellendi: ${c.name}`,
+  });
   res.json({ category: c });
 });
 
@@ -380,6 +429,7 @@ adminRouter.post("/tickets/:id/reply", async (req, res) => {
       data: { ticketId: t.id },
     });
   }
+  audit(res, { action: "ticket.reply", targetType: "ticket", targetId: id, summary: `Talep yanıtlandı: ${t.subject}` });
   res.json({ ok: true });
 });
 
@@ -387,6 +437,7 @@ adminRouter.post("/tickets/:id/close", async (req, res) => {
   const id = parse(zId, req.params.id);
   const updated = await prisma.supportTicket.updateMany({ where: { id }, data: { status: "CLOSED" } });
   if (!updated.count) throw notFound("Talep bulunamadı");
+  audit(res, { action: "ticket.close", targetType: "ticket", targetId: id, summary: "Destek talebi kapatıldı" });
   res.json({ ok: true });
 });
 
@@ -447,5 +498,11 @@ adminRouter.post("/reviews/:id/visibility", async (req, res) => {
     });
   });
   broadcast("salons:changed", { salonId: review.salonId });
+  audit(res, {
+    action: body.hidden ? "review.hide" : "review.show",
+    targetType: "review",
+    targetId: id,
+    summary: body.hidden ? `Yorum gizlendi: ${body.reason}` : "Yorum yeniden yayında",
+  });
   res.json({ ok: true });
 });

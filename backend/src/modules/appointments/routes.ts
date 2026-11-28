@@ -12,7 +12,7 @@ import { ACTIVE_APPOINTMENT_STATUSES, computeAvailability, salonDay } from "../s
 import { priceBooking } from "../salons/pricing.ts";
 import { notifyWaitlist } from "./jobs.ts";
 import { notify } from "../notifications/notify.ts";
-import { emitToBusiness, emitToUser } from "../../realtime/socket.ts";
+import { availabilityChanged, emitToAdmins, emitToBusiness, emitToUser } from "../../realtime/socket.ts";
 import type { Prisma } from "../../generated/prisma/client.ts";
 
 export const appointmentsRouter = Router();
@@ -151,6 +151,8 @@ appointmentsRouter.post("/", async (req, res) => {
 
   const out = serialize(appointment);
   if (salon.businessId) emitToBusiness(salon.businessId, "appointment:new", { id: appointment.id });
+  availabilityChanged(salon.id);
+  emitToAdmins("appointment.created", `${salon.name} · yeni randevu`);
   await notify(uid, {
     type: "appointment_confirmed",
     title: appointment.status === "CONFIRMED" ? "Randevunuz onaylandı" : "Randevu talebiniz alındı",
@@ -236,6 +238,7 @@ appointmentsRouter.post("/:id/cancel", async (req, res) => {
   });
   const out = serialize(updated);
   emitToUser(uid, "appointment:updated", out);
+  availabilityChanged(a.salon.id);
   await notifyWaitlist(a.salon.id, a.startsAt, uid);
   const owner = await prisma.salon.findUnique({ where: { id: a.salon.id }, select: { businessId: true } });
   if (owner?.businessId) emitToBusiness(owner.businessId, "appointment:updated", { id });

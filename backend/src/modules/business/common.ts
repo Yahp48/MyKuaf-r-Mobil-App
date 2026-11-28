@@ -16,7 +16,7 @@ import { fromTL } from "../../lib/money.ts";
 import { hashPassword, verifyPassword } from "../../lib/password.ts";
 import { requireAuth, userId } from "../../middleware/auth.ts";
 import { businessOf, requireBusiness } from "../../middleware/business.ts";
-import { broadcast } from "../../realtime/socket.ts";
+import { broadcast, emitToAdmins } from "../../realtime/socket.ts";
 import { revokeAllUserTokens } from "../auth/tokens.ts";
 import { businessInfoSchema } from "./auth.ts";
 import { serializeBusiness, serializeOwner } from "./serialize.ts";
@@ -70,6 +70,7 @@ businessCommonRouter.post("/verification", async (req, res) => {
     where: { id: b.id },
     data: { taxCertificateUrl: documentKey, verificationStatus: "PENDING", verificationNote: null },
   });
+  emitToAdmins("verification.submitted", `${updated.displayName} doğrulama için belge gönderdi`);
   res.json({ business: serializeBusiness(updated) });
 });
 

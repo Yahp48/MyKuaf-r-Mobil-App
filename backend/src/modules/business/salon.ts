@@ -9,7 +9,7 @@ import { fromTL, toTL } from "../../lib/money.ts";
 import { shortName } from "../../lib/names.ts";
 import { requireAuth } from "../../middleware/auth.ts";
 import { businessOf, requireBusiness, salonOf } from "../../middleware/business.ts";
-import { broadcast, emitToBusiness, emitToUser } from "../../realtime/socket.ts";
+import { availabilityChanged, broadcast, emitToAdmins, emitToBusiness, emitToUser } from "../../realtime/socket.ts";
 import { notify } from "../notifications/notify.ts";
 import { ACTIVE_APPOINTMENT_STATUSES, computeAvailability, resolveServices, salonDay } from "../salons/availability.ts";
 import { discountedCents, isoDay, todayIn } from "../salons/discount.ts";
@@ -219,6 +219,7 @@ salonPanelRouter.post("/appointments", async (req, res) => {
       include: apptInclude,
     });
     emitToBusiness(salon.businessId!, "appointment:new", { id: a.id });
+    availabilityChanged(salon.id);
     res.status(201).json({ appointment: serializeAppt(a, salon.timezone) });
   } catch (err) {
     if (pgErrorCode(err) === "23P01") throw conflict("SLOT_UNAVAILABLE", "Bu saat az önce doldu");
@@ -268,6 +269,7 @@ salonPanelRouter.post("/appointments/:id/status", async (req, res) => {
   });
   const out = serializeAppt(updated, salon.timezone);
   emitToBusiness(salon.businessId!, "appointment:updated", { id });
+  availabilityChanged(salon.id);
   if (body.status === "CANCELLED") await notifyWaitlist(salon.id, a.startsAt, a.userId);
   if (body.status === "COMPLETED") await onAppointmentCompleted(id);
   if (a.userId) {
@@ -343,6 +345,7 @@ salonPanelRouter.patch("/appointments/:id", async (req, res) => {
   }
   const out = serializeAppt(updated, salon.timezone);
   emitToBusiness(salon.businessId!, "appointment:updated", { id });
+  availabilityChanged(salon.id);
   if (moving && a.userId) {
     emitToUser(a.userId, "appointment:updated", { id });
     await notify(a.userId, {
@@ -847,6 +850,7 @@ salonPanelRouter.post("/claims", async (req, res) => {
     throw new AppError(409, "CLAIM_PENDING", "İncelenen bir talebiniz zaten var");
   }
   const claim = await prisma.salonClaim.create({ data: { listingId, businessId: b.id } });
+  emitToAdmins("claim.submitted", `${b.displayName}, "${listing.name}" kaydını sahiplenmek istiyor`);
   res.status(201).json({ claim: { id: claim.id, status: claim.status } });
 });
 

@@ -9,7 +9,7 @@ import { env, isProd } from "../../config/env.ts";
 import { authLimiter } from "../../middleware/rate-limit.ts";
 import { requireAuth, userId } from "../../middleware/auth.ts";
 import { requireBusiness, businessOf } from "../../middleware/business.ts";
-import { broadcast } from "../../realtime/socket.ts";
+import { broadcast, emitToAdmins } from "../../realtime/socket.ts";
 import { issueTokens, revokeRefreshToken, rotateRefreshToken } from "../auth/tokens.ts";
 import { serializeBusiness, serializeOwner, serializeSalonProfile } from "./serialize.ts";
 
@@ -180,6 +180,7 @@ businessAuthRouter.post("/register", authLimiter, async (req, res) => {
       });
     });
     if (body.business.type === "SALON") broadcast("salons:changed", { reason: "created" });
+    emitToAdmins("business.registered", `Yeni işletme kaydı: ${body.business.displayName}`);
 
     const tokens = await issueTokens(user, req.get("user-agent"));
     setRefreshCookie(res, tokens.refreshToken);
@@ -199,6 +200,9 @@ businessAuthRouter.post("/login", authLimiter, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { email: body.email }, include: { business: true } });
   const ok = await verifyPassword(user?.deletedAt ? null : user?.passwordHash, body.password);
   if (!user || !ok) throw new AppError(401, "INVALID_CREDENTIALS", "E-posta veya şifre hatalı");
+  if (user.suspendedAt) {
+    throw new AppError(403, "ACCOUNT_SUSPENDED", "Hesabınız askıya alınmış. Ayrıntı için destek ekibimize yazın.");
+  }
   if (user.role !== "ADMIN" && (user.role !== "BUSINESS_OWNER" || !user.business)) {
     throw new AppError(
       403,

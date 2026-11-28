@@ -68,6 +68,9 @@ authRouter.post("/login", async (req, res) => {
   const user = await prisma.user.findUnique({ where: { email: body.email } });
   const ok = await verifyPassword(user?.deletedAt ? null : user?.passwordHash, body.password);
   if (!user || !ok) throw new AppError(401, "INVALID_CREDENTIALS", "E-posta veya şifre hatalı");
+  if (user.suspendedAt) {
+    throw new AppError(403, "ACCOUNT_SUSPENDED", "Hesabınız askıya alınmış. Ayrıntı için destek ekibimize yazın.");
+  }
   if (user.role === "BUSINESS_OWNER") {
     throw new AppError(403, "BUSINESS_ACCOUNT", "Bu bir işletme hesabı. Lütfen işletme panelinden giriş yapın.");
   }

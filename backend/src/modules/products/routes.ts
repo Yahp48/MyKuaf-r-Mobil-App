@@ -9,6 +9,7 @@ import { productInclude, serializeProduct } from "./serialize.ts";
 import { badgesFor, productMetrics } from "./metrics.ts";
 import { shortName } from "../../lib/names.ts";
 import type { Prisma } from "../../generated/prisma/client.ts";
+import { emitToAdmins, emitToBusiness } from "../../realtime/socket.ts";
 
 export const productsRouter = Router();
 
@@ -234,5 +235,8 @@ productsRouter.post("/:id/reviews", requireAuth, async (req, res) => {
     });
     return created;
   });
+  const reviewed = await prisma.product.findUnique({ where: { id: productId }, select: { name: true, sellerId: true } });
+  if (reviewed) emitToBusiness(reviewed.sellerId, "review:new", { rating: review.rating });
+  emitToAdmins("review.created", `${reviewed?.name ?? "Ürün"} için ${review.rating} yıldızlı yeni yorum`);
   res.status(201).json({ review: { id: review.id, rating: review.rating, comment: review.comment } });
 });

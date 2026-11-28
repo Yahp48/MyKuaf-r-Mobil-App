@@ -4,7 +4,7 @@ import { formatTL, toTL } from "../../lib/money.ts";
 import { logger } from "../../lib/logger.ts";
 import { notify } from "../notifications/notify.ts";
 import { z } from "zod";
-import { emitToBusiness, emitToUser } from "../../realtime/socket.ts";
+import { emitToAdmins, emitToBusiness, emitToUser } from "../../realtime/socket.ts";
 import { env, isProd } from "../../config/env.ts";
 import { paymentProvider, type StoredCardInfo } from "./providers.ts";
 import type { Payment } from "../../generated/prisma/client.ts";
@@ -172,7 +172,10 @@ export async function finalizePayment(paymentId: string, outcome: Outcome) {
     const { orderInclude, serializeOrder, publishOrder } = await import("../orders/service.ts");
     const orders = await prisma.order.findMany({ where: { id: { in: result.orderIds } }, include: orderInclude });
     for (const o of orders) {
-      if (outcome.ok) emitToBusiness(o.sellerId, "order:new", serializeOrder(o));
+      if (outcome.ok) {
+        emitToBusiness(o.sellerId, "order:new", serializeOrder(o));
+        emitToAdmins("order.paid", `${o.orderNumber} numaralı sipariş ödendi`);
+      }
       publishOrder(o);
     }
   }

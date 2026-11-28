@@ -183,7 +183,18 @@ export default function Products() {
                       <StockCell key={`${p.id}-${p.stock}`} product={p} />
                     </td>
                     <td className="right mono">{p.sold30d ?? 0}</td>
-                    <td>{p.isActive ? <Stamp tone="ok">Satışta</Stamp> : <Stamp tone="faint">Satış dışı</Stamp>}</td>
+                    <td>
+                      {p.blockedAt ? (
+                        <>
+                          <Stamp tone="bad">Yönetim kaldırdı</Stamp>
+                          <div className="small faint">{p.blockReason}</div>
+                        </>
+                      ) : p.isActive ? (
+                        <Stamp tone="ok">Satışta</Stamp>
+                      ) : (
+                        <Stamp tone="faint">Satış dışı</Stamp>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

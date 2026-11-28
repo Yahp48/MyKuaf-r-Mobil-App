@@ -7,7 +7,8 @@ import { getAccessToken, userApi } from "./api";
  * Sunucuyla canlı bağlantı. Olaylar:
  * - salons:changed   → yeni salon açıldı / salon bilgisi değişti (harita tazelenir)
  * - catalog:changed  → ürün eklendi / fiyat-stok değişti (mağaza tazelenir)
- * - appointment:updated, order:updated, notification:new → kişisel güncellemeler
+ * - availability:changed → bir salonun boş saatleri değişti (randevu ekranı saatleri tazeler)
+ * - appointment:updated, order:updated, notification:new, payment:updated → kişisel güncellemeler
  */
 let socket = null;
 const listeners = new Map();
@@ -23,6 +24,7 @@ const EVENTS = [
   "order:updated",
   "notification:new",
   "payment:updated",
+  "availability:changed",
 ];
 
 export function connectRealtime() {

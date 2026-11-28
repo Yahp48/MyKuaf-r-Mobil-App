@@ -194,6 +194,9 @@ export interface Product {
   images: string[];
   features: string[];
   isActive: boolean;
+  /** Yönetim yayından kaldırdıysa (satıcı açamaz) */
+  blockedAt?: string | null;
+  blockReason?: string | null;
   rating: number;
   ratingCount: number;
   sold30d?: number;
