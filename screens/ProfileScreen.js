@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "../context/AppContext";
+import { cardApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import { BottomNavSpacer } from "../components/BottomNav";
 import { colors, formatTL } from "../components/theme";
@@ -37,6 +38,14 @@ const GROUPS = [
 
 export default function ProfileScreen({ navigation }) {
   const { user } = useApp();
+  // Ödeme kuruluşu kart saklamıyorsa "Kayıtlı kartlarım" gösterilmez (çalışmayan özellik menüde olmaz).
+  const [cardsSupported, setCardsSupported] = useState(false);
+  useEffect(() => {
+    cardApi
+      .list()
+      .then((r) => setCardsSupported(r.supported !== false))
+      .catch(() => {});
+  }, []);
   const initials = (user?.name ?? "?")
     .split(/\s+/)
     .map((w) => w[0])
@@ -79,18 +88,20 @@ export default function ProfileScreen({ navigation }) {
           <View key={g.title}>
             <Text style={styles.groupLabel}>{g.title}</Text>
             <View style={styles.card}>
-              {g.items.map((item, i) => (
-                <TouchableOpacity
-                  key={item.route}
-                  style={[styles.item, i > 0 && styles.border]}
-                  onPress={() => navigation.navigate(item.route)}
-                  accessibilityRole="button"
-                >
-                  <Ionicons name={item.icon} size={22} color={colors.text} />
-                  <Text style={styles.itemText}>{item.label}</Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.faint} />
-                </TouchableOpacity>
-              ))}
+              {g.items
+                .filter((item) => item.route !== "SavedCards" || cardsSupported)
+                .map((item, i) => (
+                  <TouchableOpacity
+                    key={item.route}
+                    style={[styles.item, i > 0 && styles.border]}
+                    onPress={() => navigation.navigate(item.route)}
+                    accessibilityRole="button"
+                  >
+                    <Ionicons name={item.icon} size={22} color={colors.text} />
+                    <Text style={styles.itemText}>{item.label}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+                  </TouchableOpacity>
+                ))}
             </View>
           </View>
         ))}

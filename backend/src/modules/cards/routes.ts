@@ -27,18 +27,25 @@ export const serializeCard = (c: SavedCard) => ({
   createdAt: c.createdAt.toISOString(),
 });
 
+/** Ödeme kuruluşu kart saklamayı desteklemiyorsa (ör. PayTR iFrame) liste boş ve supported=false döner; uygulama özelliği gizler. */
 cardsRouter.get("/", async (req, res) => {
-  const items = await prisma.savedCard.findMany({
-    where: { userId: userId(req) },
-    orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
-  });
-  res.json({ items: items.map(serializeCard) });
+  const supported = paymentProvider().supportsSavedCards;
+  const items = supported
+    ? await prisma.savedCard.findMany({
+        where: { userId: userId(req), provider: paymentProvider().name },
+        orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+      })
+    : [];
+  res.json({ supported, items: items.map(serializeCard) });
 });
 
 /** Yeni kart ekleme: 1 TL'lik doğrulama ödemesi açılır, kart saklanır ve tutar hemen iade edilir. */
 cardsRouter.post("/verify", async (req, res) => {
   const { returnUrl } = parse(z.object({ returnUrl: zReturnUrl.optional() }), req.body ?? {});
   const uid = userId(req);
+  if (!paymentProvider().supportsSavedCards) {
+    throw new AppError(400, "SAVED_CARDS_UNSUPPORTED", "Kart kaydetme şu anda kullanılamıyor");
+  }
   if ((await prisma.savedCard.count({ where: { userId: uid } })) >= MAX_CARDS) {
     throw new AppError(400, "CARD_LIMIT", `En fazla ${MAX_CARDS} kart kaydedebilirsiniz`);
   }
@@ -52,7 +59,7 @@ cardsRouter.post("/verify", async (req, res) => {
       returnUrl,
     },
   });
-  const checkout = await startCheckout(payment.id);
+  const checkout = await startCheckout(payment.id, { ip: req.ip });
   const fresh = await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } });
   res.status(201).json({ payment: serializePayment(fresh), checkoutUrl: checkout.checkoutUrl });
 });
@@ -102,6 +109,8 @@ export const zCardOptions = {
 };
 
 export async function resolveCardOptions(uid: string, opts: { savedCardId?: string; saveCard?: boolean }) {
+  // Sağlayıcı kart saklamıyorsa seçenekler yok sayılır (her ödeme yeni kartla, sağlayıcının sayfasında).
+  if (!paymentProvider().supportsSavedCards) return { saveCard: false };
   if (opts.savedCardId) {
     await ownCard(uid, opts.savedCardId);
     return { savedCardId: opts.savedCardId, saveCard: false };

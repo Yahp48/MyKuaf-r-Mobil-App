@@ -149,7 +149,7 @@ ordersRouter.post("/", async (req, res) => {
     return { orderIds, paymentId: payment?.id };
   });
 
-  const checkout = result.paymentId ? await startCheckout(result.paymentId) : undefined;
+  const checkout = result.paymentId ? await startCheckout(result.paymentId, { ip: req.ip }) : undefined;
   const orders = await prisma.order.findMany({ where: { id: { in: result.orderIds } }, include: orderInclude });
   if (body.paymentMethod === "WALLET") {
     for (const o of orders) emitToBusiness(o.sellerId, "order:new", serializeOrder(o));

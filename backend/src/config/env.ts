@@ -23,12 +23,22 @@ const schema = z
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
     PUBLIC_BASE_URL: z.string().url().default("http://localhost:5000"),
 
-    PAYMENT_PROVIDER: z.enum(["mock", "iyzico"]).default("mock"),
+    PAYMENT_PROVIDER: z.enum(["mock", "iyzico", "paytr"]).default("mock"),
+    // PayTR mağaza paneli → BİLGİ sayfası. Test modunda gerçek para çekilmez (production'da kapalı olmalı).
+    PAYTR_MERCHANT_ID: z.string().trim().default(""),
+    PAYTR_MERCHANT_KEY: z.string().trim().default(""),
+    PAYTR_MERCHANT_SALT: z.string().trim().default(""),
+    PAYTR_TEST_MODE: z
+      .enum(["0", "1"])
+      .default("1")
+      .transform((v) => v === "1"),
+    // Yalnızca yerel deneme: istek özel ağdan gelirse PayTR'a gönderilecek dış IP
+    PAYTR_DEV_PUBLIC_IP: z.string().trim().default(""),
     // Ödeme sayfası bitince kullanıcıyı uygulamaya döndüren derin bağlantı şeması (app.config.js → scheme)
     APP_DEEP_LINK_SCHEME: z
       .string()
       .regex(/^[a-z][a-z0-9+.-]*$/)
-      .default("mykuafor"),
+      .default("bakimca"),
 
     GOOGLE_MAPS_SERVER_API_KEY: z.string().default(""),
 
@@ -42,7 +52,7 @@ const schema = z
     SMTP_PORT: z.coerce.number().int().positive().default(587),
     SMTP_USER: z.string().default(""),
     SMTP_PASS: z.string().default(""),
-    MAIL_FROM: z.string().default("MyKuaför <no-reply@mykuafor.app>"),
+    MAIL_FROM: z.string().default("Bakımca <no-reply@bakimca.com.tr>"),
 
     // Platformu işleten şirket (faturayı kesen taraf): uygulamada "Hakkında", KVKK ve panel yasal sayfalarında gösterilir
     COMPANY_LEGAL_NAME: z.string().trim().default(""),
@@ -62,6 +72,14 @@ const schema = z
     WALLET_MAX_TOPUP_CENTS: z.coerce.number().int().positive().default(500000),
   })
   .superRefine((v, ctx) => {
+    if (v.PAYMENT_PROVIDER === "paytr") {
+      for (const key of ["PAYTR_MERCHANT_ID", "PAYTR_MERCHANT_KEY", "PAYTR_MERCHANT_SALT"] as const) {
+        if (!v[key]) ctx.addIssue({ code: "custom", path: [key], message: "PayTR için mağaza bilgileri gerekli" });
+      }
+      if (v.NODE_ENV === "production" && v.PAYTR_TEST_MODE) {
+        ctx.addIssue({ code: "custom", path: ["PAYTR_TEST_MODE"], message: "Production'da PayTR test modu kapalı olmalı (0)" });
+      }
+    }
     if (v.NODE_ENV === "production") {
       if (v.PAYMENT_PROVIDER === "mock") {
         ctx.addIssue({

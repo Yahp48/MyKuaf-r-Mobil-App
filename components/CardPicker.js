@@ -13,13 +13,15 @@ const BRANDS = { VISA: "VISA", MASTER_CARD: "Mastercard", TROY: "TROY", AMERICAN
  */
 export default function CardPicker({ onChange }) {
   const [cards, setCards] = useState(null);
+  const [supported, setSupported] = useState(true);
   const [selected, setSelected] = useState("new");
   const [saveCard, setSaveCard] = useState(false);
 
   useEffect(() => {
     cardApi
       .list()
-      .then(({ items }) => {
+      .then(({ items, supported: ok }) => {
+        setSupported(ok !== false);
         setCards(items);
         const def = items.find((c) => c.isDefault) ?? items[0];
         if (def) setSelected(def.id);
@@ -31,6 +33,18 @@ export default function CardPicker({ onChange }) {
     onChange(selected === "new" ? { saveCard } : { savedCardId: selected });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, saveCard]);
+
+  // Kart saklama yoksa seçim de yok: kart bilgisi ödeme kuruluşunun sayfasında girilir.
+  if (cards && !supported) {
+    return (
+      <View style={styles.note}>
+        <Ionicons name="lock-closed-outline" size={16} color={colors.muted} />
+        <Text style={styles.noteText}>
+          Kart bilgilerinizi bir sonraki adımda ödeme kuruluşunun güvenli sayfasında girersiniz.
+        </Text>
+      </View>
+    );
+  }
 
   if (!cards) {
     return (
@@ -96,6 +110,8 @@ function Option({ on, onPress, children }) {
 }
 
 const styles = StyleSheet.create({
+  note: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, paddingHorizontal: 4 },
+  noteText: { flex: 1, fontSize: 13, color: colors.muted, lineHeight: 18 },
   wrap: { gap: 8, marginTop: 8 },
   option: {
     flexDirection: "row",

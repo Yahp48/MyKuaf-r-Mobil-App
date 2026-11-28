@@ -81,7 +81,7 @@ walletRouter.post("/topups", async (req, res) => {
       ...(await resolveCardOptions(userId(req), card)),
     },
   });
-  const checkout = await startCheckout(payment.id);
+  const checkout = await startCheckout(payment.id, { ip: req.ip });
   const fresh = await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } });
   res.status(201).json({ payment: serializePayment(fresh), checkoutUrl: checkout.checkoutUrl });
 });

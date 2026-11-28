@@ -6,7 +6,7 @@ import { notify } from "../notifications/notify.ts";
 import { z } from "zod";
 import { emitToAdmins, emitToBusiness, emitToUser } from "../../realtime/socket.ts";
 import { env, isProd } from "../../config/env.ts";
-import { paymentProvider, type StoredCardInfo } from "./providers.ts";
+import { paymentProvider, paytrOid, verifyPaytrHash, type PaytrConfig, type StoredCardInfo } from "./providers.ts";
 import type { Payment } from "../../generated/prisma/client.ts";
 
 /**
@@ -25,8 +25,8 @@ export const zReturnUrl = z
 export const PAYMENT_TIMEOUT_MS = 30 * 60_000;
 
 export const PURPOSE_LABEL = {
-  ORDER: "MyKuaför sipariş ödemesi",
-  WALLET_TOPUP: "MyKuaför cüzdan yükleme",
+  ORDER: "Bakımca sipariş ödemesi",
+  WALLET_TOPUP: "Bakımca cüzdan yükleme",
   CARD_VERIFY: "Kart doğrulama (hemen iade edilir)",
 } as const;
 
@@ -47,24 +47,38 @@ export function serializePayment(p: Payment) {
 }
 
 /** Ödeme kaydını sağlayıcıda başlatır ve kullanıcıya açılacak güvenli ödeme sayfası adresini döner. */
-export async function startCheckout(paymentId: string) {
+export async function startCheckout(paymentId: string, ctx: { ip?: string | null } = {}) {
   const payment = await prisma.payment.findUniqueOrThrow({
     where: { id: paymentId },
-    include: { user: true, savedCard: true },
+    include: { user: true, savedCard: true, orders: { include: { items: true } } },
   });
   if (!payment.user) throw notFound("Kullanıcı bulunamadı");
+  // Sipariş ödemesinde sepet satırları (kargo ayrı satır) sağlayıcıya iletilir.
+  const items =
+    payment.purpose === "ORDER"
+      ? payment.orders.flatMap((o) => [
+          ...o.items.map((i) => ({ name: i.nameSnapshot, unitPriceCents: i.unitPriceCents, quantity: i.quantity })),
+          ...(o.shippingCents > 0 ? [{ name: "Kargo", unitPriceCents: o.shippingCents, quantity: 1 }] : []),
+        ])
+      : undefined;
   try {
     const session = await paymentProvider().createCheckout({
       paymentId: payment.id,
       amountCents: payment.amountCents,
       description: PURPOSE_LABEL[payment.purpose],
       buyer: { id: payment.user.id, name: payment.user.name, email: payment.user.email, phone: payment.user.phone },
+      buyerIp: ctx.ip ?? null,
+      items,
+      allowInstallments: payment.purpose === "ORDER",
       savedCard: payment.savedCard
         ? { cardUserKey: payment.savedCard.cardUserKey, cardToken: payment.savedCard.cardToken }
         : undefined,
       registerCard: payment.saveCard && !payment.savedCard,
     });
-    await prisma.payment.update({ where: { id: payment.id }, data: { providerRef: session.providerRef } });
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { providerRef: session.providerRef, checkoutToken: session.checkoutToken ?? null },
+    });
     return session;
   } catch (err) {
     await finalizePayment(payment.id, { ok: false, reason: "Ödeme başlatılamadı" });
@@ -217,6 +231,49 @@ export async function finalizeByProviderRef(providerRef: string, outcome: Outcom
   const payment = await prisma.payment.findUnique({ where: { providerRef } });
   if (!payment) throw new AppError(404, "PAYMENT_NOT_FOUND", "Ödeme bulunamadı");
   return finalizePayment(payment.id, outcome);
+}
+
+/**
+ * Sağlayıcı bildirimi henüz gelmediyse (ağ sorunu, yerel deneme) ödemenin durumunu sağlayıcıya sorar.
+ * Yalnızca başarıyı kesinleştirir; başarısız/yarım ödemeler zaman aşımıyla kapanır.
+ */
+export async function reconcilePayment(payment: Payment) {
+  const p = paymentProvider();
+  if (payment.status !== "PENDING" || !payment.providerRef || !p.queryStatus || payment.provider !== p.name) return payment;
+  if ((await p.queryStatus(payment.providerRef)) !== "SUCCEEDED") return payment;
+  await finalizePayment(payment.id, { ok: true });
+  return prisma.payment.findUniqueOrThrow({ where: { id: payment.id } });
+}
+
+/**
+ * PayTR ödeme sonucu bildirimi (mağaza panelinde "Bildirim URL"). Hash doğrulanmadan hiçbir işlem yapılmaz.
+ * Aynı bildirim birden çok gelebilir; finalizePayment yalnızca ilkini işler. PayTR yanıt olarak "OK" bekler.
+ */
+export async function handlePaytrNotification(
+  cfg: Pick<PaytrConfig, "merchantKey" | "merchantSalt">,
+  b: Record<string, string | undefined>,
+): Promise<"OK" | "BAD_HASH"> {
+  if (!verifyPaytrHash(cfg, b)) {
+    logger.warn({ oid: b.merchant_oid }, "PayTR bildirimi: hash doğrulanamadı");
+    return "BAD_HASH";
+  }
+  const payment = await prisma.payment.findUnique({ where: { providerRef: b.merchant_oid! } });
+  if (!payment || payment.provider !== "PAYTR" || paytrOid(payment.id) !== b.merchant_oid) {
+    logger.error({ oid: b.merchant_oid }, "PayTR bildirimi: ödeme bulunamadı");
+    return "OK";
+  }
+  // Tahsil edilen ana tutar bizim tutarımızdan az olamaz (taksit farkı total_amount'a eklenir).
+  const charged = Number(b.payment_amount ?? b.total_amount);
+  if (b.status === "success" && !(charged >= payment.amountCents)) {
+    logger.error({ oid: b.merchant_oid, charged, expected: payment.amountCents }, "PayTR tutarı uyuşmadı");
+    await finalizePayment(payment.id, { ok: false, reason: "Ödeme tutarı uyuşmadı" });
+    return "OK";
+  }
+  await finalizePayment(
+    payment.id,
+    b.status === "success" ? { ok: true } : { ok: false, reason: b.failed_reason_msg?.slice(0, 200) || "Ödeme reddedildi" },
+  );
+  return "OK";
 }
 
 /** Zaman aşımına uğramış bekleyen ödemeleri iptal eder (sunucu periyodik çalıştırır). */

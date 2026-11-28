@@ -1,4 +1,4 @@
-// MyKuaför veritabanı şeması (PostgreSQL, Prisma ORM 7)
+// Bakımca veritabanı şeması (PostgreSQL, Prisma ORM 7)
 // Para tutarları kuruş cinsinden tam sayı (Int) olarak saklanır: 149,90 TL = 14990.
 // Tüm zaman damgaları UTC (timestamptz). Salon saatleri salonun saat diliminde yorumlanır.
 
@@ -648,6 +648,7 @@ enum PaymentPurpose {
 enum PaymentProvider {
   MOCK
   IYZICO
+  PAYTR
 }
 
 enum PaymentStatus {
@@ -668,6 +669,8 @@ model Payment {
   provider      PaymentProvider
   // Sağlayıcının oturum/işlem kimliği (iyzico checkout token vb.)
   providerRef   String?         @unique
+  // Sağlayıcının ödeme sayfası anahtarı (PayTR iframe token'ı); kart bilgisi değildir
+  checkoutToken String?
   status        PaymentStatus   @default(PENDING)
   failureReason String?
   // Ödeme sayfası bitince yönlendirilecek uygulama adresi (doğrulanmış)
