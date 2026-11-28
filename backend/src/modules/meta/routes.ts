@@ -1,5 +1,7 @@
 import { Router } from "express";
+import { z } from "zod";
 import { env } from "../../config/env.ts";
+import { logger } from "../../lib/logger.ts";
 
 /**
  * Platformu işleten şirketin yasal kimliği (6563 sayılı Kanun: aracı hizmet sağlayıcı bilgileri,
@@ -28,4 +30,23 @@ export const metaRouter = Router();
 metaRouter.get("/company", (_req, res) => {
   res.set("Cache-Control", "public, max-age=300");
   res.json({ company: companyInfo() });
+});
+
+/**
+ * Uygulama hata bildirimi: mobil uygulamada yakalanan JavaScript hatası (çökme yerine hata ekranı gösterilir)
+ * buraya gönderilir ve sunucu günlüğüne yazılır. Kişisel veri gönderilmez; yalnızca hata metni ve sürüm.
+ */
+const clientErrorSchema = z.object({
+  message: z.string().max(1000),
+  stack: z.string().max(6000).optional(),
+  fatal: z.boolean().optional(),
+  where: z.string().max(60).optional(),
+  platform: z.string().max(20).optional(),
+  appVersion: z.string().max(20).optional(),
+});
+
+metaRouter.post("/client-errors", (req, res) => {
+  const r = clientErrorSchema.safeParse(req.body);
+  if (r.success) logger.error({ clientError: r.data }, `Uygulama hatası: ${r.data.message}`);
+  res.status(204).end();
 });
