@@ -7,6 +7,7 @@ import * as Linking from "expo-linking";
 import { AppProvider, useApp } from "./context/AppContext";
 import { EmptyState, Loading } from "./components/ui";
 import OfflineBanner from "./components/OfflineBanner";
+import { PaymentHost } from "./components/PaymentSheet";
 
 import SignInScreen from "./screens/SignInScreen";
 import SignUpScreen from "./screens/SignUpScreen";
@@ -42,7 +43,7 @@ import AiTryOnScreen from "./screens/AiTryOnScreen";
 
 const Stack = createStackNavigator();
 
-// Ödeme sayfası "mykuafor://payment-result" ile uygulamaya döner (bkz. services/checkout.js).
+// Ödeme penceresi dönüş adresini kendisi yakalar; derin bağlantı yedek olarak kalır (bkz. services/checkout.js).
 const linking = {
   prefixes: [Linking.createURL("/"), "mykuafor://"],
   config: { screens: {} },
@@ -120,6 +121,7 @@ export default function App() {
         <StatusBar style="dark" />
         <Root />
         <OfflineBanner />
+        <PaymentHost />
       </AppProvider>
     </SafeAreaProvider>
   );

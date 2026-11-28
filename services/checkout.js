@@ -1,6 +1,6 @@
-import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 import { paymentApi } from "./api";
+import { presentPayment } from "../components/PaymentSheet";
 
 /**
  * Ödeme sayfası bitince dönülecek adres. Geliştirme derlemesinde/mağaza sürümünde "mykuafor://",
@@ -8,14 +8,21 @@ import { paymentApi } from "./api";
  */
 export const paymentReturnUrl = () => Linking.createURL("payment-result");
 
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
 /**
- * Ödeme sağlayıcısının güvenli sayfasını uygulama içi tarayıcıda açar.
- * Kart bilgisi uygulamaya hiç girmez. Sayfa kapanınca sonuç sunucudan sorgulanır
- * (yönlendirme URL'sindeki bilgiye güvenilmez).
+ * Ödeme kuruluşunun güvenli sayfasını uygulama içi ödeme penceresinde açar (components/PaymentSheet.js).
+ * Kart bilgisi uygulamaya hiç girmez. Pencere kapanınca sonuç sunucudan sorgulanır
+ * (yönlendirme URL'sindeki bilgiye güvenilmez). Sayfadan dönüldüyse ama sağlayıcının bildirimi
+ * henüz gelmediyse birkaç saniye daha beklenir.
  * @returns {Promise<"SUCCEEDED"|"FAILED"|"PENDING"|"REFUNDED">}
  */
 export async function openCheckout(checkoutUrl, paymentId) {
-  await WebBrowser.openAuthSessionAsync(checkoutUrl, paymentReturnUrl());
-  const { payment } = await paymentApi.status(paymentId);
+  const how = await presentPayment(checkoutUrl, paymentReturnUrl());
+  let { payment } = await paymentApi.status(paymentId);
+  for (let i = 0; how === "returned" && payment.status === "PENDING" && i < 4; i++) {
+    await wait(1500);
+    ({ payment } = await paymentApi.status(paymentId));
+  }
   return payment.status;
 }
