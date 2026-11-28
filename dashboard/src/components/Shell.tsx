@@ -18,6 +18,7 @@ import {
   Users,
 } from "@phosphor-icons/react";
 import { useBusiness, useSession } from "../lib/session";
+import { kindOf } from "../lib/kinds";
 import { useRealtime } from "../lib/realtime";
 import { api } from "../lib/api";
 import { Button, Loading } from "./ui";
@@ -31,6 +32,8 @@ interface Item {
 }
 
 function SalonNav() {
+  const { salon } = useBusiness();
+  const kind = kindOf(salon);
   const { data } = useQuery({
     queryKey: ["salon", "overview"],
     queryFn: () => api.get<{ pendingApprovals: number }>("/business/salon/overview"),
@@ -49,9 +52,9 @@ function SalonNav() {
       ],
     },
     {
-      label: "Salon",
+      label: kind.short,
       items: [
-        { to: "/salon/personel", label: "Personel", icon: <Users size={18} /> },
+        { to: "/salon/personel", label: kind.staffNav, icon: <Users size={18} /> },
         { to: "/salon/hizmetler", label: "Hizmetler ve fiyatlar", icon: <Scissors size={18} /> },
         { to: "/salon/calisma-saatleri", label: "Çalışma saatleri", icon: <Clock size={18} /> },
       ],
@@ -203,7 +206,7 @@ export function AdminShell() {
 }
 
 export function Shell() {
-  const { business, owner } = useBusiness();
+  const { business, owner, salon } = useBusiness();
   const { signOut } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
@@ -221,6 +224,11 @@ export function Shell() {
         </a>
         <div className="index-business">
           {business.type === "SALON" ? <Scissors size={13} /> : <Storefront size={13} />} {business.displayName}
+          {business.type === "SALON" ? (
+            <span className="faint" style={{ display: "block", fontSize: 12 }}>
+              {kindOf(salon).label}
+            </span>
+          ) : null}
         </div>
         {business.type === "SALON" ? <SalonNav /> : <SellerNav />}
         <div className="index-foot">

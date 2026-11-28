@@ -804,6 +804,57 @@ textarea {
   font-size: 13.5px;
 }
 
+/* Tablo · telefon: satırlar kartlaşır, sütun adı hücrenin solunda (data-label, lib/responsiveTables.ts) */
+@media (max-width: 640px) {
+  .table thead {
+    display: none;
+  }
+  .table,
+  .table tbody,
+  .table tr {
+    display: block;
+    width: 100%;
+  }
+  .table tr {
+    padding: 10px 2px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 3px 0;
+    border-bottom: none;
+    text-align: right;
+  }
+  .table td::before {
+    content: attr(data-label);
+    flex: none;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    text-align: left;
+  }
+  .table td:first-child {
+    display: block;
+    text-align: left;
+    padding-bottom: 6px;
+  }
+  .table td:first-child::before,
+  .table td[data-label=""]::before {
+    content: none;
+  }
+  .table td[data-label=""] {
+    justify-content: flex-end;
+  }
+  .table tbody tr:hover td {
+    background: none;
+  }
+}
+
 .thumb {
   width: 44px;
   height: 44px;

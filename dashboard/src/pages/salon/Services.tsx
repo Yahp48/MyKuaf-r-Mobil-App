@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Tag, Trash } from "@phosphor-icons/react";
+import { ListChecks, Plus, Tag, Trash } from "@phosphor-icons/react";
+import { ServiceTemplatesDialog } from "./ServiceTemplates";
 import { api, ApiError, fieldErrors } from "../../lib/api";
 import { usePageMeta } from "../../lib/seo";
 import { addDays, dateShort, money, ymd } from "../../lib/format";
@@ -39,6 +40,7 @@ export default function Services() {
   const toast = useToast();
   const [edit, setEdit] = useState<Service | "new" | null>(null);
   const [campaign, setCampaign] = useState(false);
+  const [templates, setTemplates] = useState(false);
 
   const remove = useMutation({
     mutationFn: (s: Service) => api.del<{ deleted: boolean }>(`/business/salon/services/${s.id}`),
@@ -62,6 +64,9 @@ export default function Services() {
                 <Tag size={16} /> Toplu indirim
               </Button>
             ) : null}
+            <Button onClick={() => setTemplates(true)}>
+              <ListChecks size={16} /> Hazır listeden ekle
+            </Button>
             <Button variant="primary" onClick={() => setEdit("new")}>
               <Plus size={16} /> Hizmet ekle
             </Button>
@@ -103,6 +108,7 @@ export default function Services() {
                   <tr key={s.id}>
                     <td>
                       <div style={{ fontWeight: 500 }}>{s.name}</div>
+                      {s.category ? <div className="small faint">{s.category}</div> : null}
                       {s.description ? <div className="small faint">{s.description}</div> : null}
                     </td>
                     <td className="right mono" style={{ whiteSpace: "nowrap" }}>
@@ -161,6 +167,7 @@ export default function Services() {
       <PackagesSection services={q.data ?? []} />
       <ServiceDialog value={edit} onClose={() => setEdit(null)} />
       <CampaignDialog open={campaign} services={q.data ?? []} onClose={() => setCampaign(false)} />
+      <ServiceTemplatesDialog open={templates} onClose={() => setTemplates(false)} />
     </>
   );
 }
@@ -232,6 +239,7 @@ function ServiceDialog({ value, onClose }: { value: Service | "new" | null; onCl
   const isNew = value === "new";
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
   const [duration, setDuration] = useState(30);
   const [price, setPrice] = useState("");
   const [active, setActive] = useState(true);
@@ -246,6 +254,7 @@ function ServiceDialog({ value, onClose }: { value: Service | "new" | null; onCl
     const s = isNew ? null : value;
     setName(s?.name ?? "");
     setDescription(s?.description ?? "");
+    setCategory(s?.category ?? "");
     setDuration(s?.durationMinutes ?? 30);
     setPrice(s ? String(s.price).replace(".", ",") : "");
     setActive(s?.isActive ?? true);
@@ -269,6 +278,7 @@ function ServiceDialog({ value, onClose }: { value: Service | "new" | null; onCl
       const body = {
         name: name.trim(),
         description: description.trim() || null,
+        category: category.trim() || null,
         durationMinutes: duration,
         price: priceNum,
         isActive: active,
@@ -311,6 +321,13 @@ function ServiceDialog({ value, onClose }: { value: Service | "new" | null; onCl
       }
     >
       <Input label="Hizmet adı" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} autoFocus />
+      <Input
+        label="Kategori (isteğe bağlı)"
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
+        placeholder="Örn. Boya ve renk, Kalıcı oje, Masaj"
+        hint="Uygulamada hizmet menüsü bu başlıklara göre gruplanır"
+      />
       <div className="form-row">
         <div className="field">
           <label htmlFor="svc-dur">Süre</label>

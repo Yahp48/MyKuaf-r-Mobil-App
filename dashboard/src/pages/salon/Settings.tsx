@@ -1,3 +1,4 @@
+import { KIND_ORDER, KINDS } from "../../lib/kinds";
 import { VerificationForm } from "../../components/Verification";
 import { useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router";
@@ -89,7 +90,7 @@ function SalonProfileForm() {
     latitude: s.latitude,
     longitude: s.longitude,
     photos: s.photos?.length ? s.photos : s.coverImageUrl ? [s.coverImageUrl] : [],
-    kind: s.kind ?? "WOMEN",
+    kind: s.kind ?? "HAIR",
     whatsapp: s.whatsapp ?? "",
     firstVisit: s.firstVisitDiscountPercent ? String(s.firstVisitDiscountPercent) : "",
   });
@@ -136,13 +137,16 @@ function SalonProfileForm() {
         <Input label="Salon adı" value={f.name} onChange={set("name")} error={errors.name} />
         <Textarea label="Tanıtım" rows={3} value={f.description} onChange={set("description")} maxLength={1000} />
         <Select
-          label="Salon türü"
+          label="İşletme türü"
           value={f.kind}
           onChange={(e) => setF((x) => ({ ...x, kind: e.target.value as SalonProfile["kind"] }))}
           hint="Uygulamada salon adının altında görünür"
         >
-          <option value="WOMEN">Kuaför</option>
-          <option value="BEAUTY">Güzellik salonu</option>
+          {KIND_ORDER.map((k) => (
+            <option key={k} value={k}>
+              {KINDS[k].label}
+            </option>
+          ))}
         </Select>
         <Select
           label="İlk ziyaret indirimi"

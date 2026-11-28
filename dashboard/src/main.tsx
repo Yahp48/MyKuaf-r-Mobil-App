@@ -13,6 +13,9 @@ import { ApiError } from "./lib/api";
 import { SessionProvider } from "./lib/session";
 import { ToastProvider } from "./components/Toast";
 import App from "./App";
+import { installResponsiveTables } from "./lib/responsiveTables";
+
+installResponsiveTables();
 
 const queryClient = new QueryClient({
   defaultOptions: {

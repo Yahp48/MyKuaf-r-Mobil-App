@@ -50,7 +50,7 @@ export interface SalonProfile {
   longitude: number;
   coverImageUrl: string | null;
   photos: string[];
-  kind: "WOMEN" | "BEAUTY";
+  kind: "HAIR" | "BEAUTY" | "NAIL" | "SKIN" | "MASSAGE" | "BROW_LASH" | "MAKEUP";
   whatsapp: string | null;
   firstVisitDiscountPercent: number | null;
   isActive: boolean;
@@ -114,6 +114,7 @@ export interface Staff {
 export interface Service {
   id: string;
   name: string;
+  category: string | null;
   description: string | null;
   durationMinutes: number;
   price: number;

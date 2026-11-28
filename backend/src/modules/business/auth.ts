@@ -89,6 +89,7 @@ const registerSchema = z
     salon: z
       .object({
         name: z.string().trim().min(2, "Salon adı gerekli").max(100),
+        kind: z.enum(["HAIR", "BEAUTY", "NAIL", "SKIN", "MASSAGE", "BROW_LASH", "MAKEUP"]).default("HAIR"),
         description: z.string().trim().max(1000).optional(),
         latitude: z.number().min(35).max(43, "Konum Türkiye sınırları içinde olmalı"),
         longitude: z.number().min(25).max(45, "Konum Türkiye sınırları içinde olmalı"),
@@ -147,6 +148,7 @@ businessAuthRouter.post("/register", authLimiter, async (req, res) => {
             businessId: business.id,
             slug: `${slugify(body.salon.name)}-${business.id.slice(-6)}`,
             name: body.salon.name,
+            kind: body.salon.kind,
             description: body.salon.description,
             address: info.address,
             city: info.city,

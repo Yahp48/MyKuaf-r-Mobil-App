@@ -1,3 +1,4 @@
+import { KIND_ORDER, KINDS, type SalonKind } from "../../lib/kinds";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { Crosshair, Scissors, Storefront } from "@phosphor-icons/react";
@@ -13,7 +14,7 @@ import {
   isValidIban,
   isValidTaxNumber,
 } from "../../lib/validators";
-import { Button, Input, Textarea } from "../../components/ui";
+import { Button, Input, Select, Textarea } from "../../components/ui";
 import { MapPicker, locateMe } from "../../components/MapPicker";
 import { PublicLayout } from "./PublicLayout";
 
@@ -22,6 +23,7 @@ type Errors = Record<string, string>;
 
 const initial = {
   type: "SALON" as Type,
+  kind: "HAIR" as SalonKind,
   ownerName: "",
   ownerEmail: "",
   ownerPhone: "",
@@ -49,7 +51,7 @@ export default function Register() {
   usePageMeta({
     title: "İşletme kaydı",
     description:
-      "Kuaför salonunuzu veya kozmetik mağazanızı MyKuaför'e ücretsiz kaydedin. Vergi bilgilerinizle birkaç dakikada başvurun, müşterileriniz sizi uygulamada bulsun.",
+      "Kuaför, güzellik merkezi, tırnak, cilt bakımı veya spa işletmenizi ya da kozmetik mağazanızı MyKuaför'e ücretsiz kaydedin. Vergi bilgilerinizle birkaç dakikada başvurun, müşterileriniz sizi uygulamada bulsun.",
     path: "/kayit",
     index: true,
   });
@@ -135,6 +137,7 @@ export default function Register() {
           ? {
               salon: {
                 name: f.salonName.trim(),
+                kind: f.kind,
                 description: opt(f.description),
                 latitude: f.latitude,
                 longitude: f.longitude,
@@ -163,7 +166,7 @@ export default function Register() {
           <div className="label">Ücretsiz işletme kaydı</div>
           <h1>Defterinizi açalım.</h1>
           <p className="muted" style={{ maxWidth: "40ch" }}>
-            Vergi levhanızdaki bilgilerle birkaç dakikada kaydolun. Kuaförseniz salonunuz, personel ve hizmet
+            Vergi levhanızdaki bilgilerle birkaç dakikada kaydolun. Hizmet işletmesiyseniz salonunuz, personel ve hizmet
             eklediğiniz anda uygulamanın haritasında görünür.
           </p>
           <ol className="muted small" style={{ paddingLeft: 18, display: "grid", gap: 4 }}>
@@ -209,8 +212,8 @@ export default function Register() {
                           onChange={() => setF((s) => ({ ...s, type: "SALON" }))}
                         />
                         <Scissors size={22} />
-                        <b>Kuaför salonu</b>
-                        <span className="small muted">Randevu, personel, gelir-gider</span>
+                        <b>Hizmet işletmesi</b>
+                        <span className="small muted">Kuaför, güzellik, tırnak, cilt, spa…</span>
                       </label>
                       <label>
                         <input
@@ -379,8 +382,20 @@ export default function Register() {
 
               {step === 2 && f.type === "SALON" && (
                 <>
+                  <Select
+                    label="İşletme türü"
+                    value={f.kind}
+                    onChange={(e) => setF((s) => ({ ...s, kind: e.target.value as SalonKind }))}
+                    hint={KINDS[f.kind].hint}
+                  >
+                    {KIND_ORDER.map((k) => (
+                      <option key={k} value={k}>
+                        {KINDS[k].label}
+                      </option>
+                    ))}
+                  </Select>
                   <Input
-                    label="Salon adı"
+                    label="İşletme adı"
                     hint="Uygulamada haritada görünecek ad"
                     value={f.salonName}
                     onChange={set("salonName")}
@@ -392,7 +407,7 @@ export default function Register() {
                     maxLength={1000}
                     value={f.description}
                     onChange={set("description")}
-                    placeholder="Örn. Kadın kuaförü; kesim, boya, keratin ve gelin başı."
+                    placeholder={KINDS[f.kind].placeholder}
                   />
                   <div className="field">
                     <span>Haritadaki konum</span>
@@ -439,7 +454,7 @@ export default function Register() {
                 <>
                   <dl className="kv" style={{ marginBottom: 24 }}>
                     <dt>Tür</dt>
-                    <dd>{f.type === "SALON" ? "Kuaför salonu" : "Ürün satıcısı"}</dd>
+                    <dd>{f.type === "SALON" ? KINDS[f.kind].label : "Ürün satıcısı"}</dd>
                     <dt>Görünen ad</dt>
                     <dd>{f.type === "SALON" ? f.salonName : f.displayName}</dd>
                     <dt>Ticari unvan</dt>

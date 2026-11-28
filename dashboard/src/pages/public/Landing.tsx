@@ -29,7 +29,7 @@ export default function Landing() {
   usePageMeta({
     title: "MyKuaför İşletme",
     description:
-      "Kuaför salonunuzun randevu defterini, personelini, gelir-giderini ve ürün mağazanızın siparişlerini tek panelden yönetin. Ücretsiz kayıt olun, müşterileriniz sizi haritada bulsun.",
+      "Kuaför, güzellik merkezi, tırnak, cilt bakımı ve spa işletmenizin randevu defterini, ekibini, gelir-giderini; ürün mağazanızın siparişlerini tek panelden yönetin. Ücretsiz kayıt olun, müşterileriniz sizi haritada bulsun.",
     path: "/",
     index: true,
   });
@@ -40,7 +40,7 @@ export default function Landing() {
         <section className="hero" aria-labelledby="hero-title">
           <div>
             <div className="label" style={{ marginBottom: 18 }}>
-              Kuaförler ve kozmetik satıcıları için
+              Kadınlara hizmet veren güzellik işletmeleri ve kozmetik satıcıları için
             </div>
             <h1 id="hero-title">
               Randevu defteriniz artık <em>cebinizde</em>, müşterileriniz haritada.
@@ -87,7 +87,7 @@ export default function Landing() {
           <h2 id="who">İki tür işletme, iki ayrı çalışma masası</h2>
           <div className="pillars">
             <article className="pillar">
-              <div className="label">Kuaför salonları</div>
+              <div className="label">Kuaför, güzellik, tırnak, cilt ve spa</div>
               <h3>Defter, personel ve kasa</h3>
               <p className="muted">Ön masada bir bakışta günün tamamı: kim, kaçta, hangi koltukta.</p>
               <ul>

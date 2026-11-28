@@ -1,3 +1,5 @@
+import { kindOf } from "../../lib/kinds";
+import { useBusiness } from "../../lib/session";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash } from "@phosphor-icons/react";
@@ -138,6 +140,7 @@ const initials = (name: string) =>
     .join("");
 
 function StaffDialog({ value, onClose }: { value: StaffT | "new" | null; onClose: () => void }) {
+  const { salon } = useBusiness();
   const qc = useQueryClient();
   const toast = useToast();
   const isNew = value === "new";
@@ -216,7 +219,7 @@ function StaffDialog({ value, onClose }: { value: StaffT | "new" | null; onClose
         label="Ünvan (isteğe bağlı)"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="Kuaför, renk uzmanı…"
+        placeholder={kindOf(salon).staffTitle}
       />
       <Input
         label="Uzmanlıklar (isteğe bağlı)"
