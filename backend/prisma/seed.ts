@@ -5,6 +5,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.ts";
 import { hashPassword } from "../src/lib/password.ts";
 import { ISTANBUL_LISTINGS } from "./data/istanbul-salons.ts";
+import { SERVICE_CATALOG } from "../src/modules/catalog/services.ts";
+import { isValidVkn } from "../src/lib/tax-id.ts";
 
 if (process.env.NODE_ENV === "production" && process.env.SEED_ALLOW_PRODUCTION !== "true") {
   console.error("Seed production ortamında çalıştırılamaz (SEED_ALLOW_PRODUCTION=true ile zorlanabilir).");
@@ -54,11 +56,11 @@ const staffNames = [
 ];
 
 const services = [
-  { name: "Saç Kesimi", durationMinutes: 30, priceCents: 15000 },
-  { name: "Fön", durationMinutes: 30, priceCents: 10000 },
-  { name: "Saç Şekillendirme", durationMinutes: 45, priceCents: 20000 },
-  { name: "Saç Bakımı", durationMinutes: 45, priceCents: 25000 },
-  { name: "Boya", durationMinutes: 90, priceCents: 30000 },
+  { name: "Saç Kesimi", durationMinutes: 30, priceCents: 15000, category: "Kesim" },
+  { name: "Fön", durationMinutes: 30, priceCents: 10000, category: "Fön ve şekillendirme" },
+  { name: "Saç Şekillendirme", durationMinutes: 45, priceCents: 20000, category: "Fön ve şekillendirme" },
+  { name: "Saç Bakımı", durationMinutes: 45, priceCents: 25000, category: "Saç bakımı" },
+  { name: "Boya", durationMinutes: 90, priceCents: 30000, category: "Boya ve renk" },
 ];
 
 const categories = [
@@ -249,6 +251,189 @@ async function main() {
   console.log(`Seed tamam: ${ISTANBUL_LISTINGS.length} rehber salonu, ${products.length} ürün.`);
 }
 
+// ───────────── Örnek işletmeler (yalnızca yerel geliştirme) ─────────────
+// Her işletme türünün paneli ve uygulama akışı denensin diye; adlarında "Örnek" geçer, yayına çıkmaz.
+type DemoKind = "BEAUTY" | "NAIL" | "SKIN" | "MASSAGE" | "BROW_LASH" | "MAKEUP";
+const DEMO_KINDS: {
+  kind: DemoKind;
+  name: string;
+  email: string;
+  district: string;
+  address: string;
+  lat: number;
+  lng: number;
+  staff: { name: string; title: string; specialties: string[] }[];
+  perMinuteTL: number;
+}[] = [
+  {
+    kind: "BEAUTY",
+    name: "Örnek Güzellik Merkezi",
+    email: "guzellik@mykuafor.test",
+    district: "Şişli",
+    address: "Teşvikiye Mah. Örnek Sok. No:1, Şişli/İstanbul",
+    lat: 41.0505,
+    lng: 28.9935,
+    staff: [
+      { name: "Derya", title: "Güzellik uzmanı", specialties: ["Ağda", "Lazer epilasyon"] },
+      { name: "Sena", title: "Estetisyen", specialties: ["Cilt bakımı", "Bölgesel incelme"] },
+    ],
+    perMinuteTL: 10,
+  },
+  {
+    kind: "NAIL",
+    name: "Örnek Tırnak Stüdyosu",
+    email: "tirnak@mykuafor.test",
+    district: "Kadıköy",
+    address: "Caferağa Mah. Örnek Sok. No:2, Kadıköy/İstanbul",
+    lat: 40.9878,
+    lng: 29.0281,
+    staff: [
+      { name: "Melis", title: "Tırnak uzmanı", specialties: ["Protez tırnak", "Nail art"] },
+      { name: "Ece", title: "Manikürist", specialties: ["Kalıcı oje", "Spa pedikür"] },
+    ],
+    perMinuteTL: 9,
+  },
+  {
+    kind: "SKIN",
+    name: "Örnek Cilt Bakım Merkezi",
+    email: "cilt@mykuafor.test",
+    district: "Beşiktaş",
+    address: "Levent Mah. Örnek Cad. No:3, Beşiktaş/İstanbul",
+    lat: 41.0782,
+    lng: 29.0127,
+    staff: [
+      { name: "Aslı", title: "Cilt bakım uzmanı", specialties: ["Hydrafacial", "Akne bakımı"] },
+      { name: "Burcu", title: "Estetisyen", specialties: ["Dermapen", "Anti-aging"] },
+    ],
+    perMinuteTL: 15,
+  },
+  {
+    kind: "MASSAGE",
+    name: "Örnek Kadınlara Özel Spa",
+    email: "spa@mykuafor.test",
+    district: "Ataşehir",
+    address: "Barbaros Mah. Örnek Sok. No:4, Ataşehir/İstanbul",
+    lat: 40.9921,
+    lng: 29.1105,
+    staff: [
+      { name: "Nur", title: "Masaj terapisti", specialties: ["Aromaterapi", "Sıcak taş"] },
+      { name: "Gül", title: "Spa terapisti", specialties: ["Hamam ritüeli", "Refleksoloji"] },
+    ],
+    perMinuteTL: 16,
+  },
+  {
+    kind: "BROW_LASH",
+    name: "Örnek Kaş ve Kirpik Stüdyosu",
+    email: "kirpik@mykuafor.test",
+    district: "Bakırköy",
+    address: "Zeytinlik Mah. Örnek Sok. No:5, Bakırköy/İstanbul",
+    lat: 40.9805,
+    lng: 28.8722,
+    staff: [
+      { name: "Zehra", title: "Kirpik uzmanı", specialties: ["İpek kirpik", "Kirpik lifting"] },
+      { name: "İrem", title: "Kaş tasarım uzmanı", specialties: ["Microblading", "Kaş laminasyonu"] },
+    ],
+    perMinuteTL: 12,
+  },
+  {
+    kind: "MAKEUP",
+    name: "Örnek Makyaj Stüdyosu",
+    email: "makyaj@mykuafor.test",
+    district: "Üsküdar",
+    address: "Mimar Sinan Mah. Örnek Sok. No:6, Üsküdar/İstanbul",
+    lat: 41.0247,
+    lng: 29.0154,
+    staff: [{ name: "Damla", title: "Makyaj sanatçısı", specialties: ["Gelin makyajı", "Kalıcı makyaj"] }],
+    perMinuteTL: 20,
+  },
+];
+
+/** Örnek fiyat: süreye göre, 50 TL'ye yuvarlanmış (yalnızca yerel örnek veri). */
+const demoPrice = (minutes: number, perMinute: number) =>
+  Math.max(15_000, Math.round((minutes * perMinute) / 50) * 5_000);
+
+async function seedDemoKinds(passwordHash: string) {
+  for (const d of DEMO_KINDS) {
+    const slug = `ornek-${d.kind.toLowerCase().replace("_", "-")}`;
+    const salon = await prisma.salon.upsert({
+      where: { slug },
+      create: {
+        slug,
+        name: d.name,
+        kind: d.kind,
+        address: d.address,
+        city: "İstanbul",
+        district: d.district,
+        latitude: d.lat,
+        longitude: d.lng,
+        phone: "+902160000000",
+        description: "Geliştirme ortamı örnek işletmesi: panel ve randevu akışını denemek içindir.",
+      },
+      update: { name: d.name, kind: d.kind, isListing: false },
+    });
+    for (let weekday = 1; weekday <= 7; weekday++) {
+      await prisma.workingHours.upsert({
+        where: { salonId_weekday: { salonId: salon.id, weekday } },
+        create: { salonId: salon.id, weekday, openMinute: H(10), closeMinute: H(20), isClosed: weekday === 7 },
+        update: {},
+      });
+    }
+    if ((await prisma.staff.count({ where: { salonId: salon.id } })) === 0) {
+      await prisma.staff.createMany({ data: d.staff.map((st, n) => ({ ...st, salonId: salon.id, sortOrder: n })) });
+    }
+    if ((await prisma.service.count({ where: { salonId: salon.id } })) === 0) {
+      const cats = SERVICE_CATALOG.filter((c) => c.kinds.includes(d.kind));
+      let n = 0;
+      await prisma.service.createMany({
+        data: cats.flatMap((c) =>
+          c.items.map((it) => ({
+            salonId: salon.id,
+            name: it.name,
+            category: c.name,
+            description: it.description,
+            durationMinutes: it.durationMinutes,
+            priceCents: demoPrice(it.durationMinutes, d.perMinuteTL),
+            sortOrder: n++,
+          })),
+        ),
+      });
+    }
+    const bizData = {
+      type: "SALON" as const,
+      displayName: d.name,
+      legalName: `${d.name} (örnek)`,
+      taxOffice: d.district,
+      address: d.address,
+      city: "İstanbul",
+      district: d.district,
+      phone: "02160000000",
+      email: d.email.replace("@", "-isletme@"),
+    };
+    // Örnek VKN: algoritmaya uygun, gerçek bir şirkete ait değildir
+    const taxNumber = demoVkn(d.kind);
+    const biz = await prisma.business.upsert({
+      where: { taxNumber },
+      create: { ...bizData, taxNumber },
+      update: bizData,
+    });
+    await prisma.salon.update({ where: { id: salon.id }, data: { businessId: biz.id } });
+    await prisma.user.upsert({
+      where: { email: d.email },
+      create: { email: d.email, name: `${d.name} Yetkilisi`, passwordHash, role: "BUSINESS_OWNER", businessId: biz.id },
+      update: { role: "BUSINESS_OWNER", businessId: biz.id },
+    });
+  }
+  console.log(`Örnek işletmeler: ${DEMO_KINDS.length} tür`);
+}
+
+/** Örnek işletmeler için geçerli biçimde VKN üretir (sabit, tekrar çalıştırılabilir). */
+function demoVkn(kind: string) {
+  const seed = 900000000 + ([...kind].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) % 99999999);
+  const base = String(seed).slice(0, 9);
+  for (let c = 0; c <= 9; c++) if (isValidVkn(base + c)) return base + c;
+  throw new Error("VKN üretilemedi");
+}
+
 async function seedDemo(seller: { id: string; shippingFeeCents: number; freeShippingThresholdCents: number }) {
   const passwordHash = await hashPassword("Demo12345");
   const customer = await prisma.user.upsert({
@@ -279,6 +464,31 @@ async function seedDemo(seller: { id: string; shippingFeeCents: number; freeShip
   if ((await prisma.service.count({ where: { salonId: salon.id } })) === 0) {
     await prisma.service.createMany({ data: services.map((sv, i) => ({ ...sv, salonId: salon.id, sortOrder: i })) });
   }
+  for (const sv of services) {
+    await prisma.service.updateMany({
+      where: { salonId: salon.id, name: sv.name, category: null },
+      data: { category: sv.category },
+    });
+  }
+  // Kuaför kataloğunun geri kalanı (kategoriyle)
+  {
+    const have = new Set((await prisma.service.findMany({ where: { salonId: salon.id } })).map((x) => x.name));
+    let n = have.size;
+    const extra = SERVICE_CATALOG.filter((c) => c.kinds.includes("HAIR")).flatMap((c) =>
+      c.items
+        .filter((it) => !have.has(it.name))
+        .map((it) => ({
+          salonId: salon.id,
+          name: it.name,
+          category: c.name,
+          description: it.description,
+          durationMinutes: it.durationMinutes,
+          priceCents: demoPrice(it.durationMinutes, 12),
+          sortOrder: n++,
+        })),
+    );
+    if (extra.length) await prisma.service.createMany({ data: extra });
+  }
   const bizData = {
     type: "SALON" as const,
     displayName: salon.name,
@@ -296,6 +506,8 @@ async function seedDemo(seller: { id: string; shippingFeeCents: number; freeShip
     update: bizData,
   });
   await prisma.salon.update({ where: { id: salon.id }, data: { businessId: salonBiz.id } });
+
+  await seedDemoKinds(passwordHash);
 
   // Yerel platform yöneticisi (yönetim paneli: /yonetim)
   await prisma.user.upsert({
