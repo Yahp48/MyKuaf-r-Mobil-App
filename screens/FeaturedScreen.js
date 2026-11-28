@@ -21,9 +21,9 @@ import { CardListSkeleton, LoadError } from "../components/Skeleton";
 import { useRealtimeEvent } from "../services/realtime";
 
 const PERIODS = [
-  { key: "week", label: "Haftanın", title: "Haftanın kuaförleri", since: "Bu hafta" },
-  { key: "month", label: "Ayın", title: "Ayın kuaförleri", since: "Bu ay" },
-  { key: "year", label: "Yılın", title: "Yılın kuaförleri", since: "Bu yıl" },
+  { key: "week", label: "Haftanın", title: "Haftanın salonları", since: "Bu hafta" },
+  { key: "month", label: "Ayın", title: "Ayın salonları", since: "Bu ay" },
+  { key: "year", label: "Yılın", title: "Yılın salonları", since: "Bu yıl" },
 ];
 const MEDALS = ["#D4A017", "#A7A9AC", "#B87333"];
 

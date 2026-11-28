@@ -35,9 +35,15 @@ const FALLBACK_REGION = { latitude: 41.025, longitude: 29.015, latitudeDelta: 0.
 // Kullanıcının çevresi: yaklaşık 2 km'lik görünüm
 const NEAR_DELTA = { latitudeDelta: 0.018, longitudeDelta: 0.018 };
 const PROMO_SEEN_KEY = "mykuafor.promoSeen.v1";
+// İşletme türleri (hepsi kadınlara yönelik); yalnızca haritada olan türler gösterilir
 const KIND_CHIPS = [
-  { kind: "WOMEN", label: "Kadın" },
-  { kind: "BEAUTY", label: "Güzellik" },
+  { kind: "HAIR", label: "Kuaför", icon: "cut-outline" },
+  { kind: "NAIL", label: "Tırnak", icon: "hand-left-outline" },
+  { kind: "SKIN", label: "Cilt bakımı", icon: "water-outline" },
+  { kind: "BEAUTY", label: "Güzellik merkezi", icon: "sparkles-outline" },
+  { kind: "BROW_LASH", label: "Kaş ve kirpik", icon: "eye-outline" },
+  { kind: "MAKEUP", label: "Makyaj", icon: "color-palette-outline" },
+  { kind: "MASSAGE", label: "Masaj ve spa", icon: "leaf-outline" },
 ];
 
 const initials = (name = "") =>
@@ -160,12 +166,25 @@ export default function HomeScreen({ navigation, route: navRoute }) {
   };
 
   const term = search.trim().toLocaleLowerCase("tr-TR");
+  // Hizmet adıyla arama (ör. "kalıcı oje", "balyaj"): sunucuda eşleşen salonlar
+  const [serviceMatches, setServiceMatches] = useState(new Set());
+  useEffect(() => {
+    if (term.length < 3) return setServiceMatches(new Set());
+    const t = setTimeout(() => {
+      salonApi
+        .list({ q: term, pageSize: 50 })
+        .then((r) => setServiceMatches(new Set(r.items.map((s) => s.id))))
+        .catch(() => {});
+    }, 350);
+    return () => clearTimeout(t);
+  }, [term]);
   const visibleSalons = useMemo(
     () =>
       salons.filter(
         (s) =>
           (!term ||
             s.name.toLocaleLowerCase("tr-TR").includes(term) ||
+            serviceMatches.has(s.id) ||
             s.address.toLocaleLowerCase("tr-TR").includes(term) ||
             (s.district ?? "").toLocaleLowerCase("tr-TR").includes(term)) &&
           (!filters.open || s.isOpenNow) &&
@@ -175,7 +194,7 @@ export default function HomeScreen({ navigation, route: navRoute }) {
           (!filters.online || s.bookable !== false) &&
           (!filters.kind || s.kind === filters.kind),
       ),
-    [salons, term, filters],
+    [salons, term, filters, serviceMatches],
   );
   const kindsPresent = useMemo(() => new Set(salons.map((s) => s.kind)), [salons]);
   const filtering =
@@ -345,7 +364,7 @@ export default function HomeScreen({ navigation, route: navRoute }) {
           <Ionicons name="search" size={20} color={colors.muted} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Kuaför veya güzellik salonu ara"
+            placeholder="Salon veya hizmet ara (ör. kalıcı oje)"
             placeholderTextColor={colors.faint}
             value={search}
             onChangeText={setSearch}
@@ -419,6 +438,7 @@ export default function HomeScreen({ navigation, route: navRoute }) {
           {KIND_CHIPS.filter((k) => kindsPresent.has(k.kind)).map((k) => (
             <FilterChip
               key={k.kind}
+              icon={k.icon}
               label={k.label}
               on={filters.kind === k.kind}
               onPress={() => setFilters((f) => ({ ...f, kind: f.kind === k.kind ? null : k.kind }))}

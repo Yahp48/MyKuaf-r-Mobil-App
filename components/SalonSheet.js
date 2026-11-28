@@ -550,14 +550,19 @@ const SalonSheet = forwardRef(function SalonSheet(
         </>
       ) : null}
       <Text style={styles.hint}>Almak istediğiniz hizmetleri seçin, ardından randevu saatini belirleyin.</Text>
-      {detail.services.map((s) => (
-        <ServiceRow
-          key={s.id}
-          service={s}
-          picked={picked.includes(s.id)}
-          onPress={() => togglePick(s.id)}
-          withDescription
-        />
+      {groupByCategory(detail.services).map(([category, list]) => (
+        <View key={category}>
+          {category ? <Text style={styles.catTitle}>{category}</Text> : null}
+          {list.map((s) => (
+            <ServiceRow
+              key={s.id}
+              service={s}
+              picked={picked.includes(s.id)}
+              onPress={() => togglePick(s.id)}
+              withDescription
+            />
+          ))}
+        </View>
       ))}
     </View>
   ) : (
@@ -750,6 +755,18 @@ function Section({ title, action, onAction, children }) {
   );
 }
 
+/** Hizmetleri menüdeki kategori sırasını koruyarak gruplar. */
+function groupByCategory(services) {
+  const groups = [];
+  for (const s of services) {
+    const key = s.category ?? "";
+    const g = groups.find(([k]) => k === key);
+    if (g) g[1].push(s);
+    else groups.push([key, [s]]);
+  }
+  return groups;
+}
+
 function ServiceRow({ service, picked, onPress, withDescription }) {
   const deal = discountOn(service);
   return (
@@ -896,6 +913,15 @@ const styles = StyleSheet.create({
   dealBannerText: { fontSize: 13, fontWeight: "700", color: colors.primary },
   dealNote: { fontSize: 12.5, fontWeight: "600", color: colors.primary, marginTop: 2 },
   oldPrice: { fontSize: 12.5, color: colors.muted, textDecorationLine: "line-through" },
+  catTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.muted,
+    letterSpacing: 0.4,
+    marginTop: 16,
+    marginBottom: 2,
+    textTransform: "uppercase",
+  },
   subTitle: { fontSize: 15, fontWeight: "800", color: colors.text, marginTop: 8, marginBottom: 6 },
   packageCard: {
     flexDirection: "row",

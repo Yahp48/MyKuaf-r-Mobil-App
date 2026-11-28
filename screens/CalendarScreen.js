@@ -249,38 +249,42 @@ export default function CalendarScreen({ navigation, route }) {
             <Text style={styles.subSection}>Tek tek hizmetler</Text>
           </>
         ) : null}
-        {salon.services.map((s) => {
+        {salon.services.map((s, idx) => {
           const on = serviceIds.includes(s.id);
           const deal = discountOn(s, priceDay);
+          const newGroup = s.category && s.category !== salon.services[idx - 1]?.category;
           return (
-            <TouchableOpacity
-              key={s.id}
-              style={[styles.service, on && styles.serviceOn]}
-              onPress={() => toggleService(s.id)}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: on }}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.serviceName, on && { color: "#fff" }]}>{s.name}</Text>
-                <Text style={[styles.serviceMeta, on && { color: "#FBD5DF" }]}>{s.durationMinutes} dk</Text>
-                {s.discount && !deal ? (
-                  <Text style={[styles.dealNote, on && { color: "#FBD5DF" }]}>
-                    %{s.discount.percent} indirim · {discountRange(s.discount)}
-                  </Text>
-                ) : null}
-              </View>
-              <View style={{ alignItems: "flex-end" }}>
-                {deal ? (
-                  <>
-                    <Text style={[styles.oldPrice, on && { color: "#FBD5DF" }]}>{formatTL(s.price)}</Text>
-                    <Text style={[styles.servicePrice, on && { color: "#fff" }]}>{formatTL(deal.price)}</Text>
-                    <Text style={[styles.dealBadge, on && styles.dealBadgeOn]}>%{deal.percent}</Text>
-                  </>
-                ) : (
-                  <Text style={[styles.servicePrice, on && { color: "#fff" }]}>{formatTL(s.price)}</Text>
-                )}
-              </View>
-            </TouchableOpacity>
+            <React.Fragment key={s.id}>
+              {newGroup ? <Text style={styles.subSection}>{s.category}</Text> : null}
+              <TouchableOpacity
+                key={s.id}
+                style={[styles.service, on && styles.serviceOn]}
+                onPress={() => toggleService(s.id)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: on }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.serviceName, on && { color: "#fff" }]}>{s.name}</Text>
+                  <Text style={[styles.serviceMeta, on && { color: "#FBD5DF" }]}>{s.durationMinutes} dk</Text>
+                  {s.discount && !deal ? (
+                    <Text style={[styles.dealNote, on && { color: "#FBD5DF" }]}>
+                      %{s.discount.percent} indirim · {discountRange(s.discount)}
+                    </Text>
+                  ) : null}
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  {deal ? (
+                    <>
+                      <Text style={[styles.oldPrice, on && { color: "#FBD5DF" }]}>{formatTL(s.price)}</Text>
+                      <Text style={[styles.servicePrice, on && { color: "#fff" }]}>{formatTL(deal.price)}</Text>
+                      <Text style={[styles.dealBadge, on && styles.dealBadgeOn]}>%{deal.percent}</Text>
+                    </>
+                  ) : (
+                    <Text style={[styles.servicePrice, on && { color: "#fff" }]}>{formatTL(s.price)}</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            </React.Fragment>
           );
         })}
 

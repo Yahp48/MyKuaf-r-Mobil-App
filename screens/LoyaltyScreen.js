@@ -53,7 +53,7 @@ export default function LoyaltyScreen() {
 
   const invite = () =>
     Share.share({
-      message: `MyKuaför'de kuaför randevunu kolayca al! Kayıt olurken davet kodumu kullan: ${data.referralCode} — ilk randevundan sonra ikimiz de ${data.rules.referralPoints} puan kazanırız.`,
+      message: `MyKuaför'de kuaför, tırnak ve güzellik randevunu kolayca al! Kayıt olurken davet kodumu kullan: ${data.referralCode} — ilk randevundan sonra ikimiz de ${data.rules.referralPoints} puan kazanırız.`,
     }).catch(() => {});
 
   return (
