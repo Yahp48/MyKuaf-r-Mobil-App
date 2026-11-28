@@ -1,7 +1,7 @@
 {
-  "name": "mykuafor-backend",
+  "name": "bakimca-backend",
   "version": "1.0.0",
-  "description": "MyKuaför mobil uygulaması REST API ve gerçek zamanlı sunucu",
+  "description": "Bakımca mobil uygulaması REST API ve gerçek zamanlı sunucu",
   "scripts": {
     "dev": "tsx watch --env-file=.env src/server.ts",
     "build": "prisma generate && tsc -p tsconfig.json",

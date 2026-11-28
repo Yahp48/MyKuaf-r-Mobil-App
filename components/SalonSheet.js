@@ -391,7 +391,7 @@ const SalonSheet = forwardRef(function SalonSheet(
           <View style={{ flex: 1 }}>
             <Text style={styles.listingTitle}>Online randevu henüz yok</Text>
             <Text style={styles.mutedSmall}>
-              Bu salon MyKuaför'e henüz katılmadı. Randevu için telefonla ulaşabilir veya yol tarifi alabilirsiniz.
+              Bu salon Bakımca'ya henüz katılmadı. Randevu için telefonla ulaşabilir veya yol tarifi alabilirsiniz.
             </Text>
             {BUSINESS_PANEL_URL ? (
               <Text

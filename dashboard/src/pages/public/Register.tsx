@@ -51,7 +51,7 @@ export default function Register() {
   usePageMeta({
     title: "İşletme kaydı",
     description:
-      "Kuaför, güzellik merkezi, tırnak, cilt bakımı veya spa işletmenizi ya da kozmetik mağazanızı MyKuaför'e ücretsiz kaydedin. Vergi bilgilerinizle birkaç dakikada başvurun, müşterileriniz sizi uygulamada bulsun.",
+      "Kuaför, güzellik merkezi, tırnak, cilt bakımı veya spa işletmenizi ya da kozmetik mağazanızı Bakımca'ya ücretsiz kaydedin. Vergi bilgilerinizle birkaç dakikada başvurun, müşterileriniz sizi uygulamada bulsun.",
     path: "/kayit",
     index: true,
   });

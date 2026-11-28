@@ -56,7 +56,7 @@ export default function LoyaltyScreen() {
 
   const invite = () =>
     Share.share({
-      message: `MyKuaför'de kuaför, tırnak ve güzellik randevunu kolayca al! Kayıt olurken davet kodumu kullan: ${data.referralCode} — ilk randevundan sonra ikimiz de ${data.rules.referralPoints} puan kazanırız.`,
+      message: `Bakımca'da kuaför, tırnak ve güzellik randevunu kolayca al! Kayıt olurken davet kodumu kullan: ${data.referralCode} — ilk randevundan sonra ikimiz de ${data.rules.referralPoints} puan kazanırız.`,
     }).catch(() => {});
 
   return (
@@ -155,7 +155,7 @@ export default function LoyaltyScreen() {
             </View>
           )}
           <Text style={styles.note}>
-            Puanlar MyKuaför tarafından verilir; iptal edilen veya iade edilen işlemler için puan verilmez.
+            Puanlar Bakımca tarafından verilir; iptal edilen veya iade edilen işlemler için puan verilmez.
           </Text>
         </ScrollView>
       )}

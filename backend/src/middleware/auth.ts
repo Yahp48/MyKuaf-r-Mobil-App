@@ -29,16 +29,16 @@ export function signAccessToken(user: AuthUser): string {
   return jwt.sign(payload, env.JWT_ACCESS_SECRET, {
     expiresIn: env.ACCESS_TOKEN_TTL_SECONDS,
     algorithm: "HS256",
-    issuer: "mykuafor",
-    audience: "mykuafor-app",
+    issuer: "bakimca",
+    audience: "bakimca-app",
   });
 }
 
 export function verifyAccessToken(token: string): AuthUser {
   const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET, {
     algorithms: ["HS256"],
-    issuer: "mykuafor",
-    audience: "mykuafor-app",
+    issuer: "bakimca",
+    audience: "bakimca-app",
   }) as AccessPayload;
   if (decoded.typ !== "access" || typeof decoded.sub !== "string") throw new Error("invalid token");
   return { id: decoded.sub, role: decoded.role };

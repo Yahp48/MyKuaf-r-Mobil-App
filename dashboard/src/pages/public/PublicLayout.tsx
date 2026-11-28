@@ -9,8 +9,8 @@ export function PublicLayout({ children, hideNav }: { children: ReactNode; hideN
   return (
     <div className="public">
       <header className="public-top">
-        <Link to="/" className="wordmark" aria-label="MyKuaför İşletme ana sayfa">
-          <b>MyKuaför</b>
+        <Link to="/" className="wordmark" aria-label="Bakımca İşletme ana sayfa">
+          <b>Bakımca</b>
           <i aria-hidden />
           <span className="faint small" style={{ marginLeft: 4 }}>
             İşletme
@@ -29,7 +29,7 @@ export function PublicLayout({ children, hideNav }: { children: ReactNode; hideN
       </header>
       {children}
       <footer className="public-foot">
-        <span>© {year} {company?.shortName ?? "MyKuaför"}</span>
+        <span>© {year} {company?.shortName ?? "Bakımca"}</span>
         <Link to="/kvkk">KVKK aydınlatma metni</Link>
         <Link to="/hizmet-sozlesmesi">İşletme hizmet sözleşmesi</Link>
         <span>

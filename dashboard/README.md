@@ -1,4 +1,4 @@
-# MyKuaför İşletme Paneli
+# Bakımca İşletme Paneli
 
 Kuaför salonları ve kozmetik ürün satıcıları için web paneli. Tasarım ilkeleri: [DESIGN.md](DESIGN.md).
 
@@ -20,4 +20,4 @@ npm run build    # dist/ (statik dosyalar; herhangi bir CDN/nginx ile sunulur, /
 
 Demo hesapları (yalnızca yerel seed): `salon@mykuafor.test` ve `satici@mykuafor.test`, şifre `Demo12345`.
 
-Not: `index.html`, `robots.txt` ve `sitemap.xml` içindeki `isletme.mykuafor.app` alan adı yer tutucudur.
+Not: `index.html`, `robots.txt` ve `sitemap.xml` içindeki `isletme.bakimca.com.tr` alan adı yer tutucudur.

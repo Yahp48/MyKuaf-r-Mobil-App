@@ -8,4 +8,4 @@ Disallow: /salon/
 Disallow: /magaza/
 Disallow: /sifre-sifirla
 
-Sitemap: https://isletme.mykuafor.app/sitemap.xml
+Sitemap: https://isletme.bakimca.com.tr/sitemap.xml

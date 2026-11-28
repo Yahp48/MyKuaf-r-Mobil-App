@@ -1,4 +1,4 @@
-# MyKuaför İşletme — Tasarım
+# Bakımca İşletme — Tasarım
 
 ## Sahne
 Salon sahibi ön masada, iki müşteri arasında tablete veya dizüstüne göz atıyor; telefon çalıyor, kuaför

@@ -1,6 +1,6 @@
-# MyKuaför Backend
+# Bakımca Backend
 
-MyKuaför mobil uygulamasının REST API ve gerçek zamanlı (Socket.IO) sunucusu.
+Bakımca mobil uygulamasının REST API ve gerçek zamanlı (Socket.IO) sunucusu.
 
 | Katman | Teknoloji |
 | --- | --- |

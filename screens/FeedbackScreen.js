@@ -60,7 +60,7 @@ export default function FeedbackScreen({ navigation }) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={[styles.card, { alignItems: "center", paddingVertical: 22 }]}>
-            <Text style={styles.question}>MyKuaför'ü nasıl buldunuz?</Text>
+            <Text style={styles.question}>Bakımca'yı nasıl buldunuz?</Text>
             <View style={styles.stars}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <TouchableOpacity

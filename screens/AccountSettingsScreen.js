@@ -79,7 +79,7 @@ export default function AccountSettingsScreen({ navigation }) {
           setDeleting(true);
           try {
             await actions.deleteAccount(deletePassword);
-            toast.success("Hesabınız silindi", "MyKuaför'ü kullandığınız için teşekkür ederiz.");
+            toast.success("Hesabınız silindi", "Bakımca'yı kullandığınız için teşekkür ederiz.");
           } catch (e) {
             setDeleting(false);
             toast.error("Hesap silinemedi", e.message);

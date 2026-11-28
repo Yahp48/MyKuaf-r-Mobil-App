@@ -137,8 +137,8 @@ export default function PrivacyScreen({ navigation }) {
         <View style={[styles.card, styles.textCard]}>
           <Text style={styles.intro}>
             {company
-              ? `Veri sorumlusu ${company.legalName}${company.address ? ` (${company.address})` : ""} olarak, MyKuaför uygulamasında kişisel verilerinizi 6698 sayılı Kişisel Verilerin Korunması Kanunu'na uygun şekilde işliyoruz.`
-              : "MyKuaför olarak kişisel verilerinizi 6698 sayılı Kişisel Verilerin Korunması Kanunu'na uygun şekilde işliyoruz."}{" "}
+              ? `Veri sorumlusu ${company.legalName}${company.address ? ` (${company.address})` : ""} olarak, Bakımca uygulamasında kişisel verilerinizi 6698 sayılı Kişisel Verilerin Korunması Kanunu'na uygun şekilde işliyoruz.`
+              : "Bakımca olarak kişisel verilerinizi 6698 sayılı Kişisel Verilerin Korunması Kanunu'na uygun şekilde işliyoruz."}{" "}
             Bu metin, hangi verileri neden işlediğimizi ve haklarınızı özetler.
             {company?.email || company?.kep
               ? ` Başvurularınızı ${[company.email, company.kep && `KEP: ${company.kep}`].filter(Boolean).join(" veya ")} adresine iletebilirsiniz.`

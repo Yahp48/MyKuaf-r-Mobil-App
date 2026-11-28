@@ -1,9 +1,9 @@
 {
-  "name": "mykuafor-dashboard",
+  "name": "bakimca-dashboard",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "MyKuaför işletme paneli (kuaför ve satıcı)",
+  "description": "Bakımca işletme paneli (kuaför ve satıcı)",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

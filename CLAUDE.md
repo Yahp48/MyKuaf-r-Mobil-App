@@ -1,8 +1,10 @@
-# MyKuaför
+# Bakımca
 
-Kuaför/güzellik salonu müşterileri için mobil uygulama + backend: harita üzerinden salon bulma ve
-yol tarifi, randevu alma, salon ürünleri mağazası, sepet ve ödeme, cüzdan, bildirimler.
-Arayüz dili Türkçe. Uygulama adı "MyKuaför", ekranlardaki salon markası "WOMAN HAIR DESIGN".
+Kadınlara yönelik güzellik işletmeleri (kuaför, güzellik, tırnak, cilt, spa…) için mobil uygulama + backend + işletme
+ve yönetim paneli: harita üzerinden işletme bulma, randevu, ürün mağazası, sepet ve ödeme, cüzdan, bildirimler.
+Arayüz dili Türkçe. Uygulama adı "Bakımca" (şimdilik; eski adı MyKuaför — klasör, veritabanı ve `@mykuafor.test`
+demo e-postaları bilerek eski adla kaldı). Paket kimliği `com.symmetrygroup.bakimca`, derin bağlantı şeması `bakimca://`.
+İşleten şirket Symmetry Group Ltd. Şti.
 Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kurallarına uygun olmalı.
 
 ## Yapı
@@ -75,7 +77,7 @@ Backend (`backend/`):
 - `npm test` (82 test, `mykuafor_test` veritabanı), `npm run typecheck`
 - Şema değişikliği: `prisma/schema.prisma` düzenle → `npm run db:migrate -- --name <ad>`
 - Demo hesapları (yalnızca yerel seed, şifre `Demo12345`): müşteri `demo@mykuafor.test`,
-  kuaför paneli `salon@mykuafor.test` ("MyKuaför Demo Salon", Kadıköy), satıcı paneli `satici@mykuafor.test`,
+  kuaför paneli `salon@mykuafor.test` ("Bakımca Demo Salon", Kadıköy), satıcı paneli `satici@mykuafor.test`,
   yönetim paneli `admin@mykuafor.test` (/yonetim). Her işletme türü için örnek işletme ("Örnek …"):
   `guzellik@`, `tirnak@`, `cilt@`, `spa@`, `kirpik@`, `makyaj@` (hepsi `mykuafor.test`). Production'da yönetici: `npm run admin:create -- <e-posta> "<Ad>"`
 Panel (`dashboard/`): `npm run dev` (http://localhost:5173, /api'yi :5000'e yönlendirir), `npm run build`
@@ -99,4 +101,4 @@ Telefonla test: backend `.env` → `PUBLIC_BASE_URL=http://<bilgisayar-IP>:5000`
    EKSİK: `COMPANY_EMAIL` (production'da zorunlu), `COMPANY_MERSIS`, `COMPANY_KEP`, `COMPANY_PHONE`; KVKK metni (PrivacyScreen) ve mesafeli satış sözleşmesi hukukçu onayından geçmeli;
    destek telefonu/WhatsApp/e-posta/sosyal medya `.env` → `EXPO_PUBLIC_SUPPORT_*` ile girilmeli (boşsa gösterilmez)
 5. Görsel yükleme yerel diskte (`backend/uploads`); production'da S3 uyumlu depolamaya taşınmalı
-6. Panel alan adı (`isletme.mykuafor.app`) index.html, robots.txt ve sitemap.xml'de yer tutucu
+6. Alan adı alınmadı (bakimca.com.tr / .com / .app boştu): panel (`isletme.bakimca.com.tr`) index.html, robots.txt ve sitemap.xml'de yer tutucu

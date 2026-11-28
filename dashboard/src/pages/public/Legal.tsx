@@ -9,7 +9,7 @@ export function Kvkk() {
   const company = useCompany();
   usePageMeta({
     title: "KVKK aydınlatma metni",
-    description: "MyKuaför işletme hesapları için 6698 sayılı KVKK kapsamında aydınlatma metni.",
+    description: "Bakımca işletme hesapları için 6698 sayılı KVKK kapsamında aydınlatma metni.",
     path: "/kvkk",
     index: true,
   });
@@ -20,7 +20,7 @@ export function Kvkk() {
         <h1>KVKK aydınlatma metni</h1>
         <p>
           Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu'nun 10. maddesi uyarınca veri sorumlusu{" "}
-          {company?.legalName ?? "MyKuaför"} tarafından, MyKuaför işletme paneline kayıt olan işletme yetkililerinin
+          {company?.legalName ?? "Bakımca"} tarafından, Bakımca işletme paneline kayıt olan işletme yetkililerinin
           kişisel verilerinin işlenmesine ilişkin olarak hazırlanmıştır.
         </p>
         <h2>İşlenen veriler</h2>
@@ -63,7 +63,7 @@ export function Terms() {
   const company = useCompany();
   usePageMeta({
     title: "İşletme hizmet sözleşmesi",
-    description: "MyKuaför işletme paneli kullanım koşulları.",
+    description: "Bakımca işletme paneli kullanım koşulları.",
     path: "/hizmet-sozlesmesi",
     index: true,
   });
@@ -74,7 +74,7 @@ export function Terms() {
         <h1>İşletme hizmet sözleşmesi</h1>
         <h2>1. Taraflar ve konu</h2>
         <p>
-          Bu sözleşme, MyKuaför platformunu işleten {company?.legalName ?? "platform işletmecisi"} ile panele kayıt
+          Bu sözleşme, Bakımca platformunu işleten {company?.legalName ?? "platform işletmecisi"} ile panele kayıt
           olan hizmet işletmesi (kuaför, güzellik merkezi, tırnak, cilt bakımı, kaş-kirpik, makyaj, kadınlara özel
           spa) veya ürün satıcısı arasında, işletmenin randevu ve ürün satış hizmetlerini platform üzerinden sunmasına
           ilişkin koşulları düzenler.

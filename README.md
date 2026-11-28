@@ -1,4 +1,4 @@
-# MyKuaför
+# Bakımca
 
 Kuaför ve güzellik salonu müşterileri için mobil uygulama: haritada salon bulma ve yol tarifi,
 online randevu, salon ürünleri mağazası, güvenli ödeme, cüzdan ve bildirimler.
@@ -36,5 +36,5 @@ Telefon ve bilgisayar aynı Wi-Fi ağındaysa uygulama backend'i otomatik bulur.
 Demo hesapları (şifre `Demo12345`): müşteri `demo@mykuafor.test`, kuaför paneli `salon@mykuafor.test`,
 satıcı paneli `satici@mykuafor.test`.
 
-> Haritalar ve ödeme dönüşü (`mykuafor://`) için Expo Go yerine geliştirme derlemesi önerilir:
+> Haritalar ve ödeme dönüşü (`bakimca://`) için Expo Go yerine geliştirme derlemesi önerilir:
 > `npx expo run:android` veya EAS Build.

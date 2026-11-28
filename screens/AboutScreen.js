@@ -27,10 +27,10 @@ export default function AboutScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.hero}>
           <View style={styles.logo}>
-            <Text style={styles.logoText}>W</Text>
+            <Text style={styles.logoText}>B</Text>
           </View>
-          <Text style={styles.name}>MyKuaför</Text>
-          <Text style={styles.tagline}>Woman Hair Design</Text>
+          <Text style={styles.name}>Bakımca</Text>
+          <Text style={styles.tagline}>Kadınlar için güzellik randevusu ve bakım ürünleri</Text>
           <Text style={styles.version}>
             Sürüm {version}
             {build ? ` (${build})` : ""}
@@ -80,7 +80,7 @@ export default function AboutScreen({ navigation }) {
         </View>
 
         <Text style={styles.copyright}>
-          © {new Date().getFullYear()} {company?.shortName ?? "MyKuaför"}. Tüm hakları saklıdır.
+          © {new Date().getFullYear()} {company?.shortName ?? "Bakımca"}. Tüm hakları saklıdır.
         </Text>
       </ScrollView>
       <BottomNavSpacer />
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   },
   logoText: { color: "#fff", fontSize: 34, fontWeight: "800" },
   name: { fontSize: 22, fontWeight: "700", color: colors.text, marginTop: 12 },
-  tagline: { fontSize: 13, fontWeight: "600", color: colors.primary, letterSpacing: 1.6, marginTop: 2 },
+  tagline: { fontSize: 13.5, fontWeight: "500", color: colors.muted, marginTop: 4, textAlign: "center" },
   version: { fontSize: 13, color: colors.muted, marginTop: 8 },
   groupLabel: {
     fontSize: 12,

@@ -37,9 +37,9 @@ export default function AppHeader({ title, back = false, right }) {
             {title}
           </Text>
         ) : (
-          <View style={styles.brand} accessibilityRole="header" accessibilityLabel="Woman Hair Design">
-            <Text style={styles.brandMain}>WOMAN HAIR</Text>
-            <Text style={styles.brandSub}>DESIGN</Text>
+          <View style={styles.brand} accessibilityRole="header" accessibilityLabel="Bakımca">
+            <Text style={styles.brandMain}>Bakımca</Text>
+            <View style={styles.brandDot} />
           </View>
         )}
 
@@ -76,9 +76,9 @@ const styles = StyleSheet.create({
   bar: { height: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 16 },
   back: { marginLeft: -6, marginRight: 4, padding: 2 },
   title: { flex: 1, fontSize: 18, fontWeight: "700", color: colors.text, letterSpacing: -0.2 },
-  brand: { flex: 1, flexDirection: "row", alignItems: "baseline" },
-  brandMain: { fontSize: 17, fontWeight: "800", color: colors.text, letterSpacing: 2.2 },
-  brandSub: { fontSize: 11, fontWeight: "700", color: colors.primary, letterSpacing: 2.4, marginLeft: 6 },
+  brand: { flex: 1, flexDirection: "row", alignItems: "flex-end", paddingBottom: 2 },
+  brandMain: { fontSize: 21, fontWeight: "800", color: colors.text, letterSpacing: -0.3 },
+  brandDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.primary, marginLeft: 3, marginBottom: 6 },
   right: { flexDirection: "row", alignItems: "center" },
   iconButton: { padding: 4, marginLeft: 8 },
   badge: {

@@ -77,7 +77,7 @@ export default function LoadMoneyScreen({ navigation, route }) {
         <View style={styles.secure}>
           <MaterialIcons name="lock" size={18} color={colors.success} />
           <Text style={styles.secureText}>
-            Ödeme, lisanslı ödeme kuruluşunun 3D Secure korumalı sayfasında yapılır. Kart bilgileriniz MyKuaför'e
+            Ödeme, lisanslı ödeme kuruluşunun 3D Secure korumalı sayfasında yapılır. Kart bilgileriniz Bakımca'ya
             iletilmez ve saklanmaz.
           </Text>
         </View>

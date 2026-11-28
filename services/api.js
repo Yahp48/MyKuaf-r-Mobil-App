@@ -3,7 +3,7 @@ import { API_URL, REQUEST_TIMEOUT_MS } from "../config";
 
 // Yenileme token'ı cihazın güvenli deposunda (iOS Keychain / Android Keystore) tutulur.
 // Erişim token'ı yalnızca bellekte yaşar ve 15 dakikada bir yenilenir.
-const REFRESH_KEY = "mykuafor.refreshToken";
+const REFRESH_KEY = "bakimca.refreshToken";
 
 let accessToken = null;
 let refreshPromise = null;

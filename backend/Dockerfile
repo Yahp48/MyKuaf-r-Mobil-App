@@ -1,4 +1,4 @@
-# Production imajı: docker build -t mykuafor-api backend/
+# Production imajı: docker build -t bakimca-api backend/
 FROM node:22-alpine AS build
 WORKDIR /app
 # prisma generate yalnızca adresin biçimine bakar; derlemede gerçek veritabanı gerekmez.

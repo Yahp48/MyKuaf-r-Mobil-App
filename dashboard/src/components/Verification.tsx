@@ -77,7 +77,7 @@ export function VerificationForm() {
               {business.hasTaxCertificate ? "Yeni belge yükle" : "Vergi levhası yükle"}
             </Button>
             <p className="small faint" style={{ marginTop: 8 }}>
-              PDF veya fotoğraf, en fazla 8 MB. Belge yalnızca MyKuaför yöneticileri tarafından görülür; uygulamada
+              PDF veya fotoğraf, en fazla 8 MB. Belge yalnızca Bakımca yöneticileri tarafından görülür; uygulamada
               yayınlanmaz. Levhadaki unvan ve vergi numarası kayıt bilgilerinizle aynı olmalıdır.
             </p>
           </>

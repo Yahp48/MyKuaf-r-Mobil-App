@@ -31,7 +31,7 @@ const demoSalon = {
     salonImg("photo-1633681926022-84c23e8cb2d6"),
   ],
   description: "Geliştirme ortamı demo salonu: randevu, panel ve ödeme akışlarını denemek içindir.",
-  name: "MyKuaför Demo Salon",
+  name: "Bakımca Demo Salon",
   address: "Caferağa Mah. Moda Cad. No:1, 34710 Kadıköy/İstanbul",
   district: "Kadıköy",
   latitude: 40.9862,
@@ -442,7 +442,7 @@ async function seedDemo(seller: { id: string; shippingFeeCents: number; freeShip
     update: {},
   });
 
-  // Demo kuaför işletmesi → MyKuaför Demo Salon (yalnızca yerel)
+  // Demo kuaför işletmesi → Bakımca Demo Salon (yalnızca yerel)
   const { closes, ...demo } = demoSalon;
   const salonData = { ...demo, city: "İstanbul", coverImageUrl: demo.photos[0], isListing: false };
   const salon = await prisma.salon.upsert({
@@ -492,7 +492,7 @@ async function seedDemo(seller: { id: string; shippingFeeCents: number; freeShip
   const bizData = {
     type: "SALON" as const,
     displayName: salon.name,
-    legalName: "MyKuaför Demo Kuaförlük Hizmetleri",
+    legalName: "Bakımca Demo Kuaförlük Hizmetleri",
     taxOffice: "Kadıköy",
     address: salon.address,
     city: "İstanbul",

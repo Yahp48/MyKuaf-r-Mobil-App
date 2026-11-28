@@ -5,9 +5,9 @@ const IS_PROD = process.env.APP_VARIANT === "production";
 
 module.exports = {
   expo: {
-    name: "MyKuaför",
-    slug: "kuafor_mobil",
-    scheme: "mykuafor",
+    name: "Bakımca",
+    slug: "bakimca",
+    scheme: "bakimca",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
@@ -19,7 +19,7 @@ module.exports = {
       backgroundColor: "#ffffff",
     },
     ios: {
-      bundleIdentifier: "com.yaho.kuaformobil",
+      bundleIdentifier: "com.symmetrygroup.bakimca",
       buildNumber: "1",
       supportsTablet: false,
       infoPlist: {
@@ -54,7 +54,7 @@ module.exports = {
       },
     },
     android: {
-      package: "com.yaho.kuafor_mobil",
+      package: "com.symmetrygroup.bakimca",
       versionCode: 1,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",

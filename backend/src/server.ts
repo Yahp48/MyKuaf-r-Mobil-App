@@ -25,7 +25,7 @@ reminders.unref();
 runAppointmentJobs();
 
 server.listen(env.PORT, () => {
-  logger.info(`MyKuaför API ${env.PORT} portunda çalışıyor (${env.NODE_ENV})`);
+  logger.info(`Bakımca API ${env.PORT} portunda çalışıyor (${env.NODE_ENV})`);
 });
 
 // Kapanırken açık istekleri bitir, bağlantıları düzgün kapat (Docker/Kubernetes SIGTERM gönderir).
