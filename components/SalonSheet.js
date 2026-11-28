@@ -1,7 +1,6 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Linking,
   Platform,
@@ -22,6 +21,7 @@ import { discountOn, discountRange, priceOn, upToDiscount } from "./pricing";
 import { useApp } from "../context/AppContext";
 import { favoriteApi, salonApi } from "../services/api";
 import { useRealtimeEvent } from "../services/realtime";
+import { toast } from "../components/Feedback";
 
 export const HALF_RATIO = 0.46;
 
@@ -189,7 +189,7 @@ const SalonSheet = forwardRef(function SalonSheet(
     } catch (e) {
       setIsFavorite(!next);
       onFavoriteChange?.(summary.id, !next);
-      Alert.alert("Kaydedilemedi", e.message);
+      toast.error("Kaydedilemedi", e.message);
     }
   };
 
@@ -202,7 +202,7 @@ const SalonSheet = forwardRef(function SalonSheet(
   const whatsapp = () =>
     salon.whatsapp &&
     Linking.openURL(`https://wa.me/${waNumber(salon.whatsapp)}`).catch(() =>
-      Alert.alert("WhatsApp açılamadı", "Cihazınızda WhatsApp yüklü olmayabilir."),
+      toast.error("WhatsApp açılamadı", "Cihazınızda WhatsApp yüklü olmayabilir."),
     );
   const website = () => salon.website && Linking.openURL(withScheme(salon.website)).catch(() => {});
   const openInMaps = () => {

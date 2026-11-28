@@ -1,14 +1,5 @@
 import React, { useState } from "react";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { walletApi } from "../services/api";
 import { openCheckout, paymentReturnUrl } from "../services/checkout";
@@ -17,6 +8,7 @@ import AppHeader from "../components/AppHeader";
 import { Button, Field } from "../components/ui";
 import { colors, formatTL } from "../components/theme";
 import CardPicker from "../components/CardPicker";
+import { toast } from "../components/Feedback";
 
 const QUICK = [100, 250, 500, 1000];
 
@@ -38,16 +30,15 @@ export default function LoadMoneyScreen({ navigation, route }) {
       if (status === "SUCCEEDED") {
         actions.refreshUnread().catch(() => {});
         actions.refreshUser().catch(() => {});
-        Alert.alert("Bakiye yüklendi", `Cüzdanınıza ${formatTL(value)} yüklendi.`, [
-          { text: "Tamam", onPress: () => navigation.goBack() },
-        ]);
+        navigation.goBack();
+        toast.success("Bakiye yüklendi", `Cüzdanınıza ${formatTL(value)} yüklendi.`);
       } else if (status === "FAILED") {
-        Alert.alert("Ödeme başarısız", "Kartınızdan çekim yapılmadı. Lütfen tekrar deneyin.");
+        toast.error("Ödeme başarısız", "Kartınızdan çekim yapılmadı. Lütfen tekrar deneyin.");
       } else {
-        Alert.alert("Ödeme tamamlanmadı", "Ödeme sayfasını kapattınız. Çekim yapılmadı.");
+        toast.info("Ödeme tamamlanmadı", "Ödeme sayfasını kapattınız. Çekim yapılmadı.");
       }
     } catch (e) {
-      Alert.alert("Hata", e.message);
+      toast.error("Hata", e.message);
     } finally {
       setLoading(false);
     }

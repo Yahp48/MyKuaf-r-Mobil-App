@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,9 +12,10 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { supportApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import { Button } from "../components/ui";
 import { colors } from "../components/theme";
+import { toast } from "../components/Feedback";
 
 const TOPICS = [
   { id: "design", label: "Tasarım ve kullanım" },
@@ -34,9 +34,9 @@ export default function FeedbackScreen({ navigation }) {
   const [sending, setSending] = useState(false);
 
   const send = async () => {
-    if (!rating) return Alert.alert("Puan verin", "Uygulamayı 1 ile 5 arasında puanlayın.");
-    if (!topic) return Alert.alert("Konu seçin", "Geri bildiriminizin konusunu seçin.");
-    if (message.trim().length < 10) return Alert.alert("Mesaj çok kısa", "Lütfen en az 10 karakter yazın.");
+    if (!rating) return toast.error("Puan verin", "Uygulamayı 1 ile 5 arasında puanlayın.");
+    if (!topic) return toast.error("Konu seçin", "Geri bildiriminizin konusunu seçin.");
+    if (message.trim().length < 10) return toast.error("Mesaj çok kısa", "Lütfen en az 10 karakter yazın.");
     setSending(true);
     try {
       await supportApi.createTicket({
@@ -45,11 +45,10 @@ export default function FeedbackScreen({ navigation }) {
         message: message.trim(),
         rating,
       });
-      Alert.alert("Teşekkürler", "Geri bildiriminiz bize ulaştı.", [
-        { text: "Tamam", onPress: () => navigation.goBack() },
-      ]);
+      navigation.goBack();
+      toast.success("Teşekkürler", "Geri bildiriminiz bize ulaştı.");
     } catch (e) {
-      Alert.alert("Gönderilemedi", e.message);
+      toast.error("Gönderilemedi", e.message);
     } finally {
       setSending(false);
     }
@@ -119,7 +118,7 @@ export default function FeedbackScreen({ navigation }) {
           <Button title="Gönder" onPress={send} loading={sending} style={{ marginTop: 16 }} />
         </ScrollView>
       </KeyboardAvoidingView>
-      <BottomNav active="Profile" />
+      <BottomNavSpacer />
     </View>
   );
 }

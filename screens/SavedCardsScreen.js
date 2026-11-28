@@ -1,15 +1,16 @@
 import React, { useCallback, useState } from "react";
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import AppHeader from "../components/AppHeader";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import { Button } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { colors } from "../components/theme";
 import { CardListSkeleton, LoadError } from "../components/Skeleton";
 import { cardApi } from "../services/api";
 import { openCheckout, paymentReturnUrl } from "../services/checkout";
+import { confirm, toast } from "../components/Feedback";
 
 export const CARD_BRANDS = { VISA: "VISA", MASTER_CARD: "Mastercard", TROY: "TROY", AMERICAN_EXPRESS: "AMEX" };
 const GRADIENTS = [
@@ -35,13 +36,13 @@ export default function SavedCardsScreen({ navigation }) {
       const { payment, checkoutUrl } = await cardApi.verify(paymentReturnUrl());
       const status = await openCheckout(checkoutUrl, payment.id);
       if (status === "SUCCEEDED") {
-        Alert.alert("Kartınız kaydedildi", "Doğrulama için çekilen 1 TL kartınıza iade edildi.");
+        toast.success("Kartınız kaydedildi", "Doğrulama için çekilen 1 TL kartınıza iade edildi.");
         reload();
       } else if (status === "FAILED") {
-        Alert.alert("Kart doğrulanamadı", "Kartınızdan çekim yapılmadı. Lütfen tekrar deneyin.");
+        toast.error("Kart doğrulanamadı", "Kartınızdan çekim yapılmadı. Lütfen tekrar deneyin.");
       }
     } catch (e) {
-      Alert.alert("Kart eklenemedi", e.message);
+      toast.error("Kart eklenemedi", e.message);
     } finally {
       setAdding(false);
     }
@@ -52,7 +53,7 @@ export default function SavedCardsScreen({ navigation }) {
       await cardApi.update(card.id, { isDefault: true });
       setData((list) => list.map((c) => ({ ...c, isDefault: c.id === card.id })));
     } catch (e) {
-      Alert.alert("Kaydedilemedi", e.message);
+      toast.error("Kaydedilemedi", e.message);
     }
   };
 
@@ -63,26 +64,28 @@ export default function SavedCardsScreen({ navigation }) {
       setData((list) => list.map((c) => (c.id === card.id ? card : c)));
       setEditing(null);
     } catch (e) {
-      Alert.alert("Kaydedilemedi", e.message);
+      toast.error("Kaydedilemedi", e.message);
     }
   };
 
   const remove = (card) =>
-    Alert.alert("Kart silinsin mi?", `${card.alias} kayıtlı kartlarınızdan kaldırılacak.`, [
-      { text: "Vazgeç", style: "cancel" },
-      {
-        text: "Sil",
-        style: "destructive",
-        onPress: async () => {
+    confirm({
+      title: "Kart silinsin mi?",
+      message: `${card.alias} kayıtlı kartlarınızdan kaldırılacak.`,
+      confirmText: "Sil",
+      destructive: true,
+    }).then(
+      (ok) =>
+        ok &&
+        (async () => {
           try {
             await cardApi.remove(card.id);
             reload();
           } catch (e) {
-            Alert.alert("Silinemedi", e.message);
+            toast.error("Silinemedi", e.message);
           }
-        },
-      },
-    ]);
+        })(),
+    );
 
   return (
     <View style={styles.container}>
@@ -192,7 +195,7 @@ export default function SavedCardsScreen({ navigation }) {
           </View>
         </ScrollView>
       )}
-      <BottomNav active="Profile" />
+      <BottomNavSpacer />
     </View>
   );
 }

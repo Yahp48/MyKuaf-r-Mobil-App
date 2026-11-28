@@ -1,13 +1,14 @@
 import React, { useCallback } from "react";
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AppHeader from "../components/AppHeader";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import { Button } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { colors } from "../components/theme";
 import { ListSkeleton, LoadError } from "../components/Skeleton";
 import { userApi } from "../services/api";
+import { confirm, toast } from "../components/Feedback";
 
 const ICONS = { ev: "home-outline", iş: "briefcase-outline", is: "briefcase-outline", ofis: "briefcase-outline" };
 const iconFor = (title) => ICONS[title.trim().toLocaleLowerCase("tr-TR")] ?? "location-outline";
@@ -22,26 +23,28 @@ export default function AddressesScreen({ navigation }) {
       await userApi.updateAddress(a.id, { isDefault: true });
       setData((list) => list.map((x) => ({ ...x, isDefault: x.id === a.id })));
     } catch (e) {
-      Alert.alert("Kaydedilemedi", e.message);
+      toast.error("Kaydedilemedi", e.message);
     }
   };
 
   const remove = (a) =>
-    Alert.alert("Adres silinsin mi?", `"${a.title}" adresi silinecek.`, [
-      { text: "Vazgeç", style: "cancel" },
-      {
-        text: "Sil",
-        style: "destructive",
-        onPress: async () => {
+    confirm({
+      title: "Adres silinsin mi?",
+      message: `"${a.title}" adresi silinecek.`,
+      confirmText: "Sil",
+      destructive: true,
+    }).then(
+      (ok) =>
+        ok &&
+        (async () => {
           try {
             await userApi.deleteAddress(a.id);
             reload();
           } catch (e) {
-            Alert.alert("Silinemedi", e.message);
+            toast.error("Silinemedi", e.message);
           }
-        },
-      },
-    ]);
+        })(),
+    );
 
   return (
     <View style={styles.container}>
@@ -108,7 +111,7 @@ export default function AddressesScreen({ navigation }) {
           )}
         </ScrollView>
       )}
-      <BottomNav active="Profile" />
+      <BottomNavSpacer />
     </View>
   );
 }

@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   LayoutAnimation,
   Platform,
@@ -14,11 +13,12 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { supportApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import ContactList, { contactItems } from "../components/ContactList";
 import { Button } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { colors, formatDate } from "../components/theme";
+import { toast } from "../components/Feedback";
 
 const TOPICS = [
   { id: "appointment", label: "Randevu" },
@@ -63,8 +63,8 @@ export default function SupportScreen() {
   const { data: tickets, reload } = useRemote(loader);
 
   const send = async () => {
-    if (!topic) return Alert.alert("Konu seçin", "Talebinizin konusunu seçin.");
-    if (message.trim().length < 10) return Alert.alert("Mesaj çok kısa", "Lütfen sorunu en az 10 karakterle anlatın.");
+    if (!topic) return toast.error("Konu seçin", "Talebinizin konusunu seçin.");
+    if (message.trim().length < 10) return toast.error("Mesaj çok kısa", "Lütfen sorunu en az 10 karakterle anlatın.");
     setSending(true);
     try {
       await supportApi.createTicket({
@@ -75,9 +75,9 @@ export default function SupportScreen() {
       setMessage("");
       setTopic(null);
       reload();
-      Alert.alert("Talebiniz alındı", "Size hesabınızdaki e-posta adresinden dönüş yapacağız.");
+      toast.success("Talebiniz alındı", "Size hesabınızdaki e-posta adresinden dönüş yapacağız.");
     } catch (e) {
-      Alert.alert("Gönderilemedi", e.message);
+      toast.error("Gönderilemedi", e.message);
     } finally {
       setSending(false);
     }
@@ -174,7 +174,7 @@ export default function SupportScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      <BottomNav active="Profile" />
+      <BottomNavSpacer />
     </View>
   );
 }

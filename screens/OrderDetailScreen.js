@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { Alert, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { orderApi } from "../services/api";
 import { useApp } from "../context/AppContext";
 import AppHeader from "../components/AppHeader";
@@ -8,6 +8,7 @@ import { useRemote } from "../components/useRemote";
 import { useRealtimeEvent } from "../services/realtime";
 import { ORDER_STATUS, colors, formatDate, formatTL } from "../components/theme";
 import { LoadError, DetailSkeleton } from "../components/Skeleton";
+import { confirm, toast } from "../components/Feedback";
 
 export default function OrderDetailScreen({ route }) {
   const { orderId } = route.params;
@@ -35,30 +36,29 @@ export default function OrderDetailScreen({ route }) {
   const addr = order.shippingAddress;
 
   const cancel = () =>
-    Alert.alert(
-      "Siparişi iptal et",
-      order.status === "PAID"
-        ? `Siparişiniz iptal edilecek ve ${formatTL(order.total)} ${order.paymentMethod === "WALLET" ? "cüzdanınıza" : "kartınıza"} iade edilecek.`
-        : "Siparişiniz iptal edilecek.",
-      [
-        { text: "Vazgeç", style: "cancel" },
-        {
-          text: "İptal et",
-          style: "destructive",
-          onPress: async () => {
-            setBusy(true);
-            try {
-              const res = await orderApi.cancel(order.id);
-              setData(res.order);
-              actions.refreshUnread().catch(() => {});
-            } catch (e) {
-              Alert.alert("İptal edilemedi", e.message);
-            } finally {
-              setBusy(false);
-            }
-          },
-        },
-      ],
+    confirm({
+      title: "Siparişi iptal et",
+      message:
+        order.status === "PAID"
+          ? `Siparişiniz iptal edilecek ve ${formatTL(order.total)} ${order.paymentMethod === "WALLET" ? "cüzdanınıza" : "kartınıza"} iade edilecek.`
+          : "Siparişiniz iptal edilecek.",
+      confirmText: "İptal et",
+      destructive: true,
+    }).then(
+      (ok) =>
+        ok &&
+        (async () => {
+          setBusy(true);
+          try {
+            const res = await orderApi.cancel(order.id);
+            setData(res.order);
+            actions.refreshUnread().catch(() => {});
+          } catch (e) {
+            toast.error("İptal edilemedi", e.message);
+          } finally {
+            setBusy(false);
+          }
+        })(),
     );
 
   return (

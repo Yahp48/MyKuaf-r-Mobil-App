@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Linking, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "./theme";
+import { Backdrop, ConfirmSheet } from "./Feedback";
 
 /**
  * Uygulama içi güvenli ödeme penceresi.
@@ -37,6 +38,7 @@ export function PaymentHost() {
     host = (url, returnPrefix) =>
       new Promise((resolve) => {
         done.current = false;
+        setAskExit(false);
         setLoading(true);
         setCurrent(url);
         setReq({ url, returnPrefix, resolve });
@@ -71,11 +73,8 @@ export function PaymentHost() {
     return false;
   };
 
-  const askClose = () =>
-    Alert.alert("Ödemeden çıkılsın mı?", "Ödeme tamamlanmadıysa kartınızdan çekim yapılmaz.", [
-      { text: "Devam et", style: "cancel" },
-      { text: "Çık", style: "destructive", onPress: () => finish("closed") },
-    ]);
+  const [askExit, setAskExit] = useState(false);
+  const askClose = () => setAskExit(true);
 
   let host_ = "";
   let secure = false;
@@ -97,7 +96,12 @@ export function PaymentHost() {
     >
       <View style={[styles.wrap, { paddingTop: insets.top }]}>
         <View style={styles.bar}>
-          <TouchableOpacity onPress={askClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Ödemeyi kapat">
+          <TouchableOpacity
+            onPress={askClose}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Ödemeyi kapat"
+          >
             <Ionicons name="close" size={26} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.titleBox}>
@@ -113,7 +117,9 @@ export function PaymentHost() {
               </Text>
             </View>
           </View>
-          <View style={{ width: 26 }}>{loading ? <ActivityIndicator size="small" color={colors.primary} /> : null}</View>
+          <View style={{ width: 26 }}>
+            {loading ? <ActivityIndicator size="small" color={colors.primary} /> : null}
+          </View>
         </View>
         {req ? (
           <WebView
@@ -148,6 +154,23 @@ export function PaymentHost() {
           <Ionicons name="shield-checkmark-outline" size={13} color={colors.muted} />
           <Text style={styles.footText}>Kart bilgileriniz ödeme kuruluşuna gider, MyKuaför'de saklanmaz.</Text>
         </View>
+        {askExit ? (
+          <View style={StyleSheet.absoluteFill}>
+            <Backdrop onPress={() => setAskExit(false)} />
+            <ConfirmSheet
+              dialog={{
+                title: "Ödemeden çıkılsın mı?",
+                message: "Ödeme tamamlanmadıysa kartınızdan çekim yapılmaz.",
+                confirmText: "Çık",
+                cancelText: "Ödemeye devam et",
+                destructive: true,
+                icon: "close",
+              }}
+              onAnswer={(ok) => (ok ? finish("closed") : setAskExit(false))}
+              bottomInset={insets.bottom}
+            />
+          </View>
+        ) : null}
       </View>
     </Modal>
   );

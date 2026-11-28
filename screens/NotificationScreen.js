@@ -1,15 +1,16 @@
 import React, { useCallback } from "react";
-import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { notificationApi } from "../services/api";
 import { useApp } from "../context/AppContext";
 import AppHeader from "../components/AppHeader";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import { EmptyState } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { useRealtimeEvent } from "../services/realtime";
 import { colors, formatDate } from "../components/theme";
 import { LoadError, ListSkeleton } from "../components/Skeleton";
+import { toast } from "../components/Feedback";
 
 const ICONS = {
   appointment_confirmed: "event-available",
@@ -58,7 +59,7 @@ export default function NotificationScreen({ navigation }) {
       setData((d) => ({ ...d, items: d.items.map((x) => ({ ...x, read: true })), unreadCount: 0 }));
       actions.setUnreadNotifications(0);
     } catch (e) {
-      Alert.alert("Hata", e.message);
+      toast.error("Hata", e.message);
     }
   };
 
@@ -96,7 +97,7 @@ export default function NotificationScreen({ navigation }) {
           ListEmptyComponent={<EmptyState icon="notifications-none" title="Henüz bildiriminiz yok" />}
         />
       )}
-      <BottomNav />
+      <BottomNavSpacer />
     </View>
   );
 }

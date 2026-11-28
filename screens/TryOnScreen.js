@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   FlatList,
   Image,
@@ -23,11 +22,12 @@ import * as Sharing from "expo-sharing";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import { colors } from "../components/theme";
 import { TRYON_PAGE } from "../components/tryon/page";
 import { FACE_SHAPES, HAIR_COLORS, HAIRSTYLES, MAKEUP_LOOKS } from "../components/tryon/catalog";
 import { tryonApi } from "../services/api";
+import { toast } from "../components/Feedback";
 
 const ITEM = 62;
 const GAP = 14;
@@ -103,7 +103,7 @@ export default function TryOnScreen({ navigation }) {
       await file.write(base64, { encoding: "base64" });
       navigation.navigate("AiTryOn", { photoUri: file.uri, shape });
     } catch (e) {
-      Alert.alert("Fotoğraf alınamadı", e.message);
+      toast.error("Fotoğraf alınamadı", e.message);
     } finally {
       setGrabbing(false);
     }
@@ -132,7 +132,7 @@ export default function TryOnScreen({ navigation }) {
       setStyleLoading(true);
       send({ style: await loadStyle(s) });
     } catch (e) {
-      Alert.alert("Model yüklenemedi", e.message);
+      toast.error("Model yüklenemedi", e.message);
     } finally {
       setStyleLoading(false);
     }
@@ -193,10 +193,10 @@ export default function TryOnScreen({ navigation }) {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(file.uri, { mimeType: "image/jpeg", dialogTitle: "Stilini paylaş" });
       } else {
-        Alert.alert("Paylaşım kullanılamıyor", "Bu cihazda paylaşım desteklenmiyor.");
+        toast.error("Paylaşım kullanılamıyor", "Bu cihazda paylaşım desteklenmiyor.");
       }
     } catch (e) {
-      Alert.alert("Fotoğraf kaydedilemedi", e.message);
+      toast.error("Fotoğraf kaydedilemedi", e.message);
     } finally {
       setCapturing(false);
     }
@@ -217,7 +217,7 @@ export default function TryOnScreen({ navigation }) {
       case "error":
         if (msg.code === "capture") {
           setCapturing(false);
-          Alert.alert("Fotoğraf alınamadı", "Lütfen tekrar deneyin.");
+          toast.error("Fotoğraf alınamadı", "Lütfen tekrar deneyin.");
         } else {
           setStatus("error");
           setError(msg.code);
@@ -269,7 +269,7 @@ export default function TryOnScreen({ navigation }) {
             <Text style={styles.permButtonText}>{permission.canAskAgain ? "İzin ver" : "Ayarları aç"}</Text>
           </TouchableOpacity>
         </View>
-        <BottomNav active="TryOn" />
+        <BottomNavSpacer />
       </View>
     );
   }
@@ -451,7 +451,7 @@ export default function TryOnScreen({ navigation }) {
         </View>
       </View>
 
-      <BottomNav active="TryOn" />
+      <BottomNavSpacer />
 
       <Modal
         visible={shapeSheet && !!shape}

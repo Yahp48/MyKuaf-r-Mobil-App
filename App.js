@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
@@ -8,6 +9,8 @@ import { AppProvider, useApp } from "./context/AppContext";
 import { EmptyState, Loading } from "./components/ui";
 import OfflineBanner from "./components/OfflineBanner";
 import { PaymentHost } from "./components/PaymentSheet";
+import { FeedbackHost } from "./components/Feedback";
+import { navigationRef, PersistentBottomNav } from "./components/BottomNav";
 
 import SignInScreen from "./screens/SignInScreen";
 import SignUpScreen from "./screens/SignUpScreen";
@@ -43,6 +46,15 @@ import AiTryOnScreen from "./screens/AiTryOnScreen";
 
 const Stack = createStackNavigator();
 
+// Alt menü sekmeleri arasında geçiş kayarak değil, kısa bir solmayla olur (menü yerinde kalır).
+const TAB_SCREEN = {
+  cardStyleInterpolator: ({ current }) => ({ cardStyle: { opacity: current.progress } }),
+  transitionSpec: {
+    open: { animation: "timing", config: { duration: 160 } },
+    close: { animation: "timing", config: { duration: 160 } },
+  },
+};
+
 // Ödeme penceresi dönüş adresini kendisi yakalar; derin bağlantı yedek olarak kalır (bkz. services/checkout.js).
 const linking = {
   prefixes: [Linking.createURL("/"), "mykuafor://"],
@@ -63,8 +75,8 @@ function AuthStack() {
 function MainStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Home">
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="Appointments" component={AppointmentsScreen} />
+      <Stack.Screen name="Home" component={HomeScreen} options={TAB_SCREEN} />
+      <Stack.Screen name="Appointments" component={AppointmentsScreen} options={TAB_SCREEN} />
       <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
       <Stack.Screen name="Featured" component={FeaturedScreen} />
       <Stack.Screen name="SavedCards" component={SavedCardsScreen} />
@@ -72,13 +84,13 @@ function MainStack() {
       <Stack.Screen name="Store" component={StoreScreen} />
       <Stack.Screen name="Loyalty" component={LoyaltyScreen} />
       <Stack.Screen name="AiTryOn" component={AiTryOnScreen} />
-      <Stack.Screen name="TryOn" component={TryOnScreen} options={{ gestureEnabled: false }} />
-      <Stack.Screen name="Shop" component={ShopScreen} />
+      <Stack.Screen name="TryOn" component={TryOnScreen} options={{ ...TAB_SCREEN, gestureEnabled: false }} />
+      <Stack.Screen name="Shop" component={ShopScreen} options={TAB_SCREEN} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <Stack.Screen name="ShoppingCart" component={ShoppingCartScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="AddressForm" component={AddressFormScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} options={TAB_SCREEN} />
       <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
       <Stack.Screen name="Order" component={OrderScreen} />
       <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
@@ -97,6 +109,8 @@ function MainStack() {
 
 function Root() {
   const { status, actions } = useApp();
+  const [route, setRoute] = useState(null);
+  const syncRoute = () => setRoute(navigationRef.getCurrentRoute()?.name ?? null);
   if (status === "loading") return <Loading />;
   if (status === "offline") {
     return (
@@ -110,7 +124,17 @@ function Root() {
     );
   }
   return (
-    <NavigationContainer linking={linking}>{status === "signedIn" ? <MainStack /> : <AuthStack />}</NavigationContainer>
+    <NavigationContainer ref={navigationRef} linking={linking} onReady={syncRoute} onStateChange={syncRoute}>
+      {status === "signedIn" ? (
+        <View style={{ flex: 1 }}>
+          <MainStack />
+          {/* Tek, kalıcı alt menü: sayfalar değişirken yerinde kalır */}
+          <PersistentBottomNav route={route} />
+        </View>
+      ) : (
+        <AuthStack />
+      )}
+    </NavigationContainer>
   );
 }
 
@@ -122,6 +146,7 @@ export default function App() {
         <Root />
         <OfflineBanner />
         <PaymentHost />
+        <FeedbackHost />
       </AppProvider>
     </SafeAreaProvider>
   );

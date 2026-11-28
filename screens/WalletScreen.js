@@ -4,7 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { walletApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import { useRemote } from "../components/useRemote";
 import { colors, formatTL, shadow } from "../components/theme";
 import { LoadError, WalletSkeleton } from "../components/Skeleton";
@@ -91,7 +91,7 @@ export default function WalletScreen({ navigation }) {
       <View style={styles.container}>
         <AppHeader title="Cüzdanım" back />
         <WalletSkeleton />
-        <BottomNav active="Profile" />
+        <BottomNavSpacer />
       </View>
     );
   }
@@ -243,7 +243,7 @@ export default function WalletScreen({ navigation }) {
           }
         />
       )}
-      <BottomNav active="Profile" />
+      <BottomNavSpacer />
     </View>
   );
 }

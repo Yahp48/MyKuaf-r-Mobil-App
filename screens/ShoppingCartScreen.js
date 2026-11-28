@@ -1,12 +1,13 @@
 import React, { useCallback, useState } from "react";
-import { Alert, FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useApp } from "../context/AppContext";
 import AppHeader from "../components/AppHeader";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import { Button, EmptyState } from "../components/ui";
 import { colors, formatTL } from "../components/theme";
+import { toast } from "../components/Feedback";
 
 export default function ShoppingCartScreen({ navigation }) {
   const { cart, actions } = useApp();
@@ -23,7 +24,7 @@ export default function ShoppingCartScreen({ navigation }) {
 
   const refresh = async () => {
     setRefreshing(true);
-    await actions.refreshCart().catch((e) => Alert.alert("Hata", e.message));
+    await actions.refreshCart().catch((e) => toast.error("Hata", e.message));
     setRefreshing(false);
   };
 
@@ -32,21 +33,24 @@ export default function ShoppingCartScreen({ navigation }) {
     try {
       await fn();
     } catch (e) {
-      Alert.alert("Sepet güncellenemedi", e.message);
+      toast.error("Sepet güncellenemedi", e.message);
     } finally {
       setBusyId(null);
     }
   };
 
+  // Onay sormadan çıkarır; yanlışlıkla çıkarılırsa bildirimdeki "Geri al" ile aynı adet geri eklenir.
   const remove = (item) =>
-    Alert.alert("Ürünü çıkar", `${item.product.name} sepetten çıkarılsın mı?`, [
-      { text: "Vazgeç", style: "cancel" },
-      {
-        text: "Çıkar",
-        style: "destructive",
-        onPress: () => run(item.product.id, () => actions.removeFromCart(item.product.id)),
-      },
-    ]);
+    run(item.product.id, async () => {
+      await actions.removeFromCart(item.product.id);
+      toast.info("Sepetten çıkarıldı", item.product.name, {
+        action: {
+          label: "Geri al",
+          onPress: () =>
+            actions.addToCart(item.product.id, item.quantity).catch((e) => toast.error("Geri alınamadı", e.message)),
+        },
+      });
+    });
 
   const summary = cart.summary;
   const hasItems = cart.items.length > 0;
@@ -147,7 +151,7 @@ export default function ShoppingCartScreen({ navigation }) {
           />
         </View>
       ) : null}
-      <BottomNav active="Shop" />
+      <BottomNavSpacer />
     </View>
   );
 }

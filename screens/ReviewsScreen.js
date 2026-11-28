@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
   Modal,
@@ -20,6 +19,7 @@ import { Button, EmptyState } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { colors, formatDate } from "../components/theme";
 import { LoadError, ListSkeleton } from "../components/Skeleton";
+import { toast } from "../components/Feedback";
 
 /** Tamamlanan randevular: değerlendirilmemiş olanlar için puan ve yorum verilir. */
 export default function ReviewsScreen() {
@@ -58,7 +58,7 @@ export default function ReviewsScreen() {
         setPhotos((p) => p.map((x) => (x.uri === item.uri ? { ...x, url } : x)));
       } catch (e) {
         setPhotos((p) => p.filter((x) => x.uri !== item.uri));
-        Alert.alert("Fotoğraf yüklenemedi", e.message);
+        toast.error("Fotoğraf yüklenemedi", e.message);
       }
     }
   };
@@ -75,9 +75,9 @@ export default function ReviewsScreen() {
       });
       setData((list) => list.map((a) => (a.id === target.id ? { ...a, canReview: false } : a)));
       setTarget(null);
-      Alert.alert("Teşekkürler", "Değerlendirmeniz yayınlandı.");
+      toast.success("Teşekkürler", "Değerlendirmeniz yayınlandı.");
     } catch (e) {
-      Alert.alert("Gönderilemedi", e.message);
+      toast.error("Gönderilemedi", e.message);
     } finally {
       setSaving(false);
     }

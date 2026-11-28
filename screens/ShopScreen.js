@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
   RefreshControl,
@@ -17,13 +16,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "../context/AppContext";
 import { productApi, storeApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import ProductCard from "../components/ProductCard";
 import ProductFilterSheet, { SORTS } from "../components/ProductFilterSheet";
 import { DEFAULT_FILTERS, activeFilterCount, useProductList } from "../components/useProductList";
 import { useRealtimeEvent } from "../services/realtime";
 import { colors } from "../components/theme";
 import { GridSkeleton, LoadError } from "../components/Skeleton";
+import { toast } from "../components/Feedback";
 
 const initials = (name) =>
   name
@@ -66,12 +66,8 @@ export default function ShopScreen({ navigation }) {
     setAddingId(product.id);
     try {
       await actions.addToCart(product.id, 1);
-      Alert.alert("Sepete eklendi", product.name, [
-        { text: "Alışverişe devam", style: "cancel" },
-        { text: "Sepete git", onPress: () => navigation.navigate("ShoppingCart") },
-      ]);
     } catch (e) {
-      Alert.alert("Sepete eklenemedi", e.message);
+      toast.error("Sepete eklenemedi", e.message);
     } finally {
       setAddingId(null);
     }
@@ -250,7 +246,7 @@ export default function ShopScreen({ navigation }) {
           setSheet(false);
         }}
       />
-      <BottomNav active="Shop" />
+      <BottomNavSpacer />
     </View>
   );
 }

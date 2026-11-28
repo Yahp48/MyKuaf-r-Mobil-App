@@ -1,16 +1,5 @@
 import React, { useCallback, useState } from "react";
-import {
-  Alert,
-  Dimensions,
-  FlatList,
-  Image,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Dimensions, FlatList, Image, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { useApp } from "../context/AppContext";
 import { favoriteApi, productApi } from "../services/api";
@@ -21,6 +10,7 @@ import { useRemote } from "../components/useRemote";
 import { useRealtimeEvent } from "../services/realtime";
 import { colors, formatDate, formatTL } from "../components/theme";
 import { LoadError, DetailSkeleton } from "../components/Skeleton";
+import { toast } from "../components/Feedback";
 
 const { width } = Dimensions.get("window");
 
@@ -64,7 +54,7 @@ export default function ProductDetailScreen({ navigation, route }) {
       await (next ? favoriteApi.addProduct(p.id) : favoriteApi.removeProduct(p.id));
     } catch (e) {
       setData((d) => ({ ...d, product: { ...d.product, isFavorite: !next } }));
-      Alert.alert("Hata", e.message);
+      toast.error("Hata", e.message);
     }
   };
 
@@ -74,12 +64,11 @@ export default function ProductDetailScreen({ navigation, route }) {
       await actions.addToCart(p.id, quantity);
       if (goToCart) navigation.navigate("ShoppingCart");
       else
-        Alert.alert("Sepete eklendi", `${quantity} adet ${p.name}`, [
-          { text: "Alışverişe devam", style: "cancel" },
-          { text: "Sepete git", onPress: () => navigation.navigate("ShoppingCart") },
-        ]);
+        toast.success("Sepete eklendi", `${quantity} adet ${p.name}`, {
+          action: { label: "Sepete git", onPress: () => navigation.navigate("ShoppingCart") },
+        });
     } catch (e) {
-      Alert.alert("Sepete eklenemedi", e.message);
+      toast.error("Sepete eklenemedi", e.message);
     } finally {
       setAdding(false);
     }

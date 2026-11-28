@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { favoriteApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
@@ -8,6 +8,7 @@ import { EmptyState } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { colors } from "../components/theme";
 import { LoadError, GridSkeleton } from "../components/Skeleton";
+import { toast } from "../components/Feedback";
 
 export default function FavoritesScreen({ navigation }) {
   const loader = useCallback(() => favoriteApi.list(), []);
@@ -21,7 +22,7 @@ export default function FavoritesScreen({ navigation }) {
       await favoriteApi.removeSalon(id);
     } catch (e) {
       setData(prev);
-      Alert.alert("Hata", e.message);
+      toast.error("Hata", e.message);
     }
   };
 
@@ -32,7 +33,7 @@ export default function FavoritesScreen({ navigation }) {
       await favoriteApi.removeProduct(id);
     } catch (e) {
       setData(prev);
-      Alert.alert("Hata", e.message);
+      toast.error("Hata", e.message);
     }
   };
 

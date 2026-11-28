@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import { useApp } from "../context/AppContext";
 import { appointmentApi, salonApi } from "../services/api";
@@ -8,6 +8,7 @@ import { Button, Field } from "../components/ui";
 import { colors, formatTL } from "../components/theme";
 import { discountOn, discountRange, priceOn } from "../components/pricing";
 import { LoadError, FormSkeleton } from "../components/Skeleton";
+import { toast } from "../components/Feedback";
 
 LocaleConfig.locales.tr = {
   monthNames: [
@@ -90,7 +91,7 @@ export default function CalendarScreen({ navigation, route }) {
         const all = new Set(res.staff.flatMap((s) => s.slots));
         setSlots([...all].sort());
       })
-      .catch((e) => !cancelled && Alert.alert("Saatler alınamadı", e.message))
+      .catch((e) => !cancelled && toast.error("Saatler alınamadı", e.message))
       .finally(() => !cancelled && setSlotsLoading(false));
     return () => {
       cancelled = true;
@@ -148,9 +149,9 @@ export default function CalendarScreen({ navigation, route }) {
     try {
       await salonApi.joinWaitlist(salonId, { date, serviceIds, ...(staffId ? { staffId } : {}) });
       setWaitlisted((w) => [...w, date]);
-      Alert.alert("Listeye eklendiniz", "Bu günde bir randevu iptal olursa size hemen bildirim göndereceğiz.");
+      toast.success("Listeye eklendiniz", "Bu günde bir randevu iptal olursa size hemen bildirim göndereceğiz.");
     } catch (e) {
-      Alert.alert("Eklenemedi", e.message);
+      toast.error("Eklenemedi", e.message);
     } finally {
       setJoining(false);
     }
@@ -160,13 +161,13 @@ export default function CalendarScreen({ navigation, route }) {
       await salonApi.leaveWaitlist(salonId, date);
       setWaitlisted((w) => w.filter((d) => d !== date));
     } catch (e) {
-      Alert.alert("Kaldırılamadı", e.message);
+      toast.error("Kaldırılamadı", e.message);
     }
   };
 
   const submit = async () => {
     if (!/^(\+90|0)?5\d{9}$/.test(phone.replace(/[\s()-]/g, ""))) {
-      Alert.alert("Telefon gerekli", "Salonun size ulaşabilmesi için geçerli bir cep telefonu girin.");
+      toast.error("Telefon gerekli", "Salonun size ulaşabilmesi için geçerli bir cep telefonu girin.");
       return;
     }
     setSubmitting(true);
@@ -181,13 +182,14 @@ export default function CalendarScreen({ navigation, route }) {
         phone,
         ...(note.trim() ? { note: note.trim() } : {}),
       });
-      Alert.alert(
-        appointment.status === "CONFIRMED" ? "Randevunuz onaylandı 🎉" : "Randevu talebiniz alındı",
-        `${appointment.salon.name}\n${appointment.date} · ${appointment.time}\nPersonel: ${appointment.staff.name}\nTutar: ${formatTL(appointment.total)}${appointment.discount > 0 ? ` (ilk ziyaret indirimi ${formatTL(appointment.discount)})` : ""}\nRandevu kodu: ${appointment.code}`,
-        [{ text: "Randevularım", onPress: () => navigation.reset({ index: 0, routes: [{ name: "Appointments" }] }) }],
+      // Randevu ayrıntıları (kod, tutar) Randevularım'da görünür; burada kısa bir onay yeterli.
+      navigation.reset({ index: 0, routes: [{ name: "Appointments" }] });
+      toast.success(
+        appointment.status === "CONFIRMED" ? "Randevunuz onaylandı" : "Randevu talebiniz alındı",
+        `${appointment.salon.name} · ${appointment.date} ${appointment.time}`,
       );
     } catch (e) {
-      Alert.alert("Randevu alınamadı", e.message);
+      toast.error("Randevu alınamadı", e.message);
       if (e.code === "SLOT_UNAVAILABLE") setSlotsVersion((v) => v + 1); // dolan saati listeden düşür
     } finally {
       setSubmitting(false);
@@ -311,7 +313,7 @@ export default function CalendarScreen({ navigation, route }) {
           onDayPress={(day) => {
             const weekday = new Date(`${day.dateString}T12:00:00`).getDay();
             if (closedWeekdays.has(weekday)) {
-              Alert.alert("Salon kapalı", "Bu gün salon kapalı, lütfen başka bir gün seçin.");
+              toast.error("Salon kapalı", "Bu gün salon kapalı, lütfen başka bir gün seçin.");
               return;
             }
             setDate(day.dateString);

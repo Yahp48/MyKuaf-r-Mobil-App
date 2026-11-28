@@ -3,7 +3,7 @@ import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "r
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
 import AppHeader from "../components/AppHeader";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import ContactList, { contactItems } from "../components/ContactList";
 import { colors } from "../components/theme";
 import { CompanyCard, useCompany } from "../components/CompanyInfo";
@@ -79,9 +79,11 @@ export default function AboutScreen({ navigation }) {
           </Text>
         </View>
 
-        <Text style={styles.copyright}>© {new Date().getFullYear()} {company?.legalName ?? "MyKuaför"}. Tüm hakları saklıdır.</Text>
+        <Text style={styles.copyright}>
+          © {new Date().getFullYear()} {company?.legalName ?? "MyKuaför"}. Tüm hakları saklıdır.
+        </Text>
       </ScrollView>
-      <BottomNav active="Profile" />
+      <BottomNavSpacer />
     </View>
   );
 }

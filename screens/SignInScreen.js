@@ -1,19 +1,11 @@
 import React, { useState } from "react";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "../context/AppContext";
 import { Button, Field } from "../components/ui";
 import { colors } from "../components/theme";
+import { toast } from "../components/Feedback";
 
 export default function SignInScreen({ navigation }) {
   const { actions } = useApp();
@@ -24,7 +16,7 @@ export default function SignInScreen({ navigation }) {
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      Alert.alert("Eksik bilgi", "E-posta ve şifrenizi girin.");
+      toast.error("Eksik bilgi", "E-posta ve şifrenizi girin.");
       return;
     }
     setLoading(true);
@@ -32,7 +24,7 @@ export default function SignInScreen({ navigation }) {
       await actions.signIn(email.trim(), password);
       // Oturum açılınca App.js uygulama ekranlarına geçer.
     } catch (e) {
-      Alert.alert("Giriş yapılamadı", e.message);
+      toast.error("Giriş yapılamadı", e.message);
       setLoading(false);
     }
   };

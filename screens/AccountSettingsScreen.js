@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useApp } from "../context/AppContext";
 import { userApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import { Button, Field } from "../components/ui";
 import { colors } from "../components/theme";
+import { confirm, toast } from "../components/Feedback";
 
 export default function AccountSettingsScreen({ navigation }) {
   const { user, actions } = useApp();
@@ -24,9 +25,9 @@ export default function AccountSettingsScreen({ navigation }) {
     try {
       const { user: updated } = await userApi.update({ name: name.trim(), phone: phone.trim() ? phone : null });
       actions.setUser(updated);
-      Alert.alert("Kaydedildi", "Profil bilgileriniz güncellendi.");
+      toast.success("Kaydedildi", "Profil bilgileriniz güncellendi.");
     } catch (e) {
-      Alert.alert("Hata", e.message);
+      toast.error("Hata", e.message);
     } finally {
       setSavingProfile(false);
     }
@@ -34,7 +35,7 @@ export default function AccountSettingsScreen({ navigation }) {
 
   const changePassword = async () => {
     if (!currentPassword || !newPassword) {
-      Alert.alert("Eksik bilgi", "Mevcut ve yeni şifrenizi girin.");
+      toast.error("Eksik bilgi", "Mevcut ve yeni şifrenizi girin.");
       return;
     }
     setSavingPassword(true);
@@ -42,47 +43,48 @@ export default function AccountSettingsScreen({ navigation }) {
       const res = await userApi.changePassword(currentPassword, newPassword);
       setCurrentPassword("");
       setNewPassword("");
-      Alert.alert("Şifre güncellendi", res.message);
+      toast.success("Şifre güncellendi", res.message);
     } catch (e) {
-      Alert.alert("Hata", e.message);
+      toast.error("Hata", e.message);
     } finally {
       setSavingPassword(false);
     }
   };
 
   const confirmLogout = () =>
-    Alert.alert("Çıkış yap", "Hesabınızdan çıkış yapmak istiyor musunuz?", [
-      { text: "Vazgeç", style: "cancel" },
-      { text: "Çıkış yap", style: "destructive", onPress: () => actions.signOut() },
-    ]);
+    confirm({
+      title: "Çıkış yap",
+      message: "Hesabınızdan çıkış yapmak istiyor musunuz?",
+      confirmText: "Çıkış yap",
+      destructive: true,
+    }).then((ok) => ok && (() => actions.signOut())());
 
   // Hesap silme: App Store ve Google Play şartı. Geri alınamaz, iki kez onay alınır.
   const confirmDelete = () => {
     if (!deletePassword) {
-      Alert.alert("Şifre gerekli", "Hesabınızı silmek için şifrenizi girin.");
+      toast.error("Şifre gerekli", "Hesabınızı silmek için şifrenizi girin.");
       return;
     }
-    Alert.alert(
-      "Hesabınız kalıcı olarak silinecek",
-      "Profiliniz, adresleriniz, favorileriniz, sepetiniz ve bildirimleriniz silinir; gelecekteki randevularınız iptal edilir. " +
+    confirm({
+      title: "Hesabınız kalıcı olarak silinecek",
+      message:
+        "Profiliniz, adresleriniz, favorileriniz, sepetiniz ve bildirimleriniz silinir; gelecekteki randevularınız iptal edilir. " +
         "Yasal olarak saklanması gereken fatura/sipariş kayıtları kimliğinizden ayrılarak tutulur. Bu işlem geri alınamaz.",
-      [
-        { text: "Vazgeç", style: "cancel" },
-        {
-          text: "Hesabımı sil",
-          style: "destructive",
-          onPress: async () => {
-            setDeleting(true);
-            try {
-              await actions.deleteAccount(deletePassword);
-              Alert.alert("Hesabınız silindi", "MyKuaför'ü kullandığınız için teşekkür ederiz.");
-            } catch (e) {
-              setDeleting(false);
-              Alert.alert("Hesap silinemedi", e.message);
-            }
-          },
-        },
-      ],
+      confirmText: "Hesabımı sil",
+      destructive: true,
+    }).then(
+      (ok) =>
+        ok &&
+        (async () => {
+          setDeleting(true);
+          try {
+            await actions.deleteAccount(deletePassword);
+            toast.success("Hesabınız silindi", "MyKuaför'ü kullandığınız için teşekkür ederiz.");
+          } catch (e) {
+            setDeleting(false);
+            toast.error("Hesap silinemedi", e.message);
+          }
+        })(),
     );
   };
 

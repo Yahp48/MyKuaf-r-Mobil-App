@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-nati
 import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "../context/AppContext";
 import AppHeader from "../components/AppHeader";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import { colors, formatTL } from "../components/theme";
 
 const GROUPS = [
@@ -95,7 +95,7 @@ export default function ProfileScreen({ navigation }) {
           </View>
         ))}
       </ScrollView>
-      <BottomNav active="Profile" />
+      <BottomNavSpacer />
     </View>
   );
 }

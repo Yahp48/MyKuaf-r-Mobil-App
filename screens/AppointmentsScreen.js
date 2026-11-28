@@ -1,14 +1,15 @@
 import React, { useCallback, useState } from "react";
-import { Alert, FlatList, Linking, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, Linking, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { appointmentApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import { Button, EmptyState, StatusPill } from "../components/ui";
 import { useRemote } from "../components/useRemote";
 import { useRealtimeEvent } from "../services/realtime";
 import { APPOINTMENT_STATUS, colors, formatDate, formatTL } from "../components/theme";
 import { LoadError, CardListSkeleton } from "../components/Skeleton";
+import { confirm, toast } from "../components/Feedback";
 
 export default function AppointmentsScreen({ navigation }) {
   const [scope, setScope] = useState("upcoming");
@@ -19,12 +20,15 @@ export default function AppointmentsScreen({ navigation }) {
   const [cancellingId, setCancellingId] = useState(null);
 
   const cancel = (a) =>
-    Alert.alert("Randevuyu iptal et", `${a.salon.name} · ${a.date} ${a.time} randevunuz iptal edilsin mi?`, [
-      { text: "Vazgeç", style: "cancel" },
-      {
-        text: "İptal et",
-        style: "destructive",
-        onPress: async () => {
+    confirm({
+      title: "Randevuyu iptal et",
+      message: `${a.salon.name} · ${a.date} ${a.time} randevunuz iptal edilsin mi?`,
+      confirmText: "İptal et",
+      destructive: true,
+    }).then(
+      (ok) =>
+        ok &&
+        (async () => {
           setCancellingId(a.id);
           try {
             const { appointment } = await appointmentApi.cancel(a.id);
@@ -36,13 +40,12 @@ export default function AppointmentsScreen({ navigation }) {
                   : d.items.map((x) => (x.id === a.id ? appointment : x)),
             }));
           } catch (e) {
-            Alert.alert("İptal edilemedi", e.message);
+            toast.error("İptal edilemedi", e.message);
           } finally {
             setCancellingId(null);
           }
-        },
-      },
-    ]);
+        })(),
+    );
 
   const renderItem = ({ item: a }) => {
     const status = APPOINTMENT_STATUS[a.status] ?? { label: a.status, color: colors.muted };
@@ -123,7 +126,7 @@ export default function AppointmentsScreen({ navigation }) {
           }
         />
       )}
-      <BottomNav active="Appointments" />
+      <BottomNavSpacer />
     </View>
   );
 }

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Keyboard,
   Linking,
@@ -21,7 +20,7 @@ import polyline from "@mapbox/polyline";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import BottomNav, { useBottomNavHeight } from "../components/BottomNav";
+import { useBottomNavHeight } from "../components/BottomNav";
 import DraggableSheet from "../components/DraggableSheet";
 import SalonSheet, { HALF_RATIO, Stars, distanceText, openStatusText } from "../components/SalonSheet";
 import { colors, shadow } from "../components/theme";
@@ -29,6 +28,7 @@ import { upToDiscount } from "../components/pricing";
 import { useApp } from "../context/AppContext";
 import { useRealtimeEvent } from "../services/realtime";
 import { mapsApi, salonApi } from "../services/api";
+import { confirm, toast } from "../components/Feedback";
 
 // Konum izni yoksa / alınamazsa gösterilecek bölge (İstanbul, iki yaka)
 const FALLBACK_REGION = { latitude: 41.025, longitude: 29.015, latitudeDelta: 0.14, longitudeDelta: 0.14 };
@@ -95,7 +95,7 @@ export default function HomeScreen({ navigation, route: navRoute }) {
       const data = await salonApi.list({ lat: coords?.latitude, lng: coords?.longitude, pageSize: 50 });
       setSalons(data.items);
     } catch (e) {
-      Alert.alert("Salonlar yüklenemedi", e.message);
+      toast.error("Salonlar yüklenemedi", e.message);
     } finally {
       setLoading(false);
     }
@@ -117,10 +117,12 @@ export default function HomeScreen({ navigation, route: navRoute }) {
         if (status !== "granted" && canAskAgain) ({ status } = await Location.requestForegroundPermissionsAsync());
         if (status !== "granted") {
           if (askIfDenied) {
-            Alert.alert("Konum izni kapalı", "Size en yakın salonları göstermek için konum iznine ihtiyacımız var.", [
-              { text: "Vazgeç", style: "cancel" },
-              { text: "Ayarları aç", onPress: () => Linking.openSettings() },
-            ]);
+            confirm({
+              title: "Konum izni kapalı",
+              message: "Size en yakın salonları göstermek için konum iznine ihtiyacımız var.",
+              confirmText: "Ayarları aç",
+              icon: "location-outline",
+            }).then((ok) => ok && (() => Linking.openSettings())());
           }
           return null;
         }
@@ -136,7 +138,7 @@ export default function HomeScreen({ navigation, route: navRoute }) {
         focusOn(coords);
         return coords;
       } catch {
-        if (askIfDenied) Alert.alert("Konum alınamadı", "Lütfen konum servislerinin açık olduğundan emin olun.");
+        if (askIfDenied) toast.error("Konum alınamadı", "Lütfen konum servislerinin açık olduğundan emin olun.");
         return null;
       } finally {
         setLocating(false);
@@ -236,10 +238,12 @@ export default function HomeScreen({ navigation, route: navRoute }) {
   const getDirections = async () => {
     if (!selected) return;
     if (!userLocation) {
-      Alert.alert("Konum gerekli", "Yol tarifi için konum izni verin.", [
-        { text: "Vazgeç", style: "cancel" },
-        { text: "Ayarları aç", onPress: () => Linking.openSettings() },
-      ]);
+      confirm({
+        title: "Konum gerekli",
+        message: "Yol tarifi için konum izni verin.",
+        confirmText: "Ayarları aç",
+        icon: "location-outline",
+      }).then((ok) => ok && (() => Linking.openSettings())());
       return;
     }
     setRouteLoading(true);
@@ -255,10 +259,13 @@ export default function HomeScreen({ navigation, route: navRoute }) {
       // Sunucuda yol tarifi kapalıysa cihazın harita uygulamasına yönlendir.
       const q = `${selected.latitude},${selected.longitude}`;
       const url = Platform.OS === "ios" ? `maps://?daddr=${q}` : `google.navigation:q=${q}`;
-      Alert.alert("Uygulama içi rota alınamadı", e.message, [
-        { text: "Kapat", style: "cancel" },
-        { text: "Haritalar'da aç", onPress: () => Linking.openURL(url).catch(() => {}) },
-      ]);
+      confirm({
+        title: "Uygulama içi rota alınamadı",
+        message: e.message,
+        confirmText: "Haritalar'da aç",
+        cancelText: "Kapat",
+        icon: "navigate-outline",
+      }).then((ok) => ok && (() => Linking.openURL(url).catch(() => {}))());
     } finally {
       setRouteLoading(false);
     }
@@ -563,8 +570,6 @@ export default function HomeScreen({ navigation, route: navRoute }) {
           </View>
         </View>
       </Modal>
-
-      <BottomNav active="Home" floating />
     </View>
   );
 }

@@ -1,19 +1,11 @@
 import React, { useState } from "react";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "../context/AppContext";
 import { Button, Checkbox, Field } from "../components/ui";
 import { colors } from "../components/theme";
+import { toast } from "../components/Feedback";
 
 const PASSWORD_RULE = /^(?=.*[A-Za-zÇĞİÖŞÜçğıöşü])(?=.*\d).{8,128}$/;
 
@@ -43,7 +35,7 @@ export default function SignUpScreen({ navigation }) {
   const handleSignUp = async () => {
     if (!validate()) return;
     if (!acceptTerms) {
-      Alert.alert("Onay gerekli", "Devam etmek için kullanım koşullarını ve KVKK aydınlatma metnini onaylayın.");
+      toast.error("Onay gerekli", "Devam etmek için kullanım koşullarını ve KVKK aydınlatma metnini onaylayın.");
       return;
     }
     setLoading(true);
@@ -58,7 +50,7 @@ export default function SignUpScreen({ navigation }) {
         ...(form.referralCode.trim() ? { referralCode: form.referralCode.trim().toUpperCase() } : {}),
       });
     } catch (e) {
-      Alert.alert("Kayıt yapılamadı", e.message);
+      toast.error("Kayıt yapılamadı", e.message);
       setLoading(false);
     }
   };

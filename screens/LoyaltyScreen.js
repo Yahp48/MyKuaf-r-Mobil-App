@@ -1,14 +1,15 @@
 import React, { useCallback, useState } from "react";
-import { Alert, RefreshControl, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import AppHeader from "../components/AppHeader";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import { useRemote } from "../components/useRemote";
 import { colors, formatDate, formatTL } from "../components/theme";
 import { ListSkeleton, LoadError } from "../components/Skeleton";
 import { useApp } from "../context/AppContext";
 import { loyaltyApi } from "../services/api";
+import { confirm, toast } from "../components/Feedback";
 
 const REASON = {
   APPOINTMENT: { icon: "calendar-outline", label: "Randevu" },
@@ -29,26 +30,28 @@ export default function LoyaltyScreen() {
 
   const redeem = () => {
     const tl = redeemable / data.rules.pointsPerTL;
-    Alert.alert("Puanları aktar", `${redeemable} puan cüzdanınıza ${formatTL(tl)} olarak aktarılacak.`, [
-      { text: "Vazgeç", style: "cancel" },
-      {
-        text: "Aktar",
-        onPress: async () => {
+    confirm({
+      title: "Puanları aktar",
+      message: `${redeemable} puan cüzdanınıza ${formatTL(tl)} olarak aktarılacak.`,
+      confirmText: "Aktar",
+    }).then(
+      (ok) =>
+        ok &&
+        (async () => {
           setRedeeming(true);
           try {
             const r = await loyaltyApi.redeem(redeemable);
             setData((d) => ({ ...d, points: r.points }));
             actions.refreshUser().catch(() => {});
-            Alert.alert("Aktarıldı", `${formatTL(r.credited)} cüzdanınıza eklendi.`);
+            toast.success("Aktarıldı", `${formatTL(r.credited)} cüzdanınıza eklendi.`);
             reload();
           } catch (e) {
-            Alert.alert("Aktarılamadı", e.message);
+            toast.error("Aktarılamadı", e.message);
           } finally {
             setRedeeming(false);
           }
-        },
-      },
-    ]);
+        })(),
+    );
   };
 
   const invite = () =>
@@ -156,7 +159,7 @@ export default function LoyaltyScreen() {
           </Text>
         </ScrollView>
       )}
-      <BottomNav active="Profile" />
+      <BottomNavSpacer />
     </View>
   );
 }

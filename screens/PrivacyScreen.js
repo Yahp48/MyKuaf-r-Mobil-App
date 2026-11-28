@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { Alert, Linking, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { Linking, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "../context/AppContext";
 import { userApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import { colors } from "../components/theme";
 import { useCompany } from "../components/CompanyInfo";
+import { toast } from "../components/Feedback";
 
 // Not: Metin genel çerçevedir; yayından önce hukukçuya gözden geçirtilmeli (bkz. CLAUDE.md "Bilinen eksikler").
 const SECTIONS = [
@@ -36,7 +37,7 @@ const SECTIONS = [
     title: "Canlı deneme ve fotoğraflar",
     body:
       "Canlı denemede (saç modeli, renk, makyaj) kamera görüntünüz yalnızca telefonunuzda işlenir; sunucularımıza " +
-      "gönderilmez ve kaydedilmez. \"Yapay zekâ ile gerçekçi dene\" özelliğini kullanırsanız, yalnızca açık rızanızla " +
+      'gönderilmez ve kaydedilmez. "Yapay zekâ ile gerçekçi dene" özelliğini kullanırsanız, yalnızca açık rızanızla ' +
       "çektiğiniz fotoğraf yurt dışındaki görüntü işleme hizmet sağlayıcısına gönderilir (KVKK md. 9); fotoğraf " +
       "saklanmaz, oluşturulan görseller 24 saat sonra silinir. Yorumlara eklediğiniz fotoğraflar salon sayfasında " +
       "herkese açık yayınlanır; yorumunuzu silmek için Müşteri Hizmetleri'ne yazabilirsiniz.",
@@ -65,7 +66,7 @@ export default function PrivacyScreen({ navigation }) {
       actions.setUser(updated);
     } catch (e) {
       setMarketing(!value);
-      Alert.alert("Kaydedilemedi", e.message);
+      toast.error("Kaydedilemedi", e.message);
     } finally {
       setSaving(false);
     }

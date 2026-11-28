@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from "react-native";
 import { authApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import { Button, Field } from "../components/ui";
 import { colors } from "../components/theme";
+import { toast } from "../components/Feedback";
 
 /** İki adım: e-postaya 6 haneli kod gönder → kod ve yeni şifreyle sıfırla. */
 export default function ForgotPasswordScreen({ navigation, route }) {
@@ -15,16 +16,16 @@ export default function ForgotPasswordScreen({ navigation, route }) {
 
   const sendCode = async () => {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
-      Alert.alert("Geçersiz e-posta", "Lütfen kayıtlı e-posta adresinizi girin.");
+      toast.error("Geçersiz e-posta", "Lütfen kayıtlı e-posta adresinizi girin.");
       return;
     }
     setLoading(true);
     try {
       const res = await authApi.forgotPassword(email.trim());
-      Alert.alert("Kod gönderildi", res.message);
+      toast.success("Kod gönderildi", res.message);
       setStep("reset");
     } catch (e) {
-      Alert.alert("Hata", e.message);
+      toast.error("Hata", e.message);
     } finally {
       setLoading(false);
     }
@@ -34,11 +35,10 @@ export default function ForgotPasswordScreen({ navigation, route }) {
     setLoading(true);
     try {
       const res = await authApi.resetPassword(email.trim(), code.trim(), password);
-      Alert.alert("Şifre güncellendi", res.message, [
-        { text: "Giriş yap", onPress: () => navigation.navigate("SignIn") },
-      ]);
+      navigation.navigate("SignIn");
+      toast.success("Şifre güncellendi", res.message);
     } catch (e) {
-      Alert.alert("Şifre sıfırlanamadı", e.message);
+      toast.error("Şifre sıfırlanamadı", e.message);
     } finally {
       setLoading(false);
     }

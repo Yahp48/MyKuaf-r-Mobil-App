@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useApp } from "../context/AppContext";
 import { orderApi, userApi } from "../services/api";
@@ -10,6 +10,7 @@ import { useRemote } from "../components/useRemote";
 import { colors, formatTL } from "../components/theme";
 import { LoadError, FormSkeleton } from "../components/Skeleton";
 import CardPicker from "../components/CardPicker";
+import { toast } from "../components/Feedback";
 
 export default function CheckoutScreen({ navigation }) {
   const { cart, user, actions } = useApp();
@@ -40,9 +41,9 @@ export default function CheckoutScreen({ navigation }) {
   };
 
   const placeOrder = async () => {
-    if (!selectedId) return Alert.alert("Adres gerekli", "Lütfen bir teslimat adresi ekleyin.");
+    if (!selectedId) return toast.error("Adres gerekli", "Lütfen bir teslimat adresi ekleyin.");
     if (!accepted)
-      return Alert.alert("Onay gerekli", "Ön bilgilendirme formunu ve mesafeli satış sözleşmesini onaylayın.");
+      return toast.error("Onay gerekli", "Ön bilgilendirme formunu ve mesafeli satış sözleşmesini onaylayın.");
     setPlacing(true);
     try {
       const { orders, payment, checkoutUrl } = await orderApi.create(
@@ -56,25 +57,25 @@ export default function CheckoutScreen({ navigation }) {
           ? `${orders.length} satıcıdan siparişleriniz`
           : `${orders[0].orderNumber} numaralı siparişiniz`;
       if (method === "WALLET") {
-        Alert.alert("Siparişiniz alındı 🎉", `${label} cüzdanınızdan ödendi.`);
+        toast.success("Siparişiniz alındı", `${label} cüzdanınızdan ödendi.`);
         return finish(orders);
       }
       const status = await openCheckout(checkoutUrl, payment.id);
       if (status === "SUCCEEDED") {
-        Alert.alert("Siparişiniz alındı 🎉", `${label} için ödeme alındı.`);
+        toast.success("Siparişiniz alındı", `${label} için ödeme alındı.`);
         finish(orders);
       } else if (status === "FAILED") {
-        Alert.alert("Ödeme başarısız", "Kartınızdan çekim yapılmadı, sepetiniz korunuyor. Lütfen tekrar deneyin.");
+        toast.error("Ödeme başarısız", "Kartınızdan çekim yapılmadı, sepetiniz korunuyor. Lütfen tekrar deneyin.");
         actions.refreshCart().catch(() => {});
       } else {
-        Alert.alert(
+        finish(orders);
+        toast.info(
           "Ödeme tamamlanmadı",
-          "Ödeme sayfasını kapattınız. Sipariş 30 dakika içinde ödenmezse otomatik iptal edilir ve sepetiniz korunur.",
-          [{ text: "Siparişi gör", onPress: () => finish(orders) }],
+          "Sipariş 30 dakika içinde ödenmezse otomatik iptal edilir; sepetiniz korunur.",
         );
       }
     } catch (e) {
-      Alert.alert("Sipariş oluşturulamadı", e.message);
+      toast.error("Sipariş oluşturulamadı", e.message);
       if (e.code === "CART_CHANGED" || e.code === "INSUFFICIENT_STOCK") navigation.goBack();
     } finally {
       setPlacing(false);

@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from "react-native";
 import { useApp } from "../context/AppContext";
 import { userApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import { Button, Checkbox, Field } from "../components/ui";
 import { colors } from "../components/theme";
+import { toast } from "../components/Feedback";
 
 export default function AddressFormScreen({ navigation, route }) {
   const { user } = useApp();
@@ -32,7 +33,7 @@ export default function AddressFormScreen({ navigation, route }) {
       else await userApi.addAddress(body);
       navigation.goBack();
     } catch (e) {
-      Alert.alert("Adres kaydedilemedi", e.message);
+      toast.error("Adres kaydedilemedi", e.message);
     } finally {
       setSaving(false);
     }

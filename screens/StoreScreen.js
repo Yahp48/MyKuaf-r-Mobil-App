@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
   RefreshControl,
@@ -15,13 +14,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "../context/AppContext";
 import { storeApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
-import BottomNav from "../components/BottomNav";
+import { BottomNavSpacer } from "../components/BottomNav";
 import ProductCard from "../components/ProductCard";
 import ProductFilterSheet, { SORTS } from "../components/ProductFilterSheet";
 import { DEFAULT_FILTERS, activeFilterCount, useProductList } from "../components/useProductList";
 import { useRemote } from "../components/useRemote";
 import { colors, formatTL } from "../components/theme";
 import { Bone, GridSkeleton, LoadError, SkeletonGroup } from "../components/Skeleton";
+import { toast } from "../components/Feedback";
 
 const initials = (name = "") =>
   name
@@ -53,12 +53,8 @@ export default function StoreScreen({ navigation, route }) {
     setAddingId(product.id);
     try {
       await actions.addToCart(product.id, 1);
-      Alert.alert("Sepete eklendi", product.name, [
-        { text: "Alışverişe devam", style: "cancel" },
-        { text: "Sepete git", onPress: () => navigation.navigate("ShoppingCart") },
-      ]);
     } catch (e) {
-      Alert.alert("Sepete eklenemedi", e.message);
+      toast.error("Sepete eklenemedi", e.message);
     } finally {
       setAddingId(null);
     }
@@ -202,7 +198,7 @@ export default function StoreScreen({ navigation, route }) {
           setSheet(false);
         }}
       />
-      <BottomNav active="Shop" />
+      <BottomNavSpacer />
     </View>
   );
 }

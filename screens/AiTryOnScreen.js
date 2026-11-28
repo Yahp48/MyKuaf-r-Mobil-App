@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
   ScrollView,
@@ -19,6 +18,7 @@ import { Button, Checkbox } from "../components/ui";
 import { colors } from "../components/theme";
 import { FACE_SHAPES } from "../components/tryon/catalog";
 import { tryonApi } from "../services/api";
+import { toast } from "../components/Feedback";
 
 const MAX_WAIT_MS = 3 * 60_000;
 
@@ -44,7 +44,7 @@ export default function AiTryOnScreen({ navigation, route }) {
         setConfig(c);
         setStyle(c.styles?.[0]?.key ?? null);
       })
-      .catch((e) => Alert.alert("Kullanılamıyor", e.message));
+      .catch((e) => toast.error("Kullanılamıyor", e.message));
     return () => {
       cancelled.current = true;
     };
@@ -66,7 +66,7 @@ export default function AiTryOnScreen({ navigation, route }) {
   }, []);
 
   const generate = async () => {
-    if (!consent) return Alert.alert("Onay gerekli", "Fotoğrafınızın işlenmesine onay vermelisiniz.");
+    if (!consent) return toast.error("Onay gerekli", "Fotoğrafınızın işlenmesine onay vermelisiniz.");
     setPhase("working");
     try {
       const { token } = await tryonApi.create(photoUri, style, color);
@@ -79,7 +79,7 @@ export default function AiTryOnScreen({ navigation, route }) {
         .catch(() => {});
     } catch (e) {
       setPhase("form");
-      if (!cancelled.current) Alert.alert("Oluşturulamadı", e.message);
+      if (!cancelled.current) toast.error("Oluşturulamadı", e.message);
     }
   };
 
@@ -90,7 +90,7 @@ export default function AiTryOnScreen({ navigation, route }) {
       const file = await File.downloadFileAsync(url, new File(dir, `stil-${Date.now()}.jpg`), { idempotent: true });
       await Sharing.shareAsync(file.uri, { mimeType: "image/jpeg", dialogTitle: "Yeni stilini paylaş" });
     } catch (e) {
-      Alert.alert("Paylaşılamadı", e.message);
+      toast.error("Paylaşılamadı", e.message);
     }
   };
 
