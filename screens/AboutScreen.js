@@ -6,6 +6,7 @@ import AppHeader from "../components/AppHeader";
 import BottomNav from "../components/BottomNav";
 import ContactList, { contactItems } from "../components/ContactList";
 import { colors } from "../components/theme";
+import { CompanyCard, useCompany } from "../components/CompanyInfo";
 
 const FEATURES = [
   { icon: "map-outline", text: "Yakınınızdaki salonları haritada görün, yol tarifi alın" },
@@ -17,6 +18,7 @@ const FEATURES = [
 
 export default function AboutScreen({ navigation }) {
   const version = Constants.expoConfig?.version ?? "1.0.0";
+  const company = useCompany();
   const build = Constants.expoConfig?.ios?.buildNumber ?? String(Constants.expoConfig?.android?.versionCode ?? "");
 
   return (
@@ -47,6 +49,13 @@ export default function AboutScreen({ navigation }) {
 
         <ContactSection />
 
+        {company ? (
+          <>
+            <Text style={styles.groupLabel}>HİZMET SAĞLAYICI</Text>
+            <CompanyCard company={company} />
+          </>
+        ) : null}
+
         <Text style={styles.groupLabel}>YASAL</Text>
         <View style={styles.card}>
           <LinkRow label="Gizlilik ve KVKK aydınlatma metni" onPress={() => navigation.navigate("Privacy")} />
@@ -70,7 +79,7 @@ export default function AboutScreen({ navigation }) {
           </Text>
         </View>
 
-        <Text style={styles.copyright}>© {new Date().getFullYear()} MyKuaför. Tüm hakları saklıdır.</Text>
+        <Text style={styles.copyright}>© {new Date().getFullYear()} {company?.legalName ?? "MyKuaför"}. Tüm hakları saklıdır.</Text>
       </ScrollView>
       <BottomNav active="Profile" />
     </View>

@@ -44,6 +44,16 @@ const schema = z
     SMTP_PASS: z.string().default(""),
     MAIL_FROM: z.string().default("MyKuaför <no-reply@mykuafor.app>"),
 
+    // Platformu işleten şirket (faturayı kesen taraf): uygulamada "Hakkında", KVKK ve panel yasal sayfalarında gösterilir
+    COMPANY_LEGAL_NAME: z.string().trim().default(""),
+    COMPANY_ADDRESS: z.string().trim().default(""),
+    COMPANY_TAX_OFFICE: z.string().trim().default(""),
+    COMPANY_TAX_NUMBER: z.string().trim().regex(/^(\d{10,11})?$/, "Vergi no 10 (VKN) veya 11 (TCKN) hane").default(""),
+    COMPANY_MERSIS: z.string().trim().regex(/^(\d{16})?$/, "MERSİS no 16 hane").default(""),
+    COMPANY_KEP: z.string().trim().default(""),
+    COMPANY_EMAIL: z.string().trim().default(""),
+    COMPANY_PHONE: z.string().trim().default(""),
+
     SHIPPING_FEE_CENTS: z.coerce.number().int().min(0).default(2999),
     FREE_SHIPPING_THRESHOLD_CENTS: z.coerce.number().int().min(0).default(50000),
     WALLET_MIN_TOPUP_CENTS: z.coerce.number().int().positive().default(5000),
@@ -64,6 +74,15 @@ const schema = z
           path: ["SMTP_HOST"],
           message: "Production ortamında şifre sıfırlama e-postaları için SMTP gerekli",
         });
+      }
+      for (const key of ["COMPANY_LEGAL_NAME", "COMPANY_ADDRESS", "COMPANY_TAX_NUMBER", "COMPANY_EMAIL"] as const) {
+        if (!v[key]) {
+          ctx.addIssue({
+            code: "custom",
+            path: [key],
+            message: "Production ortamında platformu işleten şirketin bilgileri zorunlu (6563 sayılı Kanun, KVKK)",
+          });
+        }
       }
       if (v.JWT_ACCESS_SECRET === v.JWT_REFRESH_SECRET) {
         ctx.addIssue({

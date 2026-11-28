@@ -14,5 +14,8 @@ export function testEnv() {
     PAYMENT_PROVIDER: "mock",
     PUBLIC_BASE_URL: "http://localhost:5000",
     GOOGLE_MAPS_SERVER_API_KEY: "",
+    COMPANY_LEGAL_NAME: "Test Platform A.Ş.",
+    COMPANY_ADDRESS: "",
+    COMPANY_EMAIL: "destek@example.test",
   };
 }

@@ -5,6 +5,7 @@ import { useApp } from "../context/AppContext";
 import { userApi } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import { colors } from "../components/theme";
+import { useCompany } from "../components/CompanyInfo";
 
 // Not: Metin genel çerçevedir; yayından önce hukukçuya gözden geçirtilmeli (bkz. CLAUDE.md "Bilinen eksikler").
 const SECTIONS = [
@@ -51,6 +52,7 @@ const SECTIONS = [
 
 export default function PrivacyScreen({ navigation }) {
   const { user, status, actions } = useApp();
+  const company = useCompany();
   const signedIn = status === "signedIn";
   const [marketing, setMarketing] = useState(!!user?.marketingOptIn);
   const [saving, setSaving] = useState(false);
@@ -133,8 +135,13 @@ export default function PrivacyScreen({ navigation }) {
         <Text style={styles.groupLabel}>KVKK AYDINLATMA METNİ</Text>
         <View style={[styles.card, styles.textCard]}>
           <Text style={styles.intro}>
-            MyKuaför olarak kişisel verilerinizi 6698 sayılı Kişisel Verilerin Korunması Kanunu'na uygun şekilde
-            işliyoruz. Bu metin, hangi verileri neden işlediğimizi ve haklarınızı özetler.
+            {company
+              ? `Veri sorumlusu ${company.legalName}${company.address ? ` (${company.address})` : ""} olarak, MyKuaför uygulamasında kişisel verilerinizi 6698 sayılı Kişisel Verilerin Korunması Kanunu'na uygun şekilde işliyoruz.`
+              : "MyKuaför olarak kişisel verilerinizi 6698 sayılı Kişisel Verilerin Korunması Kanunu'na uygun şekilde işliyoruz."}{" "}
+            Bu metin, hangi verileri neden işlediğimizi ve haklarınızı özetler.
+            {company?.email || company?.kep
+              ? ` Başvurularınızı ${[company.email, company.kep && `KEP: ${company.kep}`].filter(Boolean).join(" veya ")} adresine iletebilirsiniz.`
+              : ""}
           </Text>
           {SECTIONS.map((s) => (
             <View key={s.title} style={styles.section}>

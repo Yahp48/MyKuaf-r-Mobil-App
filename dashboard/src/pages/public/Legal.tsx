@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { usePageMeta } from "../../lib/seo";
 import { PublicLayout } from "./PublicLayout";
+import { CompanyFacts } from "../../components/Company";
 
 // Not: Bu metinler genel çerçevedir; yayından önce bir hukukçuya gözden geçirtilmelidir.
 
@@ -47,6 +48,7 @@ export function Kvkk() {
           itiraz etme ve zararın giderilmesini talep etme haklarına sahipsiniz. Başvurularınızı panel içindeki destek
           kanalından veya kayıtlı e-posta adresinizden iletebilirsiniz.
         </p>
+        <CompanyFacts title="Veri sorumlusu" />
         <p>
           <Link to="/">Ana sayfaya dön</Link>
         </p>
@@ -108,6 +110,7 @@ export function NotFound() {
         <div className="label">404</div>
         <h1>Bu sayfa defterde yok.</h1>
         <p>Aradığınız sayfa taşınmış veya hiç var olmamış olabilir.</p>
+        <CompanyFacts title="Hizmet sağlayıcı" />
         <p>
           <Link to="/">Ana sayfaya dön</Link>
         </p>

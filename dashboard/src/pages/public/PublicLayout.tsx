@@ -1,9 +1,11 @@
+import { useCompany } from "../../components/Company";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { LinkButton } from "../../components/ui";
 
 export function PublicLayout({ children, hideNav }: { children: ReactNode; hideNav?: boolean }) {
   const year = new Date().getFullYear();
+  const company = useCompany();
   return (
     <div className="public">
       <header className="public-top">
@@ -27,7 +29,7 @@ export function PublicLayout({ children, hideNav }: { children: ReactNode; hideN
       </header>
       {children}
       <footer className="public-foot">
-        <span>© {year} MyKuaför</span>
+        <span>© {year} {company?.legalName ?? "MyKuaför"}</span>
         <Link to="/kvkk">KVKK aydınlatma metni</Link>
         <Link to="/hizmet-sozlesmesi">İşletme hizmet sözleşmesi</Link>
         <span>

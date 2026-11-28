@@ -9,8 +9,11 @@ Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kuralları
 - Kök dizin: Expo mobil uygulaması (saf JavaScript) — müşteriler
 - `backend/`: Node.js + TypeScript API (ayrıntılar `backend/README.md`)
 - `dashboard/`: işletme paneli, React + Vite + TypeScript (ayrıntılar `dashboard/README.md`, tasarım `dashboard/DESIGN.md`)
-- İki işletme türü: `SALON` (kuaför) ve `SELLER` (ürün satıcısı). Hesap rolü `BUSINESS_OWNER`;
+- İki işletme türü: `SALON` (hizmet işletmesi) ve `SELLER` (ürün satıcısı). Hesap rolü `BUSINESS_OWNER`;
   işletme hesapları mobil uygulamaya, müşteri hesapları panele giremez
+- Hizmet işletmesi alt türü `Salon.kind`: HAIR (kuaför), BEAUTY, NAIL, SKIN, MASSAGE (kadınlara özel spa), BROW_LASH, MAKEUP.
+  Panel türe göre uyarlanır (`dashboard/src/lib/kinds.ts`); hazır hizmet kataloğu `backend/src/modules/catalog/services.ts`
+  (tıbbi işlemler — dolgu, botoks — bilerek yok). Masaj işletmesi rehbere OSM'den alınmaz, yalnızca doğrulanmış kayıtla
 
 ## Mobil teknoloji
 - Expo SDK 58, React Native 0.88, React 19.3 (Expo Go mağaza sürümü yalnızca güncel SDK'yı açar)
@@ -21,7 +24,8 @@ Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kuralları
   `order:updated`, `notification:new`; ekranlarda `useRealtimeEvent` ile dinlenir
 - API: `services/api.js` tek istemci. Yenileme token'ı `expo-secure-store`'da, erişim token'ı bellekte; 401'de otomatik yenileme
 - API adresi: `config.js` → `.env`'deki `EXPO_PUBLIC_API_URL`; geliştirmede boşsa Expo host IP'si:5000
-- Ödeme: `services/checkout.js` sağlayıcının güvenli sayfasını `expo-web-browser` ile açar, sonucu sunucudan sorgular.
+- Ödeme: `services/checkout.js` sağlayıcının güvenli sayfasını uygulama içi pencerede açar (`components/PaymentSheet.js`,
+  App kökünde `<PaymentHost />`; WebView, dönüş adresini yakalar), sonucu sunucudan sorgular.
   Uygulama kart bilgisi ASLA toplamaz (PCI-DSS)
 - Ortak bileşenler: `components/` (AppHeader, BottomNav, DraggableSheet, SalonSheet, PhotoViewer, ProductCard, ContactList, ui.js, theme.js, useRemote.js)
 - Canlı deneme (alt menüde "Dene", `screens/TryOnScreen.js`): WebView içinde MediaPipe Tasks Vision
@@ -41,6 +45,9 @@ Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kuralları
 - Ürün rozetleri (`backend/src/modules/products/metrics.ts`) yalnızca gerçek satış/favori verisinden; mağaza logosunu satıcı kendisi yükler
 - İndirim: hizmet başına yüzde + tarih aralığı; fiyat randevu gününe göre sunucuda hesaplanır (`backend/src/modules/salons/discount.ts`).
   Son 30 günde fiyatı artırılan hizmette indirim yok, indirim sürerken fiyat artırılamaz
+- Şirket bilgisi (faturayı kesen taraf, Symmetry Group): backend `.env` → `COMPANY_*`, API `/api/meta/company`;
+  uygulamada Hakkında + KVKK, panelde yasal sayfalar. Boşsa gösterilmez; production'da zorunlu
+- iOS: `app.config.js` → `ios.privacyManifests` (izleme yok, konum cihazda kalır); iOS haritası Apple Maps
 - Tasarım: tek vurgu rengi `#C9184A` (`colors.primary`), beyaz başlık ve alt menü, gri yüzey üzerinde gruplu kartlar,
   Ionicons çizgi ikonlar. Renkleri ekranlara sabit yazma; `components/theme.js`'ten al
 
@@ -57,11 +64,12 @@ Mobil (kök dizin):
 - `npx expo-doctor` — bağımlılık/yapılandırma kontrolü
 Backend (`backend/`):
 - `docker compose up -d` (PostgreSQL), `npm run db:deploy`, `npm run db:seed`, `npm run dev`
-- `npm test` (76 test, `mykuafor_test` veritabanı), `npm run typecheck`
+- `npm test` (78 test, `mykuafor_test` veritabanı), `npm run typecheck`
 - Şema değişikliği: `prisma/schema.prisma` düzenle → `npm run db:migrate -- --name <ad>`
 - Demo hesapları (yalnızca yerel seed, şifre `Demo12345`): müşteri `demo@mykuafor.test`,
   kuaför paneli `salon@mykuafor.test` ("MyKuaför Demo Salon", Kadıköy), satıcı paneli `satici@mykuafor.test`,
-  yönetim paneli `admin@mykuafor.test` (/yonetim). Production'da yönetici: `npm run admin:create -- <e-posta> "<Ad>"`
+  yönetim paneli `admin@mykuafor.test` (/yonetim). Her işletme türü için örnek işletme ("Örnek …"):
+  `guzellik@`, `tirnak@`, `cilt@`, `spa@`, `kirpik@`, `makyaj@` (hepsi `mykuafor.test`). Production'da yönetici: `npm run admin:create -- <e-posta> "<Ad>"`
 Panel (`dashboard/`): `npm run dev` (http://localhost:5173, /api'yi :5000'e yönlendirir), `npm run build`
 Telefonla test: backend `.env` → `PUBLIC_BASE_URL=http://<bilgisayar-IP>:5000`; `npx expo start` → Expo Go ile QR
 
@@ -77,7 +85,7 @@ Telefonla test: backend `.env` → `PUBLIC_BASE_URL=http://<bilgisayar-IP>:5000`
 ## Bilinen eksikler / sıradaki işler
 1. iyzico ödeme entegrasyonu (üye işyeri hesabı ve API anahtarı gerekli) — `backend/src/modules/payments/providers.ts`
 3. Production altyapısı: barındırma, alan adı + HTTPS, SMTP, EAS projectId (push bildirimleri için)
-4. Gerçek içerik: KVKK metni (PrivacyScreen) ve mesafeli satış sözleşmesi hukukçu onayından geçmeli;
+4. Gerçek içerik: Symmetry Group'un tam ticari unvanı, adresi, VKN, MERSİS, KEP → `COMPANY_*`; KVKK metni (PrivacyScreen) ve mesafeli satış sözleşmesi hukukçu onayından geçmeli;
    destek telefonu/WhatsApp/e-posta/sosyal medya `.env` → `EXPO_PUBLIC_SUPPORT_*` ile girilmeli (boşsa gösterilmez)
 5. Görsel yükleme yerel diskte (`backend/uploads`); production'da S3 uyumlu depolamaya taşınmalı
 6. Panel alan adı (`isletme.mykuafor.app`) index.html, robots.txt ve sitemap.xml'de yer tutucu

@@ -80,3 +80,10 @@ describe("rehber kayıtları (gerçek salon, online randevu yok)", () => {
     expect(list.body.items.find((s: { id: string }) => s.id === listing.id)).toBeUndefined();
   });
 });
+
+describe("şirket bilgisi", () => {
+  it("platformu işleten şirketi yalnızca dolu alanlarla döner", async () => {
+    const res = await api().get("/api/meta/company").expect(200);
+    expect(res.body.company).toMatchObject({ legalName: "Test Platform A.Ş.", email: "destek@example.test", address: null });
+  });
+});

@@ -30,6 +30,7 @@ import { businessAuthRouter } from "./modules/business/auth.ts";
 import { salonPanelRouter } from "./modules/business/salon.ts";
 import { sellerPanelRouter } from "./modules/business/seller.ts";
 import { businessCommonRouter, UPLOAD_DIR } from "./modules/business/common.ts";
+import { metaRouter } from "./modules/meta/routes.ts";
 
 export const corsOrigins = env.CORS_ORIGINS.split(",")
   .map((s) => s.trim())
@@ -89,6 +90,7 @@ export function createApp() {
   api.use("/notifications", notificationsRouter);
   api.use("/support", supportRouter);
   api.use("/maps", mapsRouter);
+  api.use("/meta", metaRouter);
   api.use("/business/auth", businessAuthRouter);
   api.use("/business/salon", salonPanelRouter);
   api.use("/business/seller", sellerPanelRouter);

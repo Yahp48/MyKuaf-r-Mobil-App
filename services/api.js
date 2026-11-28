@@ -203,6 +203,10 @@ export const tryonApi = {
   poll: (token) => get(`/tryon/ai/${encodeURIComponent(token)}`),
 };
 
+export const metaApi = {
+  company: () => get("/meta/company"),
+};
+
 export const loyaltyApi = {
   get: () => get("/loyalty"),
   redeem: (points) => post("/loyalty/redeem", { points }),
