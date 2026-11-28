@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 
 export interface Company {
   legalName: string;
+  shortName: string;
   address: string | null;
   taxOffice: string | null;
   taxNumber: string | null;

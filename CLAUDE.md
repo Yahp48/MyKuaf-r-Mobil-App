@@ -93,7 +93,10 @@ Telefonla test: backend `.env` → `PUBLIC_BASE_URL=http://<bilgisayar-IP>:5000`
 ## Bilinen eksikler / sıradaki işler
 1. iyzico ödeme entegrasyonu (üye işyeri hesabı ve API anahtarı gerekli) — `backend/src/modules/payments/providers.ts`
 3. Production altyapısı: barındırma, alan adı + HTTPS, SMTP, EAS projectId (push bildirimleri için)
-4. Gerçek içerik: Symmetry Group'un tam ticari unvanı, adresi, VKN, MERSİS, KEP → `COMPANY_*`; KVKK metni (PrivacyScreen) ve mesafeli satış sözleşmesi hukukçu onayından geçmeli;
+4. Gerçek içerik: şirket bilgileri yerel `.env`'de girildi; production ortamına da aynen girilmeli:
+   unvan "SYMMETRY GROUP TERCÜME-TURİZM-TASARIM-YAZILIM-MATBAA-REKLAM SANATLARI İÇ ve DIŞ TİC. LTD. ŞTİ.",
+   kısa ad "Symmetry Group Ltd. Şti.", adres "İstiklal Cad. No:36-1 K:4 D:19 Beyoğlu/İstanbul", Beyoğlu VD 7840321396.
+   EKSİK: `COMPANY_EMAIL` (production'da zorunlu), `COMPANY_MERSIS`, `COMPANY_KEP`, `COMPANY_PHONE`; KVKK metni (PrivacyScreen) ve mesafeli satış sözleşmesi hukukçu onayından geçmeli;
    destek telefonu/WhatsApp/e-posta/sosyal medya `.env` → `EXPO_PUBLIC_SUPPORT_*` ile girilmeli (boşsa gösterilmez)
 5. Görsel yükleme yerel diskte (`backend/uploads`); production'da S3 uyumlu depolamaya taşınmalı
 6. Panel alan adı (`isletme.mykuafor.app`) index.html, robots.txt ve sitemap.xml'de yer tutucu

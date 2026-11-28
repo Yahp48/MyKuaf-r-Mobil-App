@@ -1,11 +1,12 @@
 import { Link } from "react-router";
 import { usePageMeta } from "../../lib/seo";
 import { PublicLayout } from "./PublicLayout";
-import { CompanyFacts } from "../../components/Company";
+import { CompanyFacts, useCompany } from "../../components/Company";
 
 // Not: Bu metinler genel çerçevedir; yayından önce bir hukukçuya gözden geçirtilmelidir.
 
 export function Kvkk() {
+  const company = useCompany();
   usePageMeta({
     title: "KVKK aydınlatma metni",
     description: "MyKuaför işletme hesapları için 6698 sayılı KVKK kapsamında aydınlatma metni.",
@@ -18,8 +19,9 @@ export function Kvkk() {
         <div className="label">Kişisel verilerin korunması</div>
         <h1>KVKK aydınlatma metni</h1>
         <p>
-          Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu'nun 10. maddesi uyarınca, MyKuaför işletme paneline
-          kayıt olan işletme yetkililerinin kişisel verilerinin işlenmesine ilişkin olarak hazırlanmıştır.
+          Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu'nun 10. maddesi uyarınca veri sorumlusu{" "}
+          {company?.legalName ?? "MyKuaför"} tarafından, MyKuaför işletme paneline kayıt olan işletme yetkililerinin
+          kişisel verilerinin işlenmesine ilişkin olarak hazırlanmıştır.
         </p>
         <h2>İşlenen veriler</h2>
         <ul>
@@ -58,6 +60,7 @@ export function Kvkk() {
 }
 
 export function Terms() {
+  const company = useCompany();
   usePageMeta({
     title: "İşletme hizmet sözleşmesi",
     description: "MyKuaför işletme paneli kullanım koşulları.",
@@ -71,8 +74,10 @@ export function Terms() {
         <h1>İşletme hizmet sözleşmesi</h1>
         <h2>1. Taraflar ve konu</h2>
         <p>
-          Bu sözleşme, MyKuaför platformu ile panele kayıt olan kuaför salonu veya ürün satıcısı işletme arasında,
-          işletmenin randevu ve ürün satış hizmetlerini platform üzerinden sunmasına ilişkin koşulları düzenler.
+          Bu sözleşme, MyKuaför platformunu işleten {company?.legalName ?? "platform işletmecisi"} ile panele kayıt
+          olan hizmet işletmesi (kuaför, güzellik merkezi, tırnak, cilt bakımı, kaş-kirpik, makyaj, kadınlara özel
+          spa) veya ürün satıcısı arasında, işletmenin randevu ve ürün satış hizmetlerini platform üzerinden sunmasına
+          ilişkin koşulları düzenler.
         </p>
         <h2>2. İşletmenin yükümlülükleri</h2>
         <ul>
@@ -97,6 +102,7 @@ export function Terms() {
           İşletme, platformdan edindiği müşteri bilgilerini yalnızca ilgili randevu veya siparişin yerine getirilmesi
           için kullanır; ayrıntılar <Link to="/kvkk">KVKK aydınlatma metninde</Link> yer alır.
         </p>
+        <CompanyFacts title="Hizmet sağlayıcı" />
       </article>
     </PublicLayout>
   );
@@ -110,7 +116,6 @@ export function NotFound() {
         <div className="label">404</div>
         <h1>Bu sayfa defterde yok.</h1>
         <p>Aradığınız sayfa taşınmış veya hiç var olmamış olabilir.</p>
-        <CompanyFacts title="Hizmet sağlayıcı" />
         <p>
           <Link to="/">Ana sayfaya dön</Link>
         </p>

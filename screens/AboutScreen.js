@@ -80,7 +80,7 @@ export default function AboutScreen({ navigation }) {
         </View>
 
         <Text style={styles.copyright}>
-          © {new Date().getFullYear()} {company?.legalName ?? "MyKuaför"}. Tüm hakları saklıdır.
+          © {new Date().getFullYear()} {company?.shortName ?? "MyKuaför"}. Tüm hakları saklıdır.
         </Text>
       </ScrollView>
       <BottomNavSpacer />

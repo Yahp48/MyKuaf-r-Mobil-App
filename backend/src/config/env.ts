@@ -46,6 +46,8 @@ const schema = z
 
     // Platformu işleten şirket (faturayı kesen taraf): uygulamada "Hakkında", KVKK ve panel yasal sayfalarında gösterilir
     COMPANY_LEGAL_NAME: z.string().trim().default(""),
+    // Kısa ad (telif satırı, alt bilgi); boşsa tam unvan kullanılır
+    COMPANY_SHORT_NAME: z.string().trim().default(""),
     COMPANY_ADDRESS: z.string().trim().default(""),
     COMPANY_TAX_OFFICE: z.string().trim().default(""),
     COMPANY_TAX_NUMBER: z.string().trim().regex(/^(\d{10,11})?$/, "Vergi no 10 (VKN) veya 11 (TCKN) hane").default(""),

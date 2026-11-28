@@ -11,6 +11,7 @@ export function companyInfo() {
   const opt = (v: string) => v || null;
   return {
     legalName: env.COMPANY_LEGAL_NAME,
+    shortName: env.COMPANY_SHORT_NAME || env.COMPANY_LEGAL_NAME,
     address: opt(env.COMPANY_ADDRESS),
     taxOffice: opt(env.COMPANY_TAX_OFFICE),
     taxNumber: opt(env.COMPANY_TAX_NUMBER),
@@ -24,6 +25,6 @@ export function companyInfo() {
 export const metaRouter = Router();
 
 metaRouter.get("/company", (_req, res) => {
-  res.set("Cache-Control", "public, max-age=3600");
+  res.set("Cache-Control", "public, max-age=300");
   res.json({ company: companyInfo() });
 });
