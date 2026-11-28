@@ -269,7 +269,7 @@ describe("kuaför paneli", () => {
     expect(pub.body.salon).toMatchObject({
       photos,
       photo: photos[0],
-      kindLabel: "Güzellik salonu",
+      kindLabel: "Güzellik merkezi",
       whatsapp: "05551234567",
       priceRange: { min: 250, max: 250 },
     });
@@ -731,5 +731,37 @@ describe("yönetici paneli", () => {
       .set(admin)
       .send({ reply: "Randevularım ekranından iptal edip yeniden alabilirsiniz." });
     expect(await prisma.notification.count({ where: { userId: u.user.id, type: "support_reply" } })).toBe(1);
+  });
+});
+
+describe("hazır hizmet kataloğu ve işletme türleri", () => {
+  it("türüne göre önerilen kategoriler önce gelir; katalogdan toplu eklenir, aynı ad tekrar eklenmez", async () => {
+    const b = await registerBusiness("SALON");
+    await api().patch("/api/business/salon/profile").set(b.auth).send({ kind: "NAIL" });
+    const t = await api().get("/api/business/salon/service-templates").set(b.auth);
+    expect(t.status).toBe(200);
+    expect(t.body.items[0].recommended).toBe(true);
+    expect(["manikur-pedikur", "kalici-oje", "protez-tirnak"]).toContain(t.body.items[0].key);
+    const body = {
+      items: [
+        { name: "Kalıcı oje (el)", category: "Kalıcı oje", durationMinutes: 45, price: 450 },
+        { name: "Klasik manikür", category: "Manikür ve pedikür", durationMinutes: 30, price: 300 },
+      ],
+    };
+    expect((await api().post("/api/business/salon/services/bulk").set(b.auth).send(body)).body).toEqual({
+      added: 2,
+      skipped: 0,
+    });
+    expect((await api().post("/api/business/salon/services/bulk").set(b.auth).send(body)).body).toEqual({
+      added: 0,
+      skipped: 2,
+    });
+    await api().post("/api/business/salon/staff").set(b.auth).send({ name: "Elif" });
+    const list = await api().get("/api/salons").query({ kind: "NAIL" });
+    expect(list.body.items[0]).toMatchObject({ kind: "NAIL", kindLabel: "Tırnak stüdyosu" });
+    const search = await api().get("/api/salons").query({ q: "kalıcı oje" });
+    expect(search.body.items.map((s: { id: string }) => s.id)).toContain(b.salon.id);
+    const detail = await api().get(`/api/salons/${b.salon.id}`);
+    expect(detail.body.salon.services[0].category).toBeTruthy();
   });
 });

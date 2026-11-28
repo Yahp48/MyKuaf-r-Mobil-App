@@ -13,6 +13,7 @@ import { broadcast, emitToBusiness, emitToUser } from "../../realtime/socket.ts"
 import { notify } from "../notifications/notify.ts";
 import { ACTIVE_APPOINTMENT_STATUSES, computeAvailability, resolveServices, salonDay } from "../salons/availability.ts";
 import { discountedCents, isoDay, todayIn } from "../salons/discount.ts";
+import { catalogFor } from "../catalog/services.ts";
 import { notifyWaitlist } from "../appointments/jobs.ts";
 import { onAppointmentCompleted } from "../loyalty/service.ts";
 import { serializeSalonProfile } from "./serialize.ts";
@@ -630,6 +631,7 @@ const serviceSchema = z.object({
   description: z.string().trim().max(300).optional().nullable(),
   durationMinutes: z.number().int().min(5, "En az 5 dakika").max(600, "En fazla 10 saat"),
   price: z.number().min(0).max(100_000).multipleOf(0.01),
+  category: z.string().trim().max(60).optional().nullable(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0).max(999).optional(),
   // İndirim: üçü birlikte verilir; null → indirimi kaldır
@@ -650,6 +652,7 @@ const MAX_DISCOUNT_DAYS = 90;
 type ServiceRow = {
   id: string;
   name: string;
+  category: string | null;
   description: string | null;
   durationMinutes: number;
   priceCents: number;
@@ -668,6 +671,7 @@ const serializeSvc = (s: ServiceRow, today: string) => {
   return {
     id: s.id,
     name: s.name,
+    category: s.category,
     description: s.description,
     durationMinutes: s.durationMinutes,
     price: toTL(s.priceCents),
@@ -846,6 +850,67 @@ salonPanelRouter.post("/claims", async (req, res) => {
   res.status(201).json({ claim: { id: claim.id, status: claim.status } });
 });
 
+// ───────────── Hazır hizmet kataloğu ─────────────
+
+/** İşletme türüne göre önerilen hizmetler (fiyatsız; işletme fiyatı kendisi girer). */
+salonPanelRouter.get("/service-templates", async (req, res) => {
+  const salon = salonOf(req);
+  const existing = new Set(
+    (await prisma.service.findMany({ where: { salonId: salon.id }, select: { name: true } })).map((s) =>
+      s.name.toLocaleLowerCase("tr-TR"),
+    ),
+  );
+  res.json({
+    items: catalogFor(salon.kind).map((c) => ({
+      key: c.key,
+      name: c.name,
+      recommended: c.kinds.includes(salon.kind),
+      items: c.items.map((x) => ({ ...x, added: existing.has(x.name.toLocaleLowerCase("tr-TR")) })),
+    })),
+  });
+});
+
+const bulkSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        name: z.string().trim().min(2).max(80),
+        category: z.string().trim().max(60).nullable(),
+        durationMinutes: z.number().int().min(5).max(600),
+        price: z.number().min(0).max(100_000).multipleOf(0.01),
+        description: z.string().trim().max(300).optional(),
+      }),
+    )
+    .min(1, "En az bir hizmet seçin")
+    .max(100),
+});
+
+/** Katalogdan toplu hizmet ekleme. Aynı adlı hizmet zaten varsa atlanır. */
+salonPanelRouter.post("/services/bulk", async (req, res) => {
+  const salon = salonOf(req);
+  const { items } = parse(bulkSchema, req.body);
+  const existing = new Set(
+    (await prisma.service.findMany({ where: { salonId: salon.id }, select: { name: true } })).map((s) =>
+      s.name.toLocaleLowerCase("tr-TR"),
+    ),
+  );
+  const fresh = items.filter((x) => !existing.has(x.name.toLocaleLowerCase("tr-TR")));
+  const base = await prisma.service.count({ where: { salonId: salon.id } });
+  await prisma.service.createMany({
+    data: fresh.map((x, n) => ({
+      salonId: salon.id,
+      name: x.name,
+      category: x.category,
+      durationMinutes: x.durationMinutes,
+      priceCents: fromTL(x.price),
+      description: x.description,
+      sortOrder: base + n,
+    })),
+  });
+  salonChanged(salon);
+  res.status(201).json({ added: fresh.length, skipped: items.length - fresh.length });
+});
+
 // ───────────── Paketler ─────────────
 
 const packageSchema = z.object({
@@ -1019,7 +1084,7 @@ const profileSchema = z
     longitude: z.number().min(25).max(45),
     coverImageUrl: z.string().url().max(500).nullable(),
     photos: z.array(z.string().url().max(500)).max(12, "En fazla 12 fotoğraf"),
-    kind: z.enum(["WOMEN", "BEAUTY"]),
+    kind: z.enum(["HAIR", "BEAUTY", "NAIL", "SKIN", "MASSAGE", "BROW_LASH", "MAKEUP"]),
     whatsapp: zPhone.nullable(),
     firstVisitDiscountPercent: z.number().int().min(5, "En az %5").max(50, "En fazla %50").nullable(),
     isActive: z.boolean(),

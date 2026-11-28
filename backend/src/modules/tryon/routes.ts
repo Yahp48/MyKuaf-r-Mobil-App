@@ -112,7 +112,11 @@ tryonRouter.post("/ai", imageUpload.single("image"), async (req, res) => {
   }
 
   const form = new FormData();
-  form.append("image", new Blob([new Uint8Array(buf)], { type: ext === "png" ? "image/png" : "image/jpeg" }), `photo.${ext}`);
+  form.append(
+    "image",
+    new Blob([new Uint8Array(buf)], { type: ext === "png" ? "image/png" : "image/jpeg" }),
+    `photo.${ext}`,
+  );
   form.append("hair_style", body.hairStyle);
   form.append("color", body.color);
   let data: { task_id?: string; error_detail?: { code?: string | number; message?: string } };

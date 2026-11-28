@@ -28,6 +28,7 @@ const listSchema = zPagination.extend({
   lat: z.coerce.number().min(-90).max(90).optional(),
   lng: z.coerce.number().min(-180).max(180).optional(),
   radiusKm: z.coerce.number().positive().max(500).optional(),
+  kind: z.enum(["HAIR", "BEAUTY", "NAIL", "SKIN", "MASSAGE", "BROW_LASH", "MAKEUP"]).optional(),
 });
 
 salonsRouter.get("/", optionalAuth, async (req, res) => {
@@ -35,7 +36,16 @@ salonsRouter.get("/", optionalAuth, async (req, res) => {
   const where = {
     ...visibleSalonWhere,
     ...(query.city ? { city: { equals: query.city, mode: "insensitive" as const } } : {}),
-    ...(query.q ? { name: { contains: query.q, mode: "insensitive" as const } } : {}),
+    ...(query.q
+      ? {
+          OR: [
+            { name: { contains: query.q, mode: "insensitive" as const } },
+            { district: { contains: query.q, mode: "insensitive" as const } },
+            { services: { some: { isActive: true, name: { contains: query.q, mode: "insensitive" as const } } } },
+          ],
+        }
+      : {}),
+    ...(query.kind ? { kind: query.kind } : {}),
   };
 
   const favoriteIds = req.user

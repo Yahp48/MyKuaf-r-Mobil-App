@@ -40,9 +40,15 @@ export function openStatus(timezone: string, hours: Hours[], now = new Date()) {
   };
 }
 
+/** İşletme türlerinin uygulamada görünen adları. */
 export const SALON_KIND_LABEL = {
-  WOMEN: "Kuaför",
-  BEAUTY: "Güzellik salonu",
+  HAIR: "Kuaför",
+  BEAUTY: "Güzellik merkezi",
+  NAIL: "Tırnak stüdyosu",
+  SKIN: "Cilt bakım merkezi",
+  MASSAGE: "Masaj ve spa",
+  BROW_LASH: "Kaş ve kirpik stüdyosu",
+  MAKEUP: "Makyaj stüdyosu",
 } as const;
 
 /** İki koordinat arası kuş uçuşu mesafe (km). */
@@ -132,11 +138,18 @@ export const serializeWorkingHours = (hours: Hours[]) =>
     }));
 
 export const serializeService = (
-  s: Discountable & { id: string; name: string; description: string | null; durationMinutes: number },
+  s: Discountable & {
+    id: string;
+    name: string;
+    description: string | null;
+    durationMinutes: number;
+    category?: string | null;
+  },
   today: string,
 ) => ({
   id: s.id,
   name: s.name,
+  category: s.category ?? null,
   description: s.description,
   durationMinutes: s.durationMinutes,
   price: toTL(s.priceCents),

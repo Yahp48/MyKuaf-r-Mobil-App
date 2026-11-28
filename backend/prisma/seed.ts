@@ -22,7 +22,7 @@ const salonImg = (id: string) => `https://images.unsplash.com/${id}?w=1000&h=700
 // Gerçek salonlar prisma/data/istanbul-salons.ts (OpenStreetMap) içindedir ve rehber kaydı olarak eklenir.
 const demoSalon = {
   slug: "mykuafor-demo-salon",
-  kind: "WOMEN" as const,
+  kind: "HAIR" as const,
   photos: [
     salonImg("photo-1560066984-138dadb4c035"),
     salonImg("photo-1522337360788-8b13dee7a37e"),

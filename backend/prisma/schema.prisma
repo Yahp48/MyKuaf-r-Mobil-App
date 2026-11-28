@@ -184,9 +184,15 @@ model PasswordReset {
 
 // ───────────────────────────── Salon & randevu ─────────────────────────────
 
+/// İşletme türü (hepsi kadınlara yönelik hizmet verir)
 enum SalonKind {
-  WOMEN
+  HAIR
   BEAUTY
+  NAIL
+  SKIN
+  MASSAGE
+  BROW_LASH
+  MAKEUP
 }
 
 model Salon {
@@ -213,7 +219,7 @@ model Salon {
   coverImageUrl             String?
   // Salon fotoğrafları (ilki vitrin); işletme panelinden yüklenir
   photos                    String[]  @default([])
-  kind                      SalonKind @default(WOMEN)
+  kind                      SalonKind @default(HAIR)
   whatsapp                  String?
   slotIntervalMinutes       Int       @default(30)
   // Randevu başlangıcına en az bu kadar dakika kala alınabilir.
@@ -298,6 +304,8 @@ model Service {
   description     String?
   durationMinutes Int
   priceCents      Int
+  // Menüde gruplama (ör. "Boya ve renk", "Manikür ve pedikür")
+  category        String?
   isActive        Boolean  @default(true)
   sortOrder       Int      @default(0)
   createdAt       DateTime @default(now()) @db.Timestamptz(3)
