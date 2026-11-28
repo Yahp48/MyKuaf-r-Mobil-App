@@ -65,7 +65,10 @@ Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kuralları
 - Express 5, PostgreSQL 17 + Prisma ORM 7 (driver adapter `@prisma/adapter-pg`), Zod 4, JWT + Argon2id
 - Para kuruş cinsinden Int; API'de TL ondalık. Fiyatlar her zaman sunucuda hesaplanır
 - Çift rezervasyon PostgreSQL exclusion constraint ile engellenir (migration'da elle eklenmiş SQL)
-- Ödeme sağlayıcısı soyut: `PAYMENT_PROVIDER=mock` (geliştirme) | `iyzico` (henüz yazılmadı). Production'da mock yasak
+- Ödeme sağlayıcısı soyut (`payments/providers.ts`): `PAYMENT_PROVIDER=mock` (geliştirme) | `paytr` (iFrame API: bizim
+  barındırdığımız sayfada PayTR iframe'i, hash'li bildirim `POST /api/payments/paytr/callback`, iade, durum sorgusu;
+  `PAYTR_TEST_MODE=1` denemede) | `iyzico` (yazılmadı). Production'da mock ve PayTR test modu yasak.
+  PayTR iFrame kart saklamaz → `supportsSavedCards=false`, "Kayıtlı kartlarım" gizlenir
 
 ## Komutlar
 Mobil (kök dizin):
@@ -93,7 +96,10 @@ Telefonla test: backend `.env` → `PUBLIC_BASE_URL=http://<bilgisayar-IP>:5000`
 - Her adım ayrı commit; doğrulama: mobil bundle + `backend` testleri
 
 ## Bilinen eksikler / sıradaki işler
-1. iyzico ödeme entegrasyonu (üye işyeri hesabı ve API anahtarı gerekli) — `backend/src/modules/payments/providers.ts`
+1. PayTR mağaza hesabı: başvuru → panel BİLGİ sayfasındaki `PAYTR_MERCHANT_ID/KEY/SALT`, panelde Bildirim URL'si.
+   Satıcılara para bölüşümü için PayTR Pazaryeri (platform transfer API) ayrıca entegre edilmeli
+2. Cüzdana kartla para yükleme elektronik para sayılabilir (6493 sayılı Kanun, lisans gerekir): yayından önce
+   kaldırılmalı veya hukukçuya sorulmalı (iade/puan bakiyesi ayrı tutulabilir)
 3. Production altyapısı: barındırma, alan adı + HTTPS, SMTP, EAS projectId (push bildirimleri için)
 4. Gerçek içerik: şirket bilgileri yerel `.env`'de girildi; production ortamına da aynen girilmeli:
    unvan "SYMMETRY GROUP TERCÜME-TURİZM-TASARIM-YAZILIM-MATBAA-REKLAM SANATLARI İÇ ve DIŞ TİC. LTD. ŞTİ.",
@@ -101,4 +107,7 @@ Telefonla test: backend `.env` → `PUBLIC_BASE_URL=http://<bilgisayar-IP>:5000`
    EKSİK: `COMPANY_EMAIL` (production'da zorunlu), `COMPANY_MERSIS`, `COMPANY_KEP`, `COMPANY_PHONE`; KVKK metni (PrivacyScreen) ve mesafeli satış sözleşmesi hukukçu onayından geçmeli;
    destek telefonu/WhatsApp/e-posta/sosyal medya `.env` → `EXPO_PUBLIC_SUPPORT_*` ile girilmeli (boşsa gösterilmez)
 5. Görsel yükleme yerel diskte (`backend/uploads`); production'da S3 uyumlu depolamaya taşınmalı
+7. Simge geçici (`scripts/make-icons.js`, geometrik "b"); profesyonel logo gelince değiştirilmeli.
+   Mağaza kaydı: gizlilik politikası `/gizlilik`, hesap silme `/hesap-silme` (panel sitesinde), App Store inceleme
+   için production demo hesabı, ekran görüntüleri, `eas.json` + EAS projectId
 6. Alan adı alınmadı (bakimca.com.tr / .com / .app boştu): panel (`isletme.bakimca.com.tr`) index.html, robots.txt ve sitemap.xml'de yer tutucu

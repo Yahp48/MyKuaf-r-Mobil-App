@@ -5,4 +5,6 @@
   <url><loc>https://isletme.bakimca.com.tr/giris</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
   <url><loc>https://isletme.bakimca.com.tr/kvkk</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://isletme.bakimca.com.tr/hizmet-sozlesmesi</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://isletme.bakimca.com.tr/gizlilik</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://isletme.bakimca.com.tr/hesap-silme</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>

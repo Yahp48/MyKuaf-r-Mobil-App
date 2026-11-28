@@ -58,7 +58,7 @@ module.exports = {
       versionCode: 1,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#ffffff",
+        backgroundColor: "#C9184A",
       },
       permissions: ["android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_FINE_LOCATION"],
       // Play Store incelemesinde sorun çıkaran, uygulamanın kullanmadığı izinler.

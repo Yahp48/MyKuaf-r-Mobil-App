@@ -201,10 +201,18 @@ function BusinessDialog({ business: b, onClose }: { business: AdminBusiness | nu
               </>
             ) : null}
           </dl>
-          <p className="small muted">
-            Vergi levhasındaki unvan, vergi numarası ve adresin yukarıdakilerle aynı olduğunu kontrol edin. Levhadaki
-            onay kodu Gelir İdaresi'nin e-vergi levhası sorgulama sayfasından doğrulanabilir.
-          </p>
+          <ol className="small" style={{ paddingLeft: 18, lineHeight: 1.6 }}>
+            <li>Vergi levhasını açın; unvan, vergi numarası, vergi dairesi ve adres yukarıdakilerle aynı olmalı.</li>
+            <li>
+              Levhadaki <b>onay kodu</b> ile levhanın gerçekliğini{" "}
+              <a href="https://www.turkiye.gov.tr/gib-intvrg-e-vergi-levhasi-dogrulama" target="_blank" rel="noreferrer">
+                e-Devlet › e-Vergi Levhası Doğrulama
+              </a>{" "}
+              sayfasından kontrol edin (kendi e-Devlet girişinizle).
+            </li>
+            <li>Şirketlerde MERSİS numarası ve ticaret sicil kaydı unvanla uyuşmalı.</li>
+            <li>Uyuşmazlık varsa sebebini yazarak reddedin; işletme panelinde görür ve yeni belge yükler.</li>
+          </ol>
           {b.hasTaxCertificate ? (
             <Button onClick={openCertificate}>Vergi levhasını aç</Button>
           ) : (

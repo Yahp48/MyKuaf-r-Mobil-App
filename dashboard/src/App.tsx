@@ -7,7 +7,7 @@ import Landing from "./pages/public/Landing";
 import Login from "./pages/public/Login";
 import Register from "./pages/public/Register";
 import ResetPassword from "./pages/public/ResetPassword";
-import { Kvkk, NotFound, Terms } from "./pages/public/Legal";
+import { AccountDeletion, CustomerPrivacy, Kvkk, NotFound, Terms } from "./pages/public/Legal";
 import type { BusinessType } from "./lib/types";
 
 // Panel sayfaları ayrı paketlerde: tanıtım sayfası hızlı açılsın (SEO / Core Web Vitals)
@@ -105,6 +105,8 @@ export default function App() {
         <Route path="/sifre-sifirla" element={<ResetPassword />} />
         <Route path="/kvkk" element={<Kvkk />} />
         <Route path="/hizmet-sozlesmesi" element={<Terms />} />
+        <Route path="/gizlilik" element={<CustomerPrivacy />} />
+        <Route path="/hesap-silme" element={<AccountDeletion />} />
 
         <Route
           path="/salon"

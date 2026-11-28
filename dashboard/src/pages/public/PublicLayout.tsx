@@ -30,7 +30,8 @@ export function PublicLayout({ children, hideNav }: { children: ReactNode; hideN
       {children}
       <footer className="public-foot">
         <span>© {year} {company?.shortName ?? "Bakımca"}</span>
-        <Link to="/kvkk">KVKK aydınlatma metni</Link>
+        <Link to="/gizlilik">Gizlilik politikası</Link>
+        <Link to="/kvkk">İşletme KVKK metni</Link>
         <Link to="/hizmet-sozlesmesi">İşletme hizmet sözleşmesi</Link>
         <span>
           Bu site yalnızca oturumun çalışması için zorunlu bir çerez kullanır; reklam veya izleme çerezi yoktur.

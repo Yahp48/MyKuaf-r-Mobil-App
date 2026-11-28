@@ -108,6 +108,124 @@ export function Terms() {
   );
 }
 
+/**
+ * Uygulama kullanıcıları için gizlilik politikası (App Store ve Google Play mağaza kaydında herkese açık adres ister).
+ * Metin uygulamadaki Gizlilik ve KVKK ekranıyla aynı tutulmalı (screens/PrivacyScreen.js).
+ */
+export function CustomerPrivacy() {
+  const company = useCompany();
+  usePageMeta({
+    title: "Gizlilik politikası",
+    description: "Bakımca uygulamasında kişisel verilerin işlenmesi, paylaşılması ve haklarınız (KVKK).",
+    path: "/gizlilik",
+    index: true,
+  });
+  return (
+    <PublicLayout>
+      <article className="prose">
+        <div className="label">Bakımca uygulaması</div>
+        <h1>Gizlilik politikası ve KVKK aydınlatma metni</h1>
+        <p>
+          Veri sorumlusu {company?.legalName ?? "Bakımca"}, Bakımca mobil uygulamasında kişisel verilerinizi 6698 sayılı
+          Kişisel Verilerin Korunması Kanunu'na uygun şekilde işler. Bu metin hangi verileri neden işlediğimizi ve
+          haklarınızı özetler.
+        </p>
+        <h2>Hangi verileri işliyoruz?</h2>
+        <p>
+          Ad soyad, e-posta, cep telefonu; randevu ve sipariş bilgileri; teslimat adresleri; bildirim almak için cihaz
+          anahtarınız. Konumunuz yalnızca izin verdiğinizde, yakındaki işletmeleri göstermek için telefonunuzda kullanılır
+          ve sunucularımıza gönderilmez. Kart bilgileriniz uygulamaya ve sunucularımıza hiç ulaşmaz; ödeme lisanslı ödeme
+          kuruluşunun güvenli sayfasında yapılır.
+        </p>
+        <h2>Neden işliyoruz?</h2>
+        <p>
+          Hesabınızı oluşturmak ve korumak, randevu ve siparişlerinizi ilgili işletmeye/satıcıya iletmek, ödeme ve
+          iadeleri yürütmek, randevu ve sipariş bildirimleri göndermek ve yasal yükümlülükleri (fatura, vergi kayıtları)
+          yerine getirmek için. Hukuki sebepler: sözleşmenin kurulması ve ifası, hukuki yükümlülük ve meşru menfaat (KVKK
+          md. 5/2-c, ç, f). Pazarlama iletişimi yalnızca açık rızanızla yapılır.
+        </p>
+        <h2>Kimlerle paylaşıyoruz?</h2>
+        <p>
+          Randevu aldığınız işletmeyle adınız ve telefonunuz; sipariş verdiğiniz satıcıyla teslimat adresiniz paylaşılır.
+          Ayrıca barındırma, e-posta ve ödeme hizmeti sağlayıcılarımız ile kanunen yetkili kurumlar. Verileriniz satılmaz
+          ve reklam amacıyla üçüncü kişilere verilmez; uygulamada izleme (tracking) yoktur.
+        </p>
+        <h2>Canlı deneme ve fotoğraflar</h2>
+        <p>
+          Canlı denemede (saç modeli, renk, makyaj) kamera görüntünüz yalnızca telefonunuzda işlenir; sunucularımıza
+          gönderilmez ve kaydedilmez. "Yapay zekâ ile gerçekçi dene" özelliğini kullanırsanız, yalnızca açık rızanızla
+          çektiğiniz fotoğraf yurt dışındaki görüntü işleme hizmet sağlayıcısına gönderilir (KVKK md. 9); fotoğraf
+          saklanmaz, oluşturulan görseller 24 saat sonra silinir. Yorumlara eklediğiniz fotoğraflar işletme sayfasında
+          herkese açık yayınlanır.
+        </p>
+        <h2>Saklama süresi</h2>
+        <p>
+          Hesabınız açık olduğu sürece verileriniz saklanır. Hesabınızı sildiğinizde profil, adres, favori, sepet ve
+          bildirimleriniz silinir; yasal olarak saklanması gereken fatura ve sipariş kayıtları kimliğinizden ayrılarak
+          kanuni süre boyunca tutulur.
+        </p>
+        <h2>Haklarınız</h2>
+        <p>
+          KVKK md. 11 uyarınca verilerinizin işlenip işlenmediğini öğrenme, düzeltilmesini veya silinmesini isteme,
+          işlemeye itiraz etme ve zararın giderilmesini talep etme haklarınız vardır. Hesabınızı uygulamadan kendiniz
+          silebilirsiniz (<Link to="/hesap-silme">nasıl?</Link>).
+          {company?.email ? ` Diğer talepleriniz için: ${company.email}` : ""}
+          {company?.kep ? ` · KEP: ${company.kep}` : ""}
+        </p>
+        <CompanyFacts title="Veri sorumlusu" />
+      </article>
+    </PublicLayout>
+  );
+}
+
+/** Hesap silme yolu (Google Play, uygulama dışından erişilebilen bir sayfa ister). */
+export function AccountDeletion() {
+  const company = useCompany();
+  usePageMeta({
+    title: "Hesabınızı silme",
+    description: "Bakımca hesabınızı ve verilerinizi nasıl silebileceğiniz.",
+    path: "/hesap-silme",
+    index: true,
+  });
+  return (
+    <PublicLayout>
+      <article className="prose">
+        <div className="label">Bakımca uygulaması</div>
+        <h1>Hesabınızı silme</h1>
+        <h2>Uygulamadan</h2>
+        <ol>
+          <li>Bakımca uygulamasında Profil › Hesap ayarları'nı açın.</li>
+          <li>"Hesabımı sil" bölümüne şifrenizi yazın ve onaylayın.</li>
+        </ol>
+        <p>İşlem hemen gerçekleşir ve geri alınamaz.</p>
+        <h2>Uygulamaya erişemiyorsanız</h2>
+        <p>
+          {company?.email ? (
+            <>
+              Hesabınızda kayıtlı e-posta adresinizden <a href={`mailto:${company.email}`}>{company.email}</a> adresine
+              "Hesap silme" konulu bir e-posta gönderin. Kimliğinizi doğruladıktan sonra en geç 30 gün içinde silinir.
+            </>
+          ) : (
+            "Müşteri hizmetlerimize hesabınızda kayıtlı e-posta adresinizden yazın; kimliğiniz doğrulandıktan sonra en geç 30 gün içinde silinir."
+          )}
+        </p>
+        <h2>Neler silinir, neler saklanır?</h2>
+        <ul>
+          <li>Silinir: ad, telefon, e-posta, adresler, favoriler, sepet, bildirimler, kayıtlı kart anahtarları.</li>
+          <li>Gelecekteki randevularınız iptal edilir ve işletmeye bildirilir.</li>
+          <li>
+            Saklanır (kimliğinizden ayrılarak): kanunen saklanması zorunlu fatura ve sipariş kayıtları, yasal süre
+            boyunca.
+          </li>
+        </ul>
+        <p>
+          Ayrıntılar: <Link to="/gizlilik">Gizlilik politikası</Link>
+        </p>
+      </article>
+    </PublicLayout>
+  );
+}
+
 export function NotFound() {
   usePageMeta({ title: "Sayfa bulunamadı" });
   return (
