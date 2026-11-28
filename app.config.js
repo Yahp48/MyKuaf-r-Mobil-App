@@ -119,8 +119,11 @@ module.exports = {
         },
       ],
     ],
+    // EAS projesi (bulut derleme, push bildirimleri). Gizli değildir.
+    owner: "myexpos",
     extra: {
       isProduction: IS_PROD,
+      eas: { projectId: "8718311a-3b81-4b7c-9004-e411b49fc898" },
     },
   },
 };
