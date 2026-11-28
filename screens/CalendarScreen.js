@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
@@ -33,13 +34,14 @@ LocaleConfig.locales.tr = {
 };
 LocaleConfig.defaultLocale = "tr";
 
-// Personel fotoğrafı sunucuda yoksa uygulamadaki görseller sırayla kullanılır.
-const STAFF_IMAGES = [
-  require("../assets/personel1.png"),
-  require("../assets/personel2.png"),
-  require("../assets/personel3.png"),
-  require("../assets/personel4.png"),
-];
+// Personelin fotoğrafı yoksa baş harfleri gösterilir (başka birinin fotoğrafı asla kullanılmaz).
+const initialsOf = (name) =>
+  name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toLocaleUpperCase("tr-TR");
 
 const ymd = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -313,12 +315,13 @@ export default function CalendarScreen({ navigation, route }) {
         <Text style={styles.section}>2. Personel</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <StaffChip label="Fark etmez" selected={staffId === null} onPress={() => setStaffId(null)} />
-          {salon.staff.map((st, i) => (
+          {salon.staff.map((st) => (
             <StaffChip
               key={st.id}
               label={st.name}
               subtitle={st.title}
-              image={st.avatarUrl ? { uri: st.avatarUrl } : STAFF_IMAGES[i % STAFF_IMAGES.length]}
+              image={st.avatarUrl ? { uri: st.avatarUrl } : null}
+              initials={initialsOf(st.name)}
               selected={staffId === st.id}
               onPress={() => setStaffId(st.id)}
             />
@@ -421,7 +424,7 @@ export default function CalendarScreen({ navigation, route }) {
   );
 }
 
-function StaffChip({ label, subtitle, image, selected, onPress }) {
+function StaffChip({ label, subtitle, image, initials, selected, onPress }) {
   return (
     <TouchableOpacity
       style={[styles.staff, selected && styles.staffOn]}
@@ -432,7 +435,13 @@ function StaffChip({ label, subtitle, image, selected, onPress }) {
       {image ? (
         <Image source={image} style={styles.staffImage} />
       ) : (
-        <View style={[styles.staffImage, styles.anyStaff]} />
+        <View style={[styles.staffImage, styles.anyStaff]}>
+          {initials ? (
+            <Text style={styles.initials}>{initials}</Text>
+          ) : (
+            <Ionicons name="people-outline" size={24} color={colors.muted} />
+          )}
+        </View>
       )}
       <Text style={[styles.staffName, selected && { color: colors.primary }]}>{label}</Text>
       {subtitle ? <Text style={styles.staffTitle}>{subtitle}</Text> : null}
@@ -494,7 +503,8 @@ const styles = StyleSheet.create({
   },
   staffOn: { borderColor: colors.primary, backgroundColor: "#FDEEF2" },
   staffImage: { width: 60, height: 60, borderRadius: 30 },
-  anyStaff: { backgroundColor: "#F5F5F7" },
+  anyStaff: { backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
+  initials: { fontSize: 18, fontWeight: "700", color: colors.primary },
   staffName: { marginTop: 6, fontWeight: "600", color: colors.text },
   staffTitle: { fontSize: 11, color: colors.muted },
   times: { flexDirection: "row", flexWrap: "wrap" },
