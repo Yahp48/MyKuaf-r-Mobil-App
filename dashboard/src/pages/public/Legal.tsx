@@ -9,7 +9,7 @@ export function Kvkk() {
   const company = useCompany();
   usePageMeta({
     title: "KVKK aydınlatma metni",
-    description: "Bakımca işletme hesapları için 6698 sayılı KVKK kapsamında aydınlatma metni.",
+    description: "BiBakım işletme hesapları için 6698 sayılı KVKK kapsamında aydınlatma metni.",
     path: "/kvkk",
     index: true,
   });
@@ -20,7 +20,7 @@ export function Kvkk() {
         <h1>KVKK aydınlatma metni</h1>
         <p>
           Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu'nun 10. maddesi uyarınca veri sorumlusu{" "}
-          {company?.legalName ?? "Bakımca"} tarafından, Bakımca işletme paneline kayıt olan işletme yetkililerinin
+          {company?.legalName ?? "BiBakım"} tarafından, BiBakım işletme paneline kayıt olan işletme yetkililerinin
           kişisel verilerinin işlenmesine ilişkin olarak hazırlanmıştır.
         </p>
         <h2>İşlenen veriler</h2>
@@ -63,7 +63,7 @@ export function Terms() {
   const company = useCompany();
   usePageMeta({
     title: "İşletme hizmet sözleşmesi",
-    description: "Bakımca işletme paneli kullanım koşulları.",
+    description: "BiBakım işletme paneli kullanım koşulları.",
     path: "/hizmet-sozlesmesi",
     index: true,
   });
@@ -74,7 +74,7 @@ export function Terms() {
         <h1>İşletme hizmet sözleşmesi</h1>
         <h2>1. Taraflar ve konu</h2>
         <p>
-          Bu sözleşme, Bakımca platformunu işleten {company?.legalName ?? "platform işletmecisi"} ile panele kayıt
+          Bu sözleşme, BiBakım platformunu işleten {company?.legalName ?? "platform işletmecisi"} ile panele kayıt
           olan hizmet işletmesi (kuaför, güzellik merkezi, tırnak, cilt bakımı, kaş-kirpik, makyaj, kadınlara özel
           spa) veya ürün satıcısı arasında, işletmenin randevu ve ürün satış hizmetlerini platform üzerinden sunmasına
           ilişkin koşulları düzenler.
@@ -116,17 +116,17 @@ export function CustomerPrivacy() {
   const company = useCompany();
   usePageMeta({
     title: "Gizlilik politikası",
-    description: "Bakımca uygulamasında kişisel verilerin işlenmesi, paylaşılması ve haklarınız (KVKK).",
+    description: "BiBakım uygulamasında kişisel verilerin işlenmesi, paylaşılması ve haklarınız (KVKK).",
     path: "/gizlilik",
     index: true,
   });
   return (
     <PublicLayout>
       <article className="prose">
-        <div className="label">Bakımca uygulaması</div>
+        <div className="label">BiBakım uygulaması</div>
         <h1>Gizlilik politikası ve KVKK aydınlatma metni</h1>
         <p>
-          Veri sorumlusu {company?.legalName ?? "Bakımca"}, Bakımca mobil uygulamasında kişisel verilerinizi 6698 sayılı
+          Veri sorumlusu {company?.legalName ?? "BiBakım"}, BiBakım mobil uygulamasında kişisel verilerinizi 6698 sayılı
           Kişisel Verilerin Korunması Kanunu'na uygun şekilde işler. Bu metin hangi verileri neden işlediğimizi ve
           haklarınızı özetler.
         </p>
@@ -183,18 +183,18 @@ export function AccountDeletion() {
   const company = useCompany();
   usePageMeta({
     title: "Hesabınızı silme",
-    description: "Bakımca hesabınızı ve verilerinizi nasıl silebileceğiniz.",
+    description: "BiBakım hesabınızı ve verilerinizi nasıl silebileceğiniz.",
     path: "/hesap-silme",
     index: true,
   });
   return (
     <PublicLayout>
       <article className="prose">
-        <div className="label">Bakımca uygulaması</div>
+        <div className="label">BiBakım uygulaması</div>
         <h1>Hesabınızı silme</h1>
         <h2>Uygulamadan</h2>
         <ol>
-          <li>Bakımca uygulamasında Profil › Hesap ayarları'nı açın.</li>
+          <li>BiBakım uygulamasında Profil › Hesap ayarları'nı açın.</li>
           <li>"Hesabımı sil" bölümüne şifrenizi yazın ve onaylayın.</li>
         </ol>
         <p>İşlem hemen gerçekleşir ve geri alınamaz.</p>

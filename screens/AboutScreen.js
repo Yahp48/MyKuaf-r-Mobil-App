@@ -29,7 +29,7 @@ export default function AboutScreen({ navigation }) {
           <View style={styles.logo}>
             <Text style={styles.logoText}>B</Text>
           </View>
-          <Text style={styles.name}>Bakımca</Text>
+          <Text style={styles.name}>BiBakım</Text>
           <Text style={styles.tagline}>Kadınlar için güzellik randevusu ve bakım ürünleri</Text>
           <Text style={styles.version}>
             Sürüm {version}
@@ -80,7 +80,7 @@ export default function AboutScreen({ navigation }) {
         </View>
 
         <Text style={styles.copyright}>
-          © {new Date().getFullYear()} {company?.shortName ?? "Bakımca"}. Tüm hakları saklıdır.
+          © {new Date().getFullYear()} {company?.shortName ?? "BiBakım"}. Tüm hakları saklıdır.
         </Text>
       </ScrollView>
       <BottomNavSpacer />

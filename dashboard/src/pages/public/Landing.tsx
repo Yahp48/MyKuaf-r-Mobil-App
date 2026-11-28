@@ -4,12 +4,12 @@ import { PublicLayout } from "./PublicLayout";
 
 const FAQ = [
   {
-    q: "Bakımca İşletme ücretli mi?",
+    q: "BiBakım İşletme ücretli mi?",
     a: "Kayıt olmak ve paneli kullanmak ücretsizdir. Uygulama üzerinden alınan randevular için ödeme müşteri ile salon arasında salonda yapılır.",
   },
   {
     q: "Salonum uygulamada ne zaman görünür?",
-    a: "Kaydı tamamlayıp en az bir personel ve bir hizmet eklediğiniz anda salonunuz Bakımca uygulamasının haritasında görünür. Panelden dilediğiniz zaman geçici olarak gizleyebilirsiniz.",
+    a: "Kaydı tamamlayıp en az bir personel ve bir hizmet eklediğiniz anda salonunuz BiBakım uygulamasının haritasında görünür. Panelden dilediğiniz zaman geçici olarak gizleyebilirsiniz.",
   },
   {
     q: "Telefonla gelen randevuları da girebilir miyim?",
@@ -27,7 +27,7 @@ const FAQ = [
 
 export default function Landing() {
   usePageMeta({
-    title: "Bakımca İşletme",
+    title: "BiBakım İşletme",
     description:
       "Kuaför, güzellik merkezi, tırnak, cilt bakımı ve spa işletmenizin randevu defterini, ekibini, gelir-giderini; ürün mağazanızın siparişlerini tek panelden yönetin. Ücretsiz kayıt olun, müşterileriniz sizi haritada bulsun.",
     path: "/",
@@ -47,7 +47,7 @@ export default function Landing() {
             </h1>
             <p className="lead">
               Gün içi randevular, personel ve izinler, hizmet fiyatları, gelir-gider defteri; ürün satıyorsanız
-              siparişler, kargo ve stok. Hepsi tek panelde, Bakımca uygulamasıyla anlık bağlantılı.
+              siparişler, kargo ve stok. Hepsi tek panelde, BiBakım uygulamasıyla anlık bağlantılı.
             </p>
             <div className="hero-cta">
               <LinkButton to="/kayit" variant="accent">

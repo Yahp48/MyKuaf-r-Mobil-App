@@ -11,7 +11,7 @@ import { Backdrop, ConfirmSheet } from "./Feedback";
  *
  * Ödeme kuruluşunun kendi sayfası (3D Secure dahil) uygulamadan çıkmadan, tam ekran bir pencerede açılır.
  * Kart bilgisi yine yalnızca ödeme kuruluşunun sayfasına girilir; uygulama sayfanın içeriğine
- * dokunmaz, yalnızca adres çubuğunu gösterir ve dönüş adresini (bakimca:// / exp://) yakalar.
+ * dokunmaz, yalnızca adres çubuğunu gösterir ve dönüş adresini (bibakim:// / exp://) yakalar.
  * Sonuç her zaman sunucudan sorgulanır (bkz. services/checkout.js).
  *
  * App kökünde bir kez <PaymentHost /> olarak bağlanır; ekranlar `presentPayment` ile açar.
@@ -58,7 +58,7 @@ export function PaymentHost() {
   /** Dönüş adresi mi? Öyleyse pencereyi kapatır ve sayfanın yüklenmesini durdurur. */
   const catchReturn = (url) => {
     if (!req || !url) return false;
-    if (url.startsWith(req.returnPrefix) || url.startsWith("bakimca://")) {
+    if (url.startsWith(req.returnPrefix) || url.startsWith("bibakim://")) {
       finish("returned");
       return true;
     }
@@ -152,7 +152,7 @@ export function PaymentHost() {
         ) : null}
         <View style={[styles.foot, { paddingBottom: Math.max(insets.bottom, 8) }]}>
           <Ionicons name="shield-checkmark-outline" size={13} color={colors.muted} />
-          <Text style={styles.footText}>Kart bilgileriniz ödeme kuruluşuna gider, Bakımca'da saklanmaz.</Text>
+          <Text style={styles.footText}>Kart bilgileriniz ödeme kuruluşuna gider, BiBakım'da saklanmaz.</Text>
         </View>
         {askExit ? (
           <View style={StyleSheet.absoluteFill}>

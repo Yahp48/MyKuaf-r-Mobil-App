@@ -22,7 +22,7 @@ function resolveApiUrl() {
 
 export const API_URL = resolveApiUrl();
 export const SOCKET_URL = API_URL.replace(/\/api$/, "");
-export const APP_SCHEME = "bakimca";
+export const APP_SCHEME = "bibakim";
 export const REQUEST_TIMEOUT_MS = 15000;
 
 /**

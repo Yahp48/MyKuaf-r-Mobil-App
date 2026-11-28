@@ -188,7 +188,7 @@ export default function SavedCardsScreen({ navigation }) {
           <View style={styles.secure}>
             <Ionicons name="lock-closed-outline" size={18} color={colors.success} />
             <Text style={styles.secureText}>
-              Kart bilgileriniz Bakımca'ya iletilmez ve saklanmaz. Kartınız lisanslı ödeme kuruluşunun güvenli
+              Kart bilgileriniz BiBakım'a iletilmez ve saklanmaz. Kartınız lisanslı ödeme kuruluşunun güvenli
               sayfasında kaydedilir; uygulamada yalnızca son 4 hanesi görünür. Kart eklerken 1 TL doğrulama tutarı
               çekilir ve hemen iade edilir.
             </Text>

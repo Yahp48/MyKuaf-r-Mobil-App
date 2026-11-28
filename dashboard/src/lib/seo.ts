@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
-const SITE = "Bakımca İşletme";
-const ORIGIN = "https://isletme.bakimca.com.tr";
+const SITE = "BiBakım İşletme";
+const ORIGIN = "https://isletme.bibakim.app";
 
 function setMeta(selector: string, attr: string, key: string, content: string) {
   let el = document.head.querySelector<HTMLMetaElement>(selector);

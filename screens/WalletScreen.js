@@ -134,7 +134,7 @@ export default function WalletScreen({ navigation }) {
                     <View style={styles.brandDot}>
                       <Ionicons name="wallet" size={14} color="#fff" />
                     </View>
-                    <Text style={styles.brand}>Bakımca Cüzdan</Text>
+                    <Text style={styles.brand}>BiBakım Cüzdan</Text>
                   </View>
                   <Ionicons name="shield-checkmark-outline" size={18} color="rgba(255,255,255,0.6)" />
                 </View>
@@ -235,7 +235,7 @@ export default function WalletScreen({ navigation }) {
               <View style={styles.info}>
                 <Ionicons name="information-circle-outline" size={18} color={colors.muted} />
                 <Text style={styles.infoText}>
-                  Cüzdan bakiyesi Bakımca'daki randevu ve ürün ödemelerinde kullanılır. Yüklemeler lisanslı ödeme
+                  Cüzdan bakiyesi BiBakım'daki randevu ve ürün ödemelerinde kullanılır. Yüklemeler lisanslı ödeme
                   kuruluşunun 3D Secure sayfasında yapılır; kart bilgileriniz bizde saklanmaz.
                 </Text>
               </View>

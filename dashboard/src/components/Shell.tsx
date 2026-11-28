@@ -188,7 +188,7 @@ export function AdminShell() {
     <div className="shell" data-business="ADMIN">
       <aside className="index" data-open={open} aria-label="Gezinme">
         <a className="wordmark" href="/yonetim">
-          <b>Bakımca</b>
+          <b>BiBakım</b>
           <i aria-hidden />
         </a>
         <div className="index-business">Platform yönetimi</div>
@@ -242,7 +242,7 @@ export function Shell() {
     <div className="shell" data-business={business.type}>
       <aside className="index" data-open={open} aria-label="Gezinme">
         <a className="wordmark" href={business.type === "SALON" ? "/salon" : "/magaza"}>
-          <b>Bakımca</b>
+          <b>BiBakım</b>
           <i aria-hidden />
         </a>
         <div className="index-business">

@@ -37,8 +37,8 @@ export default function AppHeader({ title, back = false, right }) {
             {title}
           </Text>
         ) : (
-          <View style={styles.brand} accessibilityRole="header" accessibilityLabel="Bakımca">
-            <Text style={styles.brandMain}>Bakımca</Text>
+          <View style={styles.brand} accessibilityRole="header" accessibilityLabel="BiBakım">
+            <Text style={styles.brandMain}>BiBakım</Text>
             <View style={styles.brandDot} />
           </View>
         )}

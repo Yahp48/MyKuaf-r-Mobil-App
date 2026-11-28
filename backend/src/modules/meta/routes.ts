@@ -17,8 +17,9 @@ export function companyInfo() {
     taxNumber: opt(env.COMPANY_TAX_NUMBER),
     mersisNo: opt(env.COMPANY_MERSIS),
     kep: opt(env.COMPANY_KEP),
-    email: opt(env.COMPANY_EMAIL),
-    phone: opt(env.COMPANY_PHONE),
+    // İletişim: platformun kendi adresi (işleten şirketin genel iletişim bilgisi gösterilmez)
+    email: opt(env.SUPPORT_EMAIL),
+    phone: opt(env.SUPPORT_PHONE),
   };
 }
 

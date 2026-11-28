@@ -3,7 +3,7 @@ import { paymentApi } from "./api";
 import { presentPayment } from "../components/PaymentSheet";
 
 /**
- * Ödeme sayfası bitince dönülecek adres. Geliştirme derlemesinde/mağaza sürümünde "bakimca://",
+ * Ödeme sayfası bitince dönülecek adres. Geliştirme derlemesinde/mağaza sürümünde "bibakim://",
  * Expo Go'da "exp://..." olur; sunucu yalnızca bu iki biçimi kabul eder.
  */
 export const paymentReturnUrl = () => Linking.createURL("payment-result");

@@ -16,6 +16,6 @@ export function testEnv() {
     GOOGLE_MAPS_SERVER_API_KEY: "",
     COMPANY_LEGAL_NAME: "Test Platform A.Ş.",
     COMPANY_ADDRESS: "",
-    COMPANY_EMAIL: "destek@example.test",
+    SUPPORT_EMAIL: "destek@example.test",
   };
 }

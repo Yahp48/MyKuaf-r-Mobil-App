@@ -99,7 +99,7 @@ export default function TryOnScreen({ navigation }) {
   };
   const onRawPhoto = async (base64) => {
     try {
-      const file = new File(Paths.cache, `bakimca-ai-${Date.now()}.jpg`);
+      const file = new File(Paths.cache, `bibakim-ai-${Date.now()}.jpg`);
       await file.write(base64, { encoding: "base64" });
       navigation.navigate("AiTryOn", { photoUri: file.uri, shape });
     } catch (e) {
@@ -188,7 +188,7 @@ export default function TryOnScreen({ navigation }) {
 
   const savePhoto = async (base64) => {
     try {
-      const file = new File(Paths.cache, `bakimca-stil-${Date.now()}.jpg`);
+      const file = new File(Paths.cache, `bibakim-stil-${Date.now()}.jpg`);
       await file.write(base64, { encoding: "base64" });
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(file.uri, { mimeType: "image/jpeg", dialogTitle: "Stilini paylaş" });

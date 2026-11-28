@@ -9,7 +9,7 @@ import { PublicLayout } from "./PublicLayout";
 export default function Login() {
   usePageMeta({
     title: "İşletme girişi",
-    description: "Bakımca işletme paneline giriş yapın: randevular, personel, siparişler ve stok.",
+    description: "BiBakım işletme paneline giriş yapın: randevular, personel, siparişler ve stok.",
     path: "/giris",
     index: true,
   });

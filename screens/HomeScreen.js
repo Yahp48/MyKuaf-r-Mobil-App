@@ -34,7 +34,7 @@ import { confirm, toast } from "../components/Feedback";
 const FALLBACK_REGION = { latitude: 41.025, longitude: 29.015, latitudeDelta: 0.14, longitudeDelta: 0.14 };
 // Kullanıcının çevresi: yaklaşık 2 km'lik görünüm
 const NEAR_DELTA = { latitudeDelta: 0.018, longitudeDelta: 0.018 };
-const PROMO_SEEN_KEY = "bakimca.promoSeen.v1";
+const PROMO_SEEN_KEY = "bibakim.promoSeen.v1";
 // İşletme türleri (hepsi kadınlara yönelik); yalnızca haritada olan türler gösterilir
 const KIND_CHIPS = [
   { kind: "HAIR", label: "Kuaför", icon: "cut-outline" },

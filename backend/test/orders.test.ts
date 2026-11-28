@@ -25,7 +25,7 @@ async function completeMockPayment(checkoutUrl: string, result: "success" | "fai
   const ref = checkoutUrl.split("/").pop()!;
   const res = await api().post("/api/payments/mock/complete").type("form").send({ ref, result });
   expect(res.status).toBe(303);
-  expect(res.headers.location).toMatch(/^bakimca:\/\/payment-result\?paymentId=/);
+  expect(res.headers.location).toMatch(/^bibakim:\/\/payment-result\?paymentId=/);
 }
 
 describe("sepet", () => {

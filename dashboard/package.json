@@ -1,9 +1,9 @@
 {
-  "name": "bakimca-dashboard",
+  "name": "bibakim-dashboard",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Bakımca işletme paneli (kuaför ve satıcı)",
+  "description": "BiBakım işletme paneli (kuaför ve satıcı)",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

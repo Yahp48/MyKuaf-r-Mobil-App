@@ -35,7 +35,7 @@ export default function SignInScreen({ navigation }) {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.logoBox}>
             <Ionicons name="sparkles-outline" size={64} color={colors.primary} />
-            <Text style={styles.appName}>Bakımca</Text>
+            <Text style={styles.appName}>BiBakım</Text>
             <Text style={styles.subtitle}>Hesabınıza giriş yapın</Text>
           </View>
 

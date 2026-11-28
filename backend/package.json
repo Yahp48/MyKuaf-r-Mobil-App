@@ -1,7 +1,7 @@
 {
-  "name": "bakimca-backend",
+  "name": "bibakim-backend",
   "version": "1.0.0",
-  "description": "Bakımca mobil uygulaması REST API ve gerçek zamanlı sunucu",
+  "description": "BiBakım mobil uygulaması REST API ve gerçek zamanlı sunucu",
   "scripts": {
     "dev": "tsx watch --env-file=.env src/server.ts",
     "build": "prisma generate && tsc -p tsconfig.json",

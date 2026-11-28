@@ -62,7 +62,7 @@ export default function SellerOverview() {
         <section className="leaf leaf-pad" style={{ marginBottom: 32 }}>
           <h2 style={{ fontSize: 22, marginBottom: 4 }}>{welcome ? "Mağazanız açıldı. " : ""}İlk ürününüzü ekleyin</h2>
           <p className="muted" style={{ marginBottom: 14 }}>
-            Eklediğiniz ürün, Bakımca uygulamasının mağaza bölümünde hemen satışa çıkar. Kargo ücretinizi Ayarlar'dan
+            Eklediğiniz ürün, BiBakım uygulamasının mağaza bölümünde hemen satışa çıkar. Kargo ücretinizi Ayarlar'dan
             belirleyebilirsiniz.
           </p>
           <LinkButton to="/magaza/urunler/yeni" variant="accent">

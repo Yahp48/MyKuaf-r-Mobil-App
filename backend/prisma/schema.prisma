@@ -1,4 +1,4 @@
-// Bakımca veritabanı şeması (PostgreSQL, Prisma ORM 7)
+// BiBakım veritabanı şeması (PostgreSQL, Prisma ORM 7)
 // Para tutarları kuruş cinsinden tam sayı (Int) olarak saklanır: 149,90 TL = 14990.
 // Tüm zaman damgaları UTC (timestamptz). Salon saatleri salonun saat diliminde yorumlanır.
 

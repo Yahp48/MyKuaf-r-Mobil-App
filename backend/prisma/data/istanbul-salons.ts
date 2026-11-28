@@ -1,6 +1,6 @@
 // İstanbul'daki gerçek kuaför ve güzellik salonları (rehber kaydı, online randevu yok).
 // Kaynak: OpenStreetMap katkıda bulunanları — ODbL 1.0 (https://www.openstreetmap.org/copyright).
-// Uygulamada kaynak belirtilir. Fotoğraf ve puan kopyalanmaz; puanlar yalnızca Bakımca yorumlarından oluşur.
+// Uygulamada kaynak belirtilir. Fotoğraf ve puan kopyalanmaz; puanlar yalnızca BiBakım yorumlarından oluşur.
 // hours: null → çalışma saati bilinmiyor (uydurulmaz).
 // Alınma tarihi: 2026-11-28
 

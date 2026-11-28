@@ -57,7 +57,7 @@ const TAB_SCREEN = {
 
 // Ödeme penceresi dönüş adresini kendisi yakalar; derin bağlantı yedek olarak kalır (bkz. services/checkout.js).
 const linking = {
-  prefixes: [Linking.createURL("/"), "bakimca://"],
+  prefixes: [Linking.createURL("/"), "bibakim://"],
   config: { screens: {} },
 };
 

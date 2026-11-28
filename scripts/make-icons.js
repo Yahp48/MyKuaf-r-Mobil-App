@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 /**
- * Bakımca geçici marka simgesi üretici (yazı tipi kullanmaz; geometrik "b" + nokta).
+ * BiBakım geçici marka simgesi üretici (yazı tipi kullanmaz; geometrik "b" + nokta).
  * Profesyonel logo gelince bu dosya yerine tasarımcının çıktıları assets/ altına konur.
  * Çalıştırma: node scripts/make-icons.js
  */

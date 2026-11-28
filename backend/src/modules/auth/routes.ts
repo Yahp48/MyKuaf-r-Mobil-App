@@ -108,10 +108,10 @@ authRouter.post("/forgot-password", async (req, res) => {
     ]);
     await sendMail({
       to: user.email,
-      subject: "Bakımca şifre sıfırlama kodunuz",
+      subject: "BiBakım şifre sıfırlama kodunuz",
       text:
         `Merhaba ${user.name},\n\nŞifre sıfırlama kodunuz: ${code}\n\n` +
-        `Kod 15 dakika geçerlidir. Bu isteği siz yapmadıysanız bu e-postayı dikkate almayın.\n\nBakımca`,
+        `Kod 15 dakika geçerlidir. Bu isteği siz yapmadıysanız bu e-postayı dikkate almayın.\n\nBiBakım`,
     });
   }
   res.json({ message: "Bu e-posta adresi kayıtlıysa bir sıfırlama kodu gönderildi" });

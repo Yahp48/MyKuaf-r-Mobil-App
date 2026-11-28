@@ -25,8 +25,8 @@ export const zReturnUrl = z
 export const PAYMENT_TIMEOUT_MS = 30 * 60_000;
 
 export const PURPOSE_LABEL = {
-  ORDER: "Bakımca sipariş ödemesi",
-  WALLET_TOPUP: "Bakımca cüzdan yükleme",
+  ORDER: "BiBakım sipariş ödemesi",
+  WALLET_TOPUP: "BiBakım cüzdan yükleme",
   CARD_VERIFY: "Kart doğrulama (hemen iade edilir)",
 } as const;
 

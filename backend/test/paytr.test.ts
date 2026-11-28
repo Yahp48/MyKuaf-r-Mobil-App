@@ -37,7 +37,7 @@ describe("PayTR iFrame API", () => {
     const s = await p.createCheckout({
       paymentId: PAYMENT_ID,
       amountCents: 12_990,
-      description: "Bakımca sipariş ödemesi",
+      description: "BiBakım sipariş ödemesi",
       buyer: { id: "u1", name: "Ayşe Yılmaz", email: "ayse@example.com", phone: "05551234567" },
       buyerIp: "192.168.0.6",
       items: [

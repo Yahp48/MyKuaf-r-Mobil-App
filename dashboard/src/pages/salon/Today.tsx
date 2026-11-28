@@ -69,7 +69,7 @@ export default function Today() {
             {welcome ? "Hoş geldiniz! " : ""}Salonunuzu uygulamada yayına alalım
           </h2>
           <p className="muted" style={{ marginBottom: 12 }}>
-            Bu adımlar tamamlanınca salonunuz Bakımca uygulamasının haritasında hemen görünür.
+            Bu adımlar tamamlanınca salonunuz BiBakım uygulamasının haritasında hemen görünür.
           </p>
           <ol className="setup" style={{ padding: 0, margin: 0 }}>
             <li data-done={d.setup.hasStaff}>

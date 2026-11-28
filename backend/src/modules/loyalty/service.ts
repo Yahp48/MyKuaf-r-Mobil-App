@@ -5,7 +5,7 @@ import { logger } from "../../lib/logger.ts";
 import { notify } from "../notifications/notify.ts";
 
 /**
- * Sadakat programı (Bakımca karşılar):
+ * Sadakat programı (BiBakım karşılar):
  *  - Tamamlanan randevu ve teslim edilen sipariş: her 10 TL için 1 puan
  *  - Davet: davet edilen kişinin ilk tamamlanan randevusu/teslim edilen siparişi sonrası iki tarafa 200 puan
  *  - Kullanım: en az 200 puan; 20 puan = 1 TL cüzdan bakiyesi

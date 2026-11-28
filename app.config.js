@@ -5,9 +5,9 @@ const IS_PROD = process.env.APP_VARIANT === "production";
 
 module.exports = {
   expo: {
-    name: "Bakımca",
-    slug: "bakimca",
-    scheme: "bakimca",
+    name: "BiBakım",
+    slug: "bibakim",
+    scheme: "bibakim",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
@@ -19,7 +19,7 @@ module.exports = {
       backgroundColor: "#ffffff",
     },
     ios: {
-      bundleIdentifier: "com.symmetrygroup.bakimca",
+      bundleIdentifier: "com.symmetrygroup.bibakim",
       buildNumber: "1",
       supportsTablet: false,
       infoPlist: {
@@ -54,7 +54,7 @@ module.exports = {
       },
     },
     android: {
-      package: "com.symmetrygroup.bakimca",
+      package: "com.symmetrygroup.bibakim",
       versionCode: 1,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
@@ -79,6 +79,14 @@ module.exports = {
       favicon: "./assets/favicon.png",
     },
     plugins: [
+      [
+        "expo-build-properties",
+        {
+          // Deneme derlemesi (APP_VARIANT=preview) bilgisayardaki yerel sunucuya http ile bağlanır.
+          // Mağaza derlemesinde (production) şifresiz bağlantı kapalı: yalnızca https.
+          android: { usesCleartextTraffic: !IS_PROD },
+        },
+      ],
       [
         "expo-location",
         {

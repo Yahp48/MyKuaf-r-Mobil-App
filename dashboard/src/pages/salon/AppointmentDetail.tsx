@@ -233,7 +233,7 @@ export default function AppointmentDetail() {
               <dt>Telefon</dt>
               <dd className="mono">{formatPhone(a.customer.phone)}</dd>
               <dt>Kaynak</dt>
-              <dd>{a.customer.isAppUser ? "Bakımca uygulaması" : "Telefon / kapıdan"}</dd>
+              <dd>{a.customer.isAppUser ? "BiBakım uygulaması" : "Telefon / kapıdan"}</dd>
               <dt>Kayıt</dt>
               <dd>{dateTime(a.createdAt)}</dd>
             </dl>

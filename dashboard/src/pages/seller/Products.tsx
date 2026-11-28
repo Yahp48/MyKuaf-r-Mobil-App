@@ -78,7 +78,7 @@ export default function Products() {
       <PageHead
         kicker="Satış"
         title="Ürünler ve stok"
-        sub="Değişiklikler Bakımca uygulamasının mağazasına anında yansır."
+        sub="Değişiklikler BiBakım uygulamasının mağazasına anında yansır."
         actions={
           <LinkButton to="/magaza/urunler/yeni" variant="primary">
             <Plus size={16} /> Ürün ekle

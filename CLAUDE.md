@@ -1,9 +1,10 @@
-# Bakımca
+# BiBakım
 
 Kadınlara yönelik güzellik işletmeleri (kuaför, güzellik, tırnak, cilt, spa…) için mobil uygulama + backend + işletme
 ve yönetim paneli: harita üzerinden işletme bulma, randevu, ürün mağazası, sepet ve ödeme, cüzdan, bildirimler.
-Arayüz dili Türkçe. Uygulama adı "Bakımca" (şimdilik; eski adı MyKuaför — klasör, veritabanı ve `@mykuafor.test`
-demo e-postaları bilerek eski adla kaldı). Paket kimliği `com.symmetrygroup.bakimca`, derin bağlantı şeması `bakimca://`.
+Arayüz dili Türkçe. Uygulama adı "BiBakım" (eski adları MyKuaför, Bakımca. Dikkat: bibakim.com.tr ve "Bibakım"
+adlı mobil araç servisi uygulaması başka şirkete ait; marka araştırması gerekli — klasör, veritabanı ve `@mykuafor.test`
+demo e-postaları bilerek eski adla kaldı). Paket kimliği `com.symmetrygroup.bibakim`, derin bağlantı şeması `bibakim://`.
 İşleten şirket Symmetry Group Ltd. Şti.
 Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kurallarına uygun olmalı.
 
@@ -56,7 +57,8 @@ Hedef: Play Store ve App Store'da yayın — prototip değil, mağaza kuralları
 - İndirim: hizmet başına yüzde + tarih aralığı; fiyat randevu gününe göre sunucuda hesaplanır (`backend/src/modules/salons/discount.ts`).
   Son 30 günde fiyatı artırılan hizmette indirim yok, indirim sürerken fiyat artırılamaz
 - Şirket bilgisi (faturayı kesen taraf, Symmetry Group): backend `.env` → `COMPANY_*`, API `/api/meta/company`;
-  uygulamada Hakkında + KVKK, panelde yasal sayfalar. Boşsa gösterilmez; production'da zorunlu
+  uygulamada Hakkında + KVKK, panelde yasal sayfalar. Boşsa gösterilmez; production'da zorunlu. İletişim alanı
+  `SUPPORT_EMAIL`'den gelir (şirketin genel e-postası değil)
 - iOS: `app.config.js` → `ios.privacyManifests` (izleme yok, konum cihazda kalır); iOS haritası Apple Maps
 - Tasarım: tek vurgu rengi `#C9184A` (`colors.primary`), beyaz başlık ve alt menü, gri yüzey üzerinde gruplu kartlar,
   Ionicons çizgi ikonlar. Renkleri ekranlara sabit yazma; `components/theme.js`'ten al
@@ -80,7 +82,7 @@ Backend (`backend/`):
 - `npm test` (82 test, `mykuafor_test` veritabanı), `npm run typecheck`
 - Şema değişikliği: `prisma/schema.prisma` düzenle → `npm run db:migrate -- --name <ad>`
 - Demo hesapları (yalnızca yerel seed, şifre `Demo12345`): müşteri `demo@mykuafor.test`,
-  kuaför paneli `salon@mykuafor.test` ("Bakımca Demo Salon", Kadıköy), satıcı paneli `satici@mykuafor.test`,
+  kuaför paneli `salon@mykuafor.test` ("BiBakım Demo Salon", Kadıköy), satıcı paneli `satici@mykuafor.test`,
   yönetim paneli `admin@mykuafor.test` (/yonetim). Her işletme türü için örnek işletme ("Örnek …"):
   `guzellik@`, `tirnak@`, `cilt@`, `spa@`, `kirpik@`, `makyaj@` (hepsi `mykuafor.test`). Production'da yönetici: `npm run admin:create -- <e-posta> "<Ad>"`
 Panel (`dashboard/`): `npm run dev` (http://localhost:5173, /api'yi :5000'e yönlendirir), `npm run build`
@@ -104,10 +106,13 @@ Telefonla test: backend `.env` → `PUBLIC_BASE_URL=http://<bilgisayar-IP>:5000`
 4. Gerçek içerik: şirket bilgileri yerel `.env`'de girildi; production ortamına da aynen girilmeli:
    unvan "SYMMETRY GROUP TERCÜME-TURİZM-TASARIM-YAZILIM-MATBAA-REKLAM SANATLARI İÇ ve DIŞ TİC. LTD. ŞTİ.",
    kısa ad "Symmetry Group Ltd. Şti.", adres "İstiklal Cad. No:36-1 K:4 D:19 Beyoğlu/İstanbul", Beyoğlu VD 7840321396.
-   EKSİK: `COMPANY_EMAIL` (production'da zorunlu), `COMPANY_MERSIS`, `COMPANY_KEP`, `COMPANY_PHONE`; KVKK metni (PrivacyScreen) ve mesafeli satış sözleşmesi hukukçu onayından geçmeli;
+   Symmetry Group yalnızca projeyi yapan ve faturayı kesen şirkettir; genel iletişimi (info@symmetrygroup.com.tr,
+   +90 212 274 9571) üründe GÖSTERİLMEZ, yalnızca faturalama/sözleşme için. Platformun kendi iletişimi ayrı:
+   backend `SUPPORT_EMAIL`/`SUPPORT_PHONE`, uygulama `EXPO_PUBLIC_SUPPORT_*` (boşsa gizli).
+   EKSİK: platform e-postası `SUPPORT_EMAIL` (production'da zorunlu), `COMPANY_MERSIS`, `COMPANY_KEP`; KVKK metni (PrivacyScreen) ve mesafeli satış sözleşmesi hukukçu onayından geçmeli;
    destek telefonu/WhatsApp/e-posta/sosyal medya `.env` → `EXPO_PUBLIC_SUPPORT_*` ile girilmeli (boşsa gösterilmez)
 5. Görsel yükleme yerel diskte (`backend/uploads`); production'da S3 uyumlu depolamaya taşınmalı
 7. Simge geçici (`scripts/make-icons.js`, geometrik "b"); profesyonel logo gelince değiştirilmeli.
    Mağaza kaydı: gizlilik politikası `/gizlilik`, hesap silme `/hesap-silme` (panel sitesinde), App Store inceleme
    için production demo hesabı, ekran görüntüleri, `eas.json` + EAS projectId
-6. Alan adı alınmadı (bakimca.com.tr / .com / .app boştu): panel (`isletme.bakimca.com.tr`) index.html, robots.txt ve sitemap.xml'de yer tutucu
+6. Alan adı alınmadı (bibakim.com, .com.tr, .tr başkasında; yalnızca bibakim.app boştu): panel (`isletme.bibakim.app`) index.html, robots.txt ve sitemap.xml'de yer tutucu
