@@ -25,6 +25,33 @@ module.exports = {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
       },
+      // Apple gizlilik bildirimi (PrivacyInfo.xcprivacy). İzleme yok; konum cihazda kalır, sunucuya gitmez.
+      // Toplanan veri türleri App Store Connect'teki "App Privacy" yanıtlarıyla aynı olmalı.
+      privacyManifests: {
+        NSPrivacyTracking: false,
+        NSPrivacyTrackingDomains: [],
+        NSPrivacyAccessedAPITypes: [
+          { NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryUserDefaults", NSPrivacyAccessedAPITypeReasons: ["CA92.1"] },
+          { NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryFileTimestamp", NSPrivacyAccessedAPITypeReasons: ["C617.1"] },
+          { NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategorySystemBootTime", NSPrivacyAccessedAPITypeReasons: ["35F9.1"] },
+          { NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryDiskSpace", NSPrivacyAccessedAPITypeReasons: ["E174.1"] },
+        ],
+        NSPrivacyCollectedDataTypes: [
+          ["NSPrivacyCollectedDataTypeName", true],
+          ["NSPrivacyCollectedDataTypeEmailAddress", true],
+          ["NSPrivacyCollectedDataTypePhoneNumber", true],
+          ["NSPrivacyCollectedDataTypePhysicalAddress", true],
+          ["NSPrivacyCollectedDataTypePurchaseHistory", true],
+          ["NSPrivacyCollectedDataTypePhotosorVideos", true],
+          ["NSPrivacyCollectedDataTypeCustomerSupport", true],
+          ["NSPrivacyCollectedDataTypeOtherUserContent", true],
+        ].map(([type, linked]) => ({
+          NSPrivacyCollectedDataType: type,
+          NSPrivacyCollectedDataTypeLinked: linked,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: ["NSPrivacyCollectedDataTypePurposeAppFunctionality"],
+        })),
+      },
     },
     android: {
       package: "com.yaho.kuafor_mobil",
@@ -56,14 +83,14 @@ module.exports = {
         "expo-location",
         {
           locationWhenInUsePermission:
-            "Size en yakın kuaförleri haritada göstermek ve yol tarifi oluşturmak için konumunuz kullanılır.",
+            "Size en yakın kuaför ve güzellik işletmelerini haritada göstermek ve yol tarifi oluşturmak için konumunuz kullanılır.",
         },
       ],
       [
         "expo-camera",
         {
           cameraPermission:
-            "Saç rengi ve makyajı canlı denemek için ön kamera kullanılır. Görüntünüz yalnızca cihazınızda işlenir ve hiçbir yere gönderilmez.",
+            "Saç modeli, saç rengi ve makyajı canlı denemek için ön kamera kullanılır. Görüntü cihazınızda işlenir; yalnızca yapay zekâ ile denemeyi seçip onay verirseniz çektiğiniz fotoğraf işlenmek üzere gönderilir.",
           microphonePermission: false,
           recordAudioAndroid: false,
         },
@@ -72,7 +99,7 @@ module.exports = {
         "expo-image-picker",
         {
           photosPermission:
-            "Yorumlarınıza saçınızın önce/sonra fotoğraflarını ekleyebilmeniz için galerinize erişilir. Yalnızca seçtiğiniz fotoğraflar yüklenir.",
+            "Yorumlarınıza aldığınız hizmetin önce/sonra fotoğraflarını ekleyebilmeniz için galerinize erişilir. Yalnızca seçtiğiniz fotoğraflar yüklenir.",
           cameraPermission: false,
           microphonePermission: false,
         },
